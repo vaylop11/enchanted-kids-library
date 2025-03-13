@@ -10,7 +10,7 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { direction } = useLanguage();
+  const { direction, language, t } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -37,11 +37,13 @@ const Navbar = () => {
         <div className="flex h-16 items-center justify-between">
           <Link 
             to="/" 
-            className="flex items-center space-x-2 transition-opacity hover:opacity-80"
+            className="flex items-center transition-opacity hover:opacity-80"
             style={{ gap: '0.5rem' }}
           >
             <BookOpen className="h-6 w-6" />
-            <span className="font-display text-lg font-medium">StoryTime</span>
+            <span className="font-display text-lg font-medium">
+              {language === 'ar' ? 'وقت القصة' : 'StoryTime'}
+            </span>
           </Link>
 
           {/* Desktop Menu */}
@@ -85,16 +87,16 @@ const Navbar = () => {
 
 const NavLinks = () => {
   const location = useLocation();
-  const { language } = useLanguage();
+  const { t } = useLanguage();
   
   const links = [
     { 
       href: '/', 
-      label: language === 'en' ? 'Home' : 'الرئيسية' 
+      label: t('home')
     },
     { 
       href: '/stories', 
-      label: language === 'en' ? 'Stories' : 'القصص' 
+      label: t('stories')
     },
   ];
   

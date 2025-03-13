@@ -5,12 +5,14 @@ import { stories } from '@/data/stories';
 import Navbar from '@/components/Navbar';
 import { ArrowLeft, Clock, ArrowDown, Share } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const StoryDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const story = stories.find(s => s.id === id);
   const contentRef = useRef<HTMLDivElement>(null);
+  const { t, language, direction } = useLanguage();
   
   const [isLoaded, setIsLoaded] = useState(false);
   const [isCoverVisible, setIsCoverVisible] = useState(true);
@@ -54,7 +56,7 @@ const StoryDetail = () => {
     } else {
       // Fallback - copy URL to clipboard
       navigator.clipboard.writeText(window.location.href);
-      toast('Link copied to clipboard');
+      toast(language === 'ar' ? 'تم نسخ الرابط إلى الحافظة' : 'Link copied to clipboard');
     }
   };
   
@@ -80,7 +82,7 @@ const StoryDetail = () => {
         <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-10 lg:p-16 container mx-auto max-w-4xl">
           <div className={`transition-all duration-500 transform ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
             <div className="inline-block rounded-full bg-white/20 backdrop-blur-sm px-3 py-1 text-sm font-medium text-white mb-4">
-              {story.category} • Ages {story.ageRange}
+              {story.category} • {t('ages')} {story.ageRange}
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
@@ -93,7 +95,7 @@ const StoryDetail = () => {
             
             <div className="flex items-center text-sm text-white/80 mb-8">
               <Clock className="h-4 w-4 mr-2" />
-              {story.readingTime} reading time
+              {story.readingTime} {t('readingTime')}
             </div>
           </div>
           
@@ -121,14 +123,14 @@ const StoryDetail = () => {
               to="/stories" 
               className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to stories
+              <ArrowLeft className={`h-4 w-4 ${direction === 'rtl' ? 'ml-2 rotate-180' : 'mr-2'}`} />
+              {t('backToStories')}
             </Link>
             
             <button
               onClick={handleShare}
               className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-muted transition-colors"
-              aria-label="Share story"
+              aria-label={language === 'ar' ? 'مشاركة القصة' : 'Share story'}
             >
               <Share className="h-5 w-5" />
             </button>
@@ -145,17 +147,17 @@ const StoryDetail = () => {
           <div className="border-t border-border mt-16 pt-8">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
-                <span className="text-sm text-muted-foreground">Category</span>
+                <span className="text-sm text-muted-foreground">{t('category')}</span>
                 <div className="text-base font-medium">{story.category}</div>
               </div>
               
               <div>
-                <span className="text-sm text-muted-foreground">Age Range</span>
-                <div className="text-base font-medium">Ages {story.ageRange}</div>
+                <span className="text-sm text-muted-foreground">{t('ageRange')}</span>
+                <div className="text-base font-medium">{t('ages')} {story.ageRange}</div>
               </div>
               
               <div>
-                <span className="text-sm text-muted-foreground">Reading Time</span>
+                <span className="text-sm text-muted-foreground">{t('readingTime')}</span>
                 <div className="text-base font-medium">{story.readingTime}</div>
               </div>
             </div>
@@ -167,7 +169,7 @@ const StoryDetail = () => {
       <footer className="bg-background border-t border-border py-10 relative z-20">
         <div className="container mx-auto px-4 md:px-6 text-center text-muted-foreground">
           <p className="text-sm">
-            © {new Date().getFullYear()} StoryTime. A magical place for children's stories.
+            {t('copyright').replace('{year}', new Date().getFullYear().toString())}
           </p>
         </div>
       </footer>
