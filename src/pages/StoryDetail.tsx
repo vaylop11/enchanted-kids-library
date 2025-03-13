@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { stories } from '@/data/stories';
@@ -48,8 +47,8 @@ const StoryDetail = () => {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: story?.title,
-        text: story?.summary,
+        title: story ? t(story.title) : '',
+        text: story ? t(story.summary) : '',
         url: window.location.href,
       })
       .catch((error) => console.log('Error sharing', error));
@@ -82,15 +81,15 @@ const StoryDetail = () => {
         <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-10 lg:p-16 container mx-auto max-w-4xl">
           <div className={`transition-all duration-500 transform ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
             <div className="inline-block rounded-full bg-white/20 backdrop-blur-sm px-3 py-1 text-sm font-medium text-white mb-4">
-              {story.category} • {t('ages')} {story.ageRange}
+              {t(story.category)} • {t('ages')} {story.ageRange}
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
-              {story.title}
+              {t(story.title)}
             </h1>
             
             <p className="text-lg text-white/90 mb-6 max-w-2xl">
-              {story.summary}
+              {t(story.summary)}
             </p>
             
             <div className="flex items-center text-sm text-white/80 mb-8">
@@ -148,7 +147,7 @@ const StoryDetail = () => {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
                 <span className="text-sm text-muted-foreground">{t('category')}</span>
-                <div className="text-base font-medium">{story.category}</div>
+                <div className="text-base font-medium">{t(story.category)}</div>
               </div>
               
               <div>

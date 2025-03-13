@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Story } from '@/data/stories';
 import { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface StoryCardProps {
   story: Story;
@@ -13,6 +14,7 @@ interface StoryCardProps {
 const StoryCard = ({ story, index }: StoryCardProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -57,25 +59,25 @@ const StoryCard = ({ story, index }: StoryCardProps) => {
         />
         <img
           src={story.coverImage}
-          alt={story.title}
+          alt={t(story.title)}
           className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           onLoad={() => setIsLoaded(true)}
           loading="lazy"
         />
         <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium">
-          {story.category}
+          {t(story.category)}
         </div>
       </div>
       
       <div className="flex flex-col flex-grow p-4">
         <h3 className="font-display font-medium text-lg leading-tight mb-2 group-hover:text-foreground/80 transition-colors">
-          {story.title}
+          {t(story.title)}
         </h3>
         <p className="text-sm text-muted-foreground mb-4 flex-grow">
-          {story.summary}
+          {t(story.summary)}
         </p>
         <div className="flex justify-between items-center text-xs text-muted-foreground">
-          <span>Ages {story.ageRange}</span>
+          <span>{t('ages')} {story.ageRange}</span>
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {story.readingTime}
