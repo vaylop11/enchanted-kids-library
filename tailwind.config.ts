@@ -20,8 +20,9 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Inter', 'sans-serif'],
-				display: ['SF Pro Display', 'Inter', 'sans-serif']
+				sans: ['Inter', 'Tajawal', 'sans-serif'],
+				arabic: ['Tajawal', 'sans-serif'],
+				display: ['SF Pro Display', 'Tajawal', 'Inter', 'sans-serif']
 			},
 			colors: {
 				border: 'hsl(var(--border))',

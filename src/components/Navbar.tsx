@@ -3,11 +3,14 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { BookOpen, Menu, X } from 'lucide-react';
+import LanguageSwitcher from './LanguageSwitcher';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { direction } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -35,28 +38,33 @@ const Navbar = () => {
           <Link 
             to="/" 
             className="flex items-center space-x-2 transition-opacity hover:opacity-80"
+            style={{ gap: '0.5rem' }}
           >
             <BookOpen className="h-6 w-6" />
             <span className="font-display text-lg font-medium">StoryTime</span>
           </Link>
 
           {/* Desktop Menu */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className={`hidden md:flex items-center ${direction === 'rtl' ? 'space-x-reverse' : ''} space-x-8`}>
             <NavLinks />
+            <LanguageSwitcher />
           </nav>
 
           {/* Mobile Menu Toggle */}
-          <button 
-            className="md:hidden flex items-center justify-center w-10 h-10 text-foreground rounded-full hover:bg-muted transition-colors"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </button>
+          <div className="md:hidden flex items-center space-x-4">
+            <LanguageSwitcher />
+            <button 
+              className="flex items-center justify-center w-10 h-10 text-foreground rounded-full hover:bg-muted transition-colors"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -64,7 +72,7 @@ const Navbar = () => {
       <div
         className={cn(
           'md:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-lg pt-16 px-4 transition-transform duration-300 ease-in-out transform',
-          isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          isMobileMenuOpen ? 'translate-x-0' : direction === 'rtl' ? '-translate-x-full' : 'translate-x-full'
         )}
       >
         <nav className="flex flex-col items-center justify-center h-full space-y-8 text-lg">
@@ -77,10 +85,17 @@ const Navbar = () => {
 
 const NavLinks = () => {
   const location = useLocation();
+  const { language } = useLanguage();
   
   const links = [
-    { href: '/', label: 'Home' },
-    { href: '/stories', label: 'Stories' },
+    { 
+      href: '/', 
+      label: language === 'en' ? 'Home' : 'الرئيسية' 
+    },
+    { 
+      href: '/stories', 
+      label: language === 'en' ? 'Stories' : 'القصص' 
+    },
   ];
   
   return (
