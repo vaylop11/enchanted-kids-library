@@ -1,4 +1,3 @@
-
 export interface Story {
   id: string;
   title: string;
@@ -13,12 +12,118 @@ export interface Story {
 export const storyCategories = [
   "Animals",
   "Adventure",
-  "Fantasy",
+  "Fantasy", 
   "Bedtime",
-  "Educational"
+  "Educational",
+  "Moral Stories",
+  "Fables"
 ];
 
 export const stories: Story[] = [
+  {
+    id: "1",
+    title: "The Clever Monkey",
+    summary: "A clever monkey outwits a crocodile who tries to trick him.",
+    category: "Fables",
+    ageRange: "4-8",
+    coverImage: "https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+    content: `Once upon a time, there lived a monkey who resided on a berry tree on the banks of a river. The monkey was alone, as he had no friends or relatives. In the same river, there lived a crocodile and his wife. One day, the crocodile wandered deep into the river and came to rest under the berry tree, where the monkey lived.
+
+The crocodile, having swum a great distance, was tired and hungry. The kind-hearted monkey saw that the crocodile was tired and offered him some berries. The crocodile thanked the monkey and enjoyed the sweet berries. The crocodile enjoyed the berries so much that he visited the monkey every day. The monkey and the crocodile became good friends.
+
+One day, the crocodile took some berries home for his wife. His wife found the berries to be the sweetest she had ever tasted. This made her wonder about the monkey. She thought that if the monkey ate such sweet berries every day, his flesh would be even sweeter. She asked her husband to invite the monkey home for dinner so that she could eat the monkey's heart.
+
+The crocodile was not happy about this. He didn't want to deceive his friend. But his wife was adamant. She threatened to starve herself and even leave the house if he didn't bring the monkey home. The crocodile had no choice but to obey her.
+
+The next day, the crocodile swam to the berry tree and invited the monkey to his home. The excited monkey agreed. But the monkey couldn't swim, so the crocodile suggested that he sit on his back and he would carry him to his house. The monkey agreed and jumped onto the crocodile's back.
+
+While they were in the middle of the river, the crocodile began to sink into the river. The monkey was terrified. The crocodile told the monkey that he was taking him home so that his wife could eat his heart. The clever monkey thought quickly and said, "My friend, you should have told me this before we left. I left my heart on the berry tree. Let's go back and get it."
+
+The foolish crocodile believed him and swam back to the berry tree. Upon reaching the berry tree, the monkey quickly climbed up the tree and said, "O foolish crocodile, how can anyone keep their heart on a tree? I'm not coming down from here. Go home and tell your wicked wife that she cannot eat my heart."
+
+The crocodile felt ashamed of betraying his friend and swam home. The clever monkey saved his life with his wit and intelligence.`,
+    readingTime: "5 min"
+  },
+  {
+    id: "2",
+    title: "The Cap Seller and the Monkeys",
+    summary: "A cap seller finds a clever way to get back his caps from mischievous monkeys.",
+    category: "Fables",
+    ageRange: "4-8",
+    coverImage: "https://images.unsplash.com/photo-1578617994183-730154e93ab4?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+    content: `Once upon a time, there was a cap seller in a city. He used to go from village to village to sell his caps. His way passed through a forest. It was a hot summer day, and he got tired after walking for a long time in the forest. So, he decided to take rest under a tree.
+
+He kept his bag full of caps beside him and went to sleep. After some hours, when he woke up, he found that all his caps were missing. He looked around, but he couldn't find them anywhere.
+
+Suddenly, he looked up at the tree and was surprised to see monkeys sitting on its branches, each wearing a cap that belonged to him. He tried to scare the monkeys and make them drop his caps, but they only mimicked him and didn't drop any cap.
+
+After trying a lot, he finally gave up and started walking away in disappointment. But then, he got an idea. The cap seller threw his own cap on the ground and the monkeys, who were imitating him all the time, did the same. They threw all the caps on the ground.
+
+The cap seller quickly collected all his caps, put them back in his bag, and went on his way, feeling very clever for outwitting the monkeys.
+
+Moral of the story: Sometimes we can find solutions to our problems by thinking outside the box.`,
+    readingTime: "4 min"
+  },
+  {
+    id: "3",
+    title: "The Fox and the Grapes",
+    summary: "A fox tries to reach some high-hanging grapes but fails and declares them sour.",
+    category: "Fables",
+    ageRange: "3-7",
+    coverImage: "https://images.unsplash.com/photo-1596363505729-4190a9506133?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+    content: `One hot summer day, a fox was walking through an orchard. He was very hungry and tired. Suddenly, he saw a bunch of grapes hanging from a vine high up on a tree. The grapes looked ripe, juicy, and sweet. The fox's mouth watered at the sight of the delicious-looking grapes.
+
+He wanted to eat the grapes, but they were too high for him to reach. He tried jumping up to grab them, but they were still out of his reach. He tried again and again, jumping as high as he could, but he just couldn't reach the grapes.
+
+Finally, after many attempts, the fox gave up. He was tired and even hungrier now. As he walked away, he looked back at the grapes and said, "I'm sure those grapes are sour anyway. I don't want to eat sour grapes."
+
+And with that, the fox continued on his way, telling himself that the grapes weren't worth his effort.
+
+Moral of the story: It's easy to despise what you cannot have.`,
+    readingTime: "3 min"
+  },
+  {
+    id: "4",
+    title: "The Ant and the Grasshopper",
+    summary: "A tale about the importance of hard work and planning for the future.",
+    category: "Fables",
+    ageRange: "4-9",
+    coverImage: "https://images.unsplash.com/photo-1525923838299-2312b60f6d69?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+    content: `In a field one summer's day, a Grasshopper was hopping about, chirping and singing to its heart's content. An Ant passed by, bearing along with great effort an ear of corn he was taking to the nest.
+
+"Why not come and chat with me," said the Grasshopper, "instead of toiling in that way?"
+
+"I am helping to lay up food for the winter," said the Ant, "and recommend you to do the same."
+
+"Why bother about winter?" said the Grasshopper; "we have plenty of food at present."
+
+But the Ant went on its way and continued its toil. When winter came, the Grasshopper found itself dying of hunger, while it saw the ants distributing, every day, corn and grain from the stores they had collected in the summer.
+
+Then the Grasshopper knew: It is best to prepare for the days of necessity.
+
+Moral of the story: Work today for a better tomorrow. Don't waste time when you should be working.`,
+    readingTime: "3 min"
+  },
+  {
+    id: "5",
+    title: "The Thirsty Crow",
+    summary: "A clever crow finds a way to drink water from a pitcher by dropping pebbles into it.",
+    category: "Fables",
+    ageRange: "3-8",
+    coverImage: "https://images.unsplash.com/photo-1557387712-a73be95a5c12?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+    content: `Once upon a time, there was a crow who was very thirsty. It had been a hot, dry day, and the crow had flown a long distance but hadn't found any water to drink. The crow was feeling weak and desperate.
+
+Finally, the crow spotted a pitcher on the ground. Excited, it flew down and looked inside. There was some water in the pitcher, but it was at the very bottom, and the crow couldn't reach it with its beak.
+
+The crow tried to push the pitcher over, hoping the water would spill out, but the pitcher was too heavy. The crow was getting more and more thirsty and worried.
+
+Suddenly, the crow had an idea. It saw some small pebbles nearby. The crow picked up a pebble with its beak and dropped it into the pitcher. Then it got another pebble and dropped it in too. The crow kept adding pebbles to the pitcher.
+
+Slowly, as more and more pebbles filled the pitcher, the water level began to rise. Finally, the water reached the top of the pitcher where the crow could reach it. The crow drank the water and felt much better.
+
+Moral of the story: Where there's a will, there's a way. With clever thinking and persistence, we can solve difficult problems.`,
+    readingTime: "4 min"
+  },
   {
     id: "1",
     title: "The Curious Fox",
