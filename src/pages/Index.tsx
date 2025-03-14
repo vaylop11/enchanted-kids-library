@@ -1,4 +1,3 @@
-
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { pdfs } from '@/data/pdfs';
@@ -60,7 +59,7 @@ const Index = () => {
             const newPdfId = uuidv4();
             const fileName = file.name;
             
-            // Store file in sessionStorage (for demo purposes)
+            // Store file info in sessionStorage
             sessionStorage.setItem(`pdf_${newPdfId}`, JSON.stringify({
               id: newPdfId,
               name: fileName,
@@ -72,15 +71,25 @@ const Index = () => {
             // Store the file as a URL in sessionStorage
             const fileReader = new FileReader();
             fileReader.onload = (e) => {
-              const fileUrl = e.target?.result as string;
-              sessionStorage.setItem(`pdf_url_${newPdfId}`, fileUrl);
-              
-              // Navigate to the PDF viewer with the new ID
-              navigate(`/pdf/${newPdfId}`);
+              if (e.target && e.target.result) {
+                const fileUrl = e.target.result as string;
+                sessionStorage.setItem(`pdf_url_${newPdfId}`, fileUrl);
+                
+                // Navigate to the PDF viewer with the new ID
+                navigate(`/pdf/${newPdfId}`);
+              } else {
+                toast.error(language === 'ar' ? 'فشل في قراءة الملف' : 'Failed to read the file');
+              }
             };
+            
+            fileReader.onerror = () => {
+              toast.error(language === 'ar' ? 'خطأ في قراءة الملف' : 'Error reading file');
+              setIsUploading(false);
+            };
+            
+            // Actually read the file as DataURL
             fileReader.readAsDataURL(file);
             
-            toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
           }, 500);
         }
         return newProgress;
@@ -112,6 +121,12 @@ const Index = () => {
       } else {
         toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload PDF files only');
       }
+    }
+  };
+
+  const handleUploadButtonClick = () => {
+    if (uploadInputRef.current) {
+      uploadInputRef.current.click();
     }
   };
 
@@ -213,18 +228,16 @@ const Index = () => {
               </p>
               
               <div className="flex justify-center">
-                <label className="cursor-pointer">
-                  <Input 
-                    type="file" 
-                    accept=".pdf" 
-                    onChange={handleFileChange}
-                    className="hidden"
-                    ref={uploadInputRef}
-                  />
-                  <Button variant="outline">
-                    {language === 'ar' ? 'اختر ملف' : 'Choose File'}
-                  </Button>
-                </label>
+                <Input 
+                  type="file" 
+                  accept=".pdf" 
+                  onChange={handleFileChange}
+                  className="hidden"
+                  ref={uploadInputRef}
+                />
+                <Button variant="outline" onClick={handleUploadButtonClick}>
+                  {language === 'ar' ? 'اختر ملف' : 'Choose File'}
+                </Button>
               </div>
             </div>
           )}
