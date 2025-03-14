@@ -1,6 +1,6 @@
 
-import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import { pdfs } from '@/data/pdfs';
 import PDFCard from '@/components/PDFCard';
 import Navbar from '@/components/Navbar';
@@ -8,12 +8,19 @@ import { FileUp, ChevronRight, FileText } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils'; // Add this import for cn utility
+import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
+import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 
 const Index = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const { t, language } = useLanguage();
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const navigate = useNavigate();
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Simulate loading to ensure animations trigger correctly
@@ -36,23 +43,82 @@ const Index = () => {
     setIsDragging(false);
   };
 
+  const simulateUpload = (file: File) => {
+    setIsUploading(true);
+    setUploadProgress(0);
+    
+    // Simulate upload progress
+    const interval = setInterval(() => {
+      setUploadProgress(prev => {
+        const newProgress = prev + 10;
+        if (newProgress >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setIsUploading(false);
+            
+            // Generate a new PDF ID and navigate to it
+            const newPdfId = uuidv4();
+            const fileName = file.name;
+            
+            // Store file in sessionStorage (for demo purposes)
+            sessionStorage.setItem(`pdf_${newPdfId}`, JSON.stringify({
+              id: newPdfId,
+              name: fileName,
+              size: file.size,
+              type: file.type,
+              lastModified: file.lastModified
+            }));
+            
+            // Store the file as a URL in sessionStorage
+            const fileReader = new FileReader();
+            fileReader.onload = (e) => {
+              const fileUrl = e.target?.result as string;
+              sessionStorage.setItem(`pdf_url_${newPdfId}`, fileUrl);
+              
+              // Navigate to the PDF viewer with the new ID
+              navigate(`/pdf/${newPdfId}`);
+            };
+            fileReader.readAsDataURL(file);
+            
+            toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
+          }, 500);
+        }
+        return newProgress;
+      });
+    }, 300);
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    // Handle file upload logic here
+    
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      console.log('Files dropped:', files);
-      // Process files logic would go here
+      const file = files[0];
+      if (file.type === 'application/pdf') {
+        simulateUpload(file);
+      } else {
+        toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload PDF files only');
+      }
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      console.log('Files selected:', files);
-      // Process files logic would go here
+      const file = files[0];
+      if (file.type === 'application/pdf') {
+        simulateUpload(file);
+      } else {
+        toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload PDF files only');
+      }
     }
+  };
+
+  const formatFileSize = (size: number): string => {
+    if (size < 1024) return `${size} B`;
+    if (size < 1048576) return `${(size / 1024).toFixed(2)} KB`;
+    return `${(size / 1048576).toFixed(2)} MB`;
   };
   
   return (
@@ -104,42 +170,64 @@ const Index = () => {
             {language === 'ar' ? 'تحميل ملف PDF' : 'Upload PDF'}
           </h2>
           
-          <div 
-            className={cn(
-              "border-2 border-dashed rounded-xl p-10 text-center transition-all",
-              isDragging ? "border-primary bg-primary/5" : "border-border",
-            )}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <FileUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            
-            <h3 className="text-lg font-medium mb-2">
-              {language === 'ar' ? 'اسحب وأفلت ملف PDF هنا' : 'Drag & Drop PDF Here'}
-            </h3>
-            
-            <p className="text-muted-foreground mb-6">
-              {language === 'ar' 
-                ? 'أو اختر ملفًا من جهازك' 
-                : 'Or select a file from your device'
-              }
-            </p>
-            
-            <div className="flex justify-center">
-              <label className="cursor-pointer">
-                <Input 
-                  type="file" 
-                  accept=".pdf" 
-                  onChange={handleFileChange}
-                  className="hidden" 
-                />
-                <Button variant="outline">
-                  {language === 'ar' ? 'اختر ملف' : 'Choose File'}
-                </Button>
-              </label>
+          {isUploading ? (
+            <div className="border-2 rounded-xl p-10 text-center transition-all bg-primary/5">
+              <FileUp className="h-12 w-12 mx-auto mb-4 text-primary" />
+              
+              <h3 className="text-lg font-medium mb-6">
+                {language === 'ar' ? 'جاري تحميل الملف...' : 'Uploading PDF...'}
+              </h3>
+              
+              <div className="w-full max-w-md mx-auto mb-4">
+                <Progress value={uploadProgress} className="h-2" />
+              </div>
+              
+              <p className="text-sm text-muted-foreground">
+                {language === 'ar' 
+                  ? `${uploadProgress}% مكتمل` 
+                  : `${uploadProgress}% Complete`
+                }
+              </p>
             </div>
-          </div>
+          ) : (
+            <div 
+              className={cn(
+                "border-2 border-dashed rounded-xl p-10 text-center transition-all",
+                isDragging ? "border-primary bg-primary/5" : "border-border",
+              )}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <FileUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              
+              <h3 className="text-lg font-medium mb-2">
+                {language === 'ar' ? 'اسحب وأفلت ملف PDF هنا' : 'Drag & Drop PDF Here'}
+              </h3>
+              
+              <p className="text-muted-foreground mb-6">
+                {language === 'ar' 
+                  ? 'أو اختر ملفًا من جهازك' 
+                  : 'Or select a file from your device'
+                }
+              </p>
+              
+              <div className="flex justify-center">
+                <label className="cursor-pointer">
+                  <Input 
+                    type="file" 
+                    accept=".pdf" 
+                    onChange={handleFileChange}
+                    className="hidden"
+                    ref={uploadInputRef}
+                  />
+                  <Button variant="outline">
+                    {language === 'ar' ? 'اختر ملف' : 'Choose File'}
+                  </Button>
+                </label>
+              </div>
+            </div>
+          )}
         </div>
       </section>
       

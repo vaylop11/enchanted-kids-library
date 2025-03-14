@@ -10,6 +10,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -19,6 +20,14 @@ interface ChatMessage {
   content: string;
   isUser: boolean;
   timestamp: Date;
+}
+
+interface UploadedPDF {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  lastModified: number;
 }
 
 const PDFViewer = () => {
@@ -37,11 +46,27 @@ const PDFViewer = () => {
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [showChat, setShowChat] = useState(true);
+  const [uploadedPdf, setUploadedPdf] = useState<UploadedPDF | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(true);
 
   useEffect(() => {
-    if (!pdf) {
-      navigate('/pdfs');
-      return;
+    // Check if this is a stored PDF from sessionStorage
+    if (id) {
+      const storedPdfData = sessionStorage.getItem(`pdf_${id}`);
+      const storedPdfUrl = sessionStorage.getItem(`pdf_url_${id}`);
+      
+      if (storedPdfData && storedPdfUrl) {
+        setUploadedPdf(JSON.parse(storedPdfData));
+        setPdfUrl(storedPdfUrl);
+        setIsLoadingPdf(false);
+      } else if (!pdf) {
+        // If not a stored PDF and not in our static list, redirect
+        navigate('/pdfs');
+        return;
+      } else {
+        setIsLoadingPdf(false);
+      }
     }
     
     // Simulate loading to ensure animations trigger correctly
@@ -52,10 +77,11 @@ const PDFViewer = () => {
     return () => {
       clearTimeout(timer);
     };
-  }, [pdf, navigate]);
+  }, [id, pdf, navigate]);
 
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
+    setIsLoadingPdf(false);
   };
 
   const scrollToLatestMessage = () => {
@@ -69,8 +95,8 @@ const PDFViewer = () => {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: pdf ? pdf.title : '',
-        text: pdf ? pdf.summary : '',
+        title: uploadedPdf ? uploadedPdf.name : pdf ? pdf.title : '',
+        text: pdf ? pdf.summary : uploadedPdf ? `PDF: ${uploadedPdf.name}` : '',
         url: window.location.href,
       })
       .catch((error) => console.log('Error sharing', error));
@@ -97,6 +123,12 @@ const PDFViewer = () => {
 
   const handleZoomOut = () => {
     setPdfScale(prev => Math.max(prev - 0.2, 0.5));
+  };
+
+  const formatFileSize = (size: number): string => {
+    if (size < 1024) return `${size} B`;
+    if (size < 1048576) return `${(size / 1024).toFixed(2)} KB`;
+    return `${(size / 1048576).toFixed(2)} MB`;
   };
 
   const handleChatSubmit = (e: React.FormEvent) => {
@@ -126,9 +158,8 @@ const PDFViewer = () => {
     }, 1000);
   };
   
-  if (!pdf) {
-    return null; // Navigate happens in useEffect
-  }
+  const pdfTitle = uploadedPdf ? uploadedPdf.name : pdf ? pdf.title : '';
+  const pdfSource = pdfUrl || (pdf ? `https://www.africau.edu/images/default/sample.pdf` : '');
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -167,7 +198,7 @@ const PDFViewer = () => {
             <div className="lg:w-2/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm">
               <div className="flex justify-between items-center p-4 border-b">
                 <h1 className="font-display text-xl font-medium truncate">
-                  {pdf.title}
+                  {pdfTitle}
                 </h1>
                 <button 
                   onClick={() => setShowPdfControls(!showPdfControls)}
@@ -213,38 +244,46 @@ const PDFViewer = () => {
                   </div>
                   
                   <div className="text-sm text-muted-foreground">
-                    {pdf.fileSize} • {language === 'ar' ? 'تم التحميل' : 'Uploaded'} {pdf.uploadDate}
+                    {uploadedPdf ? formatFileSize(uploadedPdf.size) : pdf?.fileSize} • {language === 'ar' ? 'تم التحميل' : 'Uploaded'} {uploadedPdf ? new Date(uploadedPdf.lastModified).toLocaleDateString() : pdf?.uploadDate}
                   </div>
                 </div>
               )}
               
               <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
-                <Document
-                  file={`https://www.africau.edu/images/default/sample.pdf`} // Sample PDF for demo
-                  onLoadSuccess={handleDocumentLoadSuccess}
-                  loading={
-                    <div className="flex items-center justify-center h-full w-full">
-                      <div className="animate-pulse text-muted-foreground">
-                        {language === 'ar' ? 'جاري التحميل...' : 'Loading...'}
+                {isLoadingPdf ? (
+                  <div className="flex flex-col items-center justify-center h-full w-full">
+                    <Skeleton className="h-16 w-16 rounded-full mb-4" />
+                    <Skeleton className="h-6 w-48 mb-2" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ) : (
+                  <Document
+                    file={pdfSource}
+                    onLoadSuccess={handleDocumentLoadSuccess}
+                    loading={
+                      <div className="flex items-center justify-center h-full w-full">
+                        <div className="animate-pulse text-muted-foreground">
+                          {language === 'ar' ? 'جاري التحميل...' : 'Loading...'}
+                        </div>
                       </div>
-                    </div>
-                  }
-                  error={
-                    <div className="flex flex-col items-center justify-center h-full w-full">
-                      <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">
-                        {language === 'ar' ? 'فشل تحميل الملف' : 'Failed to load PDF'}
-                      </p>
-                    </div>
-                  }
-                >
-                  <Page 
-                    pageNumber={pageNumber} 
-                    scale={pdfScale}
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                  />
-                </Document>
+                    }
+                    error={
+                      <div className="flex flex-col items-center justify-center h-full w-full">
+                        <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">
+                          {language === 'ar' ? 'فشل تحميل الملف' : 'Failed to load PDF'}
+                        </p>
+                      </div>
+                    }
+                  >
+                    <Page 
+                      pageNumber={pageNumber} 
+                      scale={pdfScale}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                    />
+                  </Document>
+                )}
               </div>
             </div>
             
