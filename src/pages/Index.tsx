@@ -1,15 +1,18 @@
 
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { stories, storyCategories } from '@/data/stories';
-import StoryCard from '@/components/StoryCard';
+import { pdfs } from '@/data/pdfs';
+import PDFCard from '@/components/PDFCard';
 import Navbar from '@/components/Navbar';
-import { ChevronRight, BookOpen } from 'lucide-react';
+import { FileUp, ChevronRight, FileText } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const { t, language } = useLanguage();
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     // Simulate loading to ensure animations trigger correctly
@@ -20,8 +23,36 @@ const Index = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Featured stories - first 3 stories
-  const featuredStories = stories.slice(0, 3);
+  // Featured PDFs - first 3 pdfs
+  const recentPDFs = pdfs.slice(0, 3);
+  
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    // Handle file upload logic here
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      console.log('Files dropped:', files);
+      // Process files logic would go here
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      console.log('Files selected:', files);
+      // Process files logic would go here
+    }
+  };
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -32,79 +63,103 @@ const Index = () => {
         <div className={`transition-all duration-500 transform ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
           <div className="inline-block rounded-full bg-primary px-3 py-1 text-sm font-medium mb-6 animate-fade-in">
             <span className="flex items-center gap-1.5">
-              <BookOpen className="h-3.5 w-3.5" />
-              {t('welcomeToStoryTime')}
+              <FileText className="h-3.5 w-3.5" />
+              {language === 'ar' ? 'مرحبًا بك في أداة دردشة PDF' : 'Welcome to PDF Chat Tool'}
             </span>
           </div>
           
           <h1 className="heading-1 mb-6 max-w-4xl">
-            {t('discoverStories')}
+            {language === 'ar' ? 'تحدث مع ملفات PDF الخاصة بك' : 'Chat with your PDF documents'}
           </h1>
           
           <p className="paragraph mb-8 max-w-3xl">
-            {t('description')}
+            {language === 'ar' 
+              ? 'قم بتحميل ملفات PDF الخاصة بك، واستعرضها، وطرح الأسئلة عليها. استخدم قوة الذكاء الاصطناعي للحصول على إجابات دقيقة من مستنداتك.'
+              : 'Upload your PDFs, preview them, and ask questions. Leverage the power of AI to get accurate answers from your documents.'
+            }
           </p>
           
           <div className="flex flex-wrap gap-4">
             <Link 
-              to="/stories" 
+              to="/pdfs" 
               className="inline-flex items-center justify-center rounded-lg bg-foreground px-6 py-3 text-base font-medium text-background shadow-sm transition-colors hover:bg-foreground/90"
             >
-              {t('browseStories')}
+              {language === 'ar' ? 'استعرض ملفاتي' : 'Browse My PDFs'}
             </Link>
             <a 
-              href="#featured" 
+              href="#upload" 
               className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-6 py-3 text-base font-medium shadow-sm transition-colors hover:bg-muted"
             >
-              {t('featuredStories')}
+              {language === 'ar' ? 'تحميل ملف جديد' : 'Upload New PDF'}
             </a>
           </div>
         </div>
       </section>
       
-      {/* Categories Section */}
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-4 md:px-6 max-w-7xl">
+      {/* Upload Section */}
+      <section id="upload" className="py-16 bg-muted/30">
+        <div className="container mx-auto px-4 md:px-6 max-w-3xl">
           <h2 className="heading-2 mb-8 text-center">
-            {t('storyCategories')}
+            {language === 'ar' ? 'تحميل ملف PDF' : 'Upload PDF'}
           </h2>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {storyCategories.map((category, index) => (
-              <Link
-                key={category}
-                to={`/stories?category=${category}`}
-                className="group flex flex-col items-center justify-center p-6 rounded-xl bg-card border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 hover-lift"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="text-lg font-medium mb-1 group-hover:text-foreground/80 transition-colors">
-                  {category}
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {stories.filter(s => s.category === category).length} {language === 'ar' ? 'قصة' : 'stories'}
-                </span>
-              </Link>
-            ))}
+          <div 
+            className={cn(
+              "border-2 border-dashed rounded-xl p-10 text-center transition-all",
+              isDragging ? "border-primary bg-primary/5" : "border-border",
+            )}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <FileUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            
+            <h3 className="text-lg font-medium mb-2">
+              {language === 'ar' ? 'اسحب وأفلت ملف PDF هنا' : 'Drag & Drop PDF Here'}
+            </h3>
+            
+            <p className="text-muted-foreground mb-6">
+              {language === 'ar' 
+                ? 'أو اختر ملفًا من جهازك' 
+                : 'Or select a file from your device'
+              }
+            </p>
+            
+            <div className="flex justify-center">
+              <label className="cursor-pointer">
+                <Input 
+                  type="file" 
+                  accept=".pdf" 
+                  onChange={handleFileChange}
+                  className="hidden" 
+                />
+                <Button variant="outline">
+                  {language === 'ar' ? 'اختر ملف' : 'Choose File'}
+                </Button>
+              </label>
+            </div>
           </div>
         </div>
       </section>
       
-      {/* Featured Stories Section */}
-      <section id="featured" className="py-20 px-4 md:px-6 container mx-auto max-w-7xl">
+      {/* Recent PDFs Section */}
+      <section id="recent" className="py-20 px-4 md:px-6 container mx-auto max-w-7xl">
         <div className="flex justify-between items-end mb-10">
-          <h2 className="heading-2">{t('featuredStories')}</h2>
+          <h2 className="heading-2">
+            {language === 'ar' ? 'ملفات PDF الأخيرة' : 'Recent PDFs'}
+          </h2>
           <Link 
-            to="/stories" 
+            to="/pdfs" 
             className="text-sm font-medium flex items-center hover:underline text-muted-foreground hover:text-foreground transition-colors"
           >
-            {t('viewAllStories')}
+            {language === 'ar' ? 'عرض جميع الملفات' : 'View All PDFs'}
             <ChevronRight className={`h-4 w-4 ${language === 'ar' ? 'mr-1 rotate-180' : 'ml-1'}`} />
           </Link>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredStories.map((story, index) => (
-            <StoryCard key={story.id} story={story} index={index} />
+          {recentPDFs.map((pdf, index) => (
+            <PDFCard key={pdf.id} pdf={pdf} index={index} />
           ))}
         </div>
       </section>
@@ -113,13 +168,16 @@ const Index = () => {
       <footer className="mt-auto py-10 bg-muted/30 border-t border-border">
         <div className="container mx-auto px-4 md:px-6 text-center text-muted-foreground">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <BookOpen className="h-5 w-5" />
+            <FileText className="h-5 w-5" />
             <span className="font-display text-lg font-medium">
-              {language === 'ar' ? 'وقت القصة' : 'StoryTime'}
+              {language === 'ar' ? 'أداة دردشة PDF' : 'PDF Chat Tool'}
             </span>
           </div>
           <p className="text-sm">
-            {t('copyright').replace('{year}', new Date().getFullYear().toString())}
+            {language === 'ar' 
+              ? `© ${new Date().getFullYear()} أداة دردشة PDF. جميع الحقوق محفوظة.`
+              : `© ${new Date().getFullYear()} PDF Chat Tool. All rights reserved.`
+            }
           </p>
         </div>
       </footer>

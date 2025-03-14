@@ -1,0 +1,105 @@
+
+import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
+import { Clock, FileText } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+
+export interface PDF {
+  id: string;
+  title: string;
+  summary: string;
+  uploadDate: string;
+  pageCount: number;
+  fileSize: string;
+  thumbnail?: string;
+}
+
+interface PDFCardProps {
+  pdf: PDF;
+  index: number;
+}
+
+const PDFCard = ({ pdf, index }: PDFCardProps) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const { t, language } = useLanguage();
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const element = document.getElementById(`pdf-card-${pdf.id}`);
+    if (element) {
+      observer.observe(element);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [pdf.id]);
+
+  // Add a staggered animation delay based on the index
+  const animationDelay = `${index * 100}ms`;
+
+  return (
+    <Link 
+      to={`/pdf/${pdf.id}`}
+      id={`pdf-card-${pdf.id}`}
+      className={cn(
+        'group relative flex flex-col rounded-2xl overflow-hidden bg-card border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 h-full hover-lift',
+        isInView ? 'animate-fade-in opacity-100' : 'opacity-0'
+      )}
+      style={{ animationDelay }}
+    >
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/20">
+        {pdf.thumbnail ? (
+          <>
+            <div 
+              className={cn(
+                "absolute inset-0 bg-muted/20 backdrop-blur-sm transition-opacity duration-500",
+                isLoaded ? "opacity-0" : "opacity-100"
+              )}
+            />
+            <img
+              src={pdf.thumbnail}
+              alt={language === 'ar' ? `صورة مصغرة لـ ${pdf.title}` : `Thumbnail for ${pdf.title}`}
+              className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+              onLoad={() => setIsLoaded(true)}
+              loading="lazy"
+            />
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <FileText className="h-20 w-20 text-muted-foreground/50" />
+          </div>
+        )}
+      </div>
+      
+      <div className="flex flex-col flex-grow p-4">
+        <h3 className="font-display font-medium text-lg leading-tight mb-2 group-hover:text-foreground/80 transition-colors">
+          {pdf.title}
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4 flex-grow">
+          {pdf.summary}
+        </p>
+        <div className="flex justify-between items-center text-xs text-muted-foreground">
+          <span>{pdf.uploadDate}</span>
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {pdf.pageCount} {language === 'ar' ? 'صفحات' : 'pages'}
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+};
+
+export default PDFCard;
