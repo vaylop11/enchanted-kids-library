@@ -1,6 +1,6 @@
+
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { pdfs } from '@/data/pdfs';
 import PDFCard from '@/components/PDFCard';
 import Navbar from '@/components/Navbar';
 import { FileUp, ChevronRight, FileText } from 'lucide-react';
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { v4 as uuidv4 } from 'uuid';
+import { getSavedPDFs, createPDFFromFile } from '@/services/pdfStorage';
 
 const Index = () => {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -18,6 +18,7 @@ const Index = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [recentPDFs, setRecentPDFs] = useState(getSavedPDFs().slice(0, 3));
   const navigate = useNavigate();
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
@@ -27,11 +28,11 @@ const Index = () => {
       setIsLoaded(true);
     }, 100);
     
+    // Load saved PDFs
+    setRecentPDFs(getSavedPDFs().slice(0, 3));
+    
     return () => clearTimeout(timer);
   }, []);
-
-  // Featured PDFs - first 3 pdfs
-  const recentPDFs = pdfs.slice(0, 3);
   
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -55,28 +56,20 @@ const Index = () => {
           setTimeout(() => {
             setIsUploading(false);
             
-            // Generate a new PDF ID and navigate to it
-            const newPdfId = uuidv4();
-            const fileName = file.name;
-            
-            // Store file info in sessionStorage
-            sessionStorage.setItem(`pdf_${newPdfId}`, JSON.stringify({
-              id: newPdfId,
-              name: fileName,
-              size: file.size,
-              type: file.type,
-              lastModified: file.lastModified
-            }));
-            
-            // Store the file as a URL in sessionStorage
+            // Create a FileReader to convert file to data URL
             const fileReader = new FileReader();
             fileReader.onload = (e) => {
               if (e.target && e.target.result) {
                 const fileUrl = e.target.result as string;
-                sessionStorage.setItem(`pdf_url_${newPdfId}`, fileUrl);
                 
-                // Navigate to the PDF viewer with the new ID
-                navigate(`/pdf/${newPdfId}`);
+                // Save the PDF to our storage
+                const newPdf = createPDFFromFile(file, fileUrl);
+                
+                // Update recent PDFs
+                setRecentPDFs(getSavedPDFs().slice(0, 3));
+                
+                // Navigate to the PDF viewer
+                navigate(`/pdf/${newPdf.id}`);
               } else {
                 toast.error(language === 'ar' ? 'فشل في قراءة الملف' : 'Failed to read the file');
               }
@@ -87,7 +80,7 @@ const Index = () => {
               setIsUploading(false);
             };
             
-            // Actually read the file as DataURL
+            // Read the file as DataURL
             fileReader.readAsDataURL(file);
             
           }, 500);
@@ -128,12 +121,6 @@ const Index = () => {
     if (uploadInputRef.current) {
       uploadInputRef.current.click();
     }
-  };
-
-  const formatFileSize = (size: number): string => {
-    if (size < 1024) return `${size} B`;
-    if (size < 1048576) return `${(size / 1024).toFixed(2)} KB`;
-    return `${(size / 1048576).toFixed(2)} MB`;
   };
   
   return (
@@ -260,9 +247,24 @@ const Index = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {recentPDFs.map((pdf, index) => (
-            <PDFCard key={pdf.id} pdf={pdf} index={index} />
-          ))}
+          {recentPDFs.length > 0 ? (
+            recentPDFs.map((pdf, index) => (
+              <PDFCard key={pdf.id} pdf={pdf} index={index} />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <h3 className="text-lg font-medium mb-2">
+                {language === 'ar' ? 'لا توجد ملفات PDF حتى الآن' : 'No PDFs Yet'}
+              </h3>
+              <p className="text-muted-foreground">
+                {language === 'ar' 
+                  ? 'قم بتحميل ملف PDF للبدء' 
+                  : 'Upload a PDF to get started'
+                }
+              </p>
+            </div>
+          )}
         </div>
       </section>
       

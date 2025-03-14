@@ -23,7 +23,7 @@ interface PDFCardProps {
 const PDFCard = ({ pdf, index }: PDFCardProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -48,6 +48,9 @@ const PDFCard = ({ pdf, index }: PDFCardProps) => {
 
   // Add a staggered animation delay based on the index
   const animationDelay = `${index * 100}ms`;
+
+  // Check if this is an uploaded PDF with chat messages
+  const hasChatMessages = 'chatMessages' in pdf && Array.isArray((pdf as any).chatMessages) && (pdf as any).chatMessages.length > 0;
 
   return (
     <Link 
@@ -79,6 +82,12 @@ const PDFCard = ({ pdf, index }: PDFCardProps) => {
         ) : (
           <div className="flex items-center justify-center h-full">
             <FileText className="h-20 w-20 text-muted-foreground/50" />
+          </div>
+        )}
+        
+        {hasChatMessages && (
+          <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+            {language === 'ar' ? 'مع محادثة' : 'Has Chat'}
           </div>
         )}
       </div>

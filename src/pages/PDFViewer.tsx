@@ -1,7 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { pdfs } from '@/data/pdfs';
 import Navbar from '@/components/Navbar';
 import { ArrowLeft, Clock, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
@@ -11,29 +10,20 @@ import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { 
+  getPDFById, 
+  addChatMessageToPDF, 
+  savePDF, 
+  ChatMessage, 
+  UploadedPDF 
+} from '@/services/pdfStorage';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
-interface ChatMessage {
-  id: string;
-  content: string;
-  isUser: boolean;
-  timestamp: Date;
-}
-
-interface UploadedPDF {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  lastModified: number;
-}
-
 const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const pdf = pdfs.find(s => s.id === id);
   const contentRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const { language, direction } = useLanguage();
@@ -46,27 +36,26 @@ const PDFViewer = () => {
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [showChat, setShowChat] = useState(true);
-  const [uploadedPdf, setUploadedPdf] = useState<UploadedPDF | null>(null);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdf, setPdf] = useState<UploadedPDF | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(true);
 
   useEffect(() => {
-    // Check if this is a stored PDF from sessionStorage
-    if (id) {
-      const storedPdfData = sessionStorage.getItem(`pdf_${id}`);
-      const storedPdfUrl = sessionStorage.getItem(`pdf_url_${id}`);
-      
-      if (storedPdfData && storedPdfUrl) {
-        setUploadedPdf(JSON.parse(storedPdfData));
-        setPdfUrl(storedPdfUrl);
-        setIsLoadingPdf(false);
-      } else if (!pdf) {
-        // If not a stored PDF and not in our static list, redirect
-        navigate('/pdfs');
-        return;
-      } else {
-        setIsLoadingPdf(false);
-      }
+    if (!id) {
+      navigate('/');
+      return;
+    }
+
+    // Load PDF from storage
+    const loadedPdf = getPDFById(id);
+    if (!loadedPdf) {
+      toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
+      navigate('/');
+      return;
+    }
+
+    setPdf(loadedPdf);
+    if (loadedPdf.chatMessages) {
+      setChatMessages(loadedPdf.chatMessages);
     }
     
     // Simulate loading to ensure animations trigger correctly
@@ -77,11 +66,18 @@ const PDFViewer = () => {
     return () => {
       clearTimeout(timer);
     };
-  }, [id, pdf, navigate]);
+  }, [id, navigate, language]);
 
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setIsLoadingPdf(false);
+    
+    // Update page count if needed
+    if (pdf && pdf.pageCount !== numPages) {
+      const updatedPdf = { ...pdf, pageCount: numPages };
+      setPdf(updatedPdf);
+      savePDF(updatedPdf);
+    }
   };
 
   const scrollToLatestMessage = () => {
@@ -95,8 +91,8 @@ const PDFViewer = () => {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: uploadedPdf ? uploadedPdf.name : pdf ? pdf.title : '',
-        text: pdf ? pdf.summary : uploadedPdf ? `PDF: ${uploadedPdf.name}` : '',
+        title: pdf ? pdf.title : '',
+        text: pdf ? pdf.summary : '',
         url: window.location.href,
       })
       .catch((error) => console.log('Error sharing', error));
@@ -125,41 +121,56 @@ const PDFViewer = () => {
     setPdfScale(prev => Math.max(prev - 0.2, 0.5));
   };
 
-  const formatFileSize = (size: number): string => {
-    if (size < 1024) return `${size} B`;
-    if (size < 1048576) return `${(size / 1024).toFixed(2)} KB`;
-    return `${(size / 1048576).toFixed(2)} MB`;
-  };
-
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim()) return;
+    if (!chatInput.trim() || !id || !pdf) return;
 
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+    // Add user message to chat
+    const userMessage: Omit<ChatMessage, 'id'> = {
       content: chatInput,
       isUser: true,
       timestamp: new Date()
     };
 
-    // Add user message
-    setChatMessages(prev => [...prev, userMessage]);
+    const savedMessage = addChatMessageToPDF(id, userMessage);
+    if (savedMessage) {
+      // Update local state
+      setChatMessages(prev => [...prev, savedMessage]);
+    }
+    
     setChatInput('');
 
     // Simulate AI response after a short delay
     setTimeout(() => {
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+      const aiMessage: Omit<ChatMessage, 'id'> = {
         content: "This is a simulated response. In a real application, this would be generated by an AI based on the content of the PDF.",
         isUser: false,
         timestamp: new Date()
       };
-      setChatMessages(prev => [...prev, aiMessage]);
+      
+      const savedAiMessage = addChatMessageToPDF(id, aiMessage);
+      if (savedAiMessage) {
+        setChatMessages(prev => [...prev, savedAiMessage]);
+      }
     }, 1000);
   };
   
-  const pdfTitle = uploadedPdf ? uploadedPdf.name : pdf ? pdf.title : '';
-  const pdfSource = pdfUrl || (pdf ? `https://www.africau.edu/images/default/sample.pdf` : '');
+  if (!pdf) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+        <h1 className="text-xl font-medium mb-2">
+          {language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF Not Found'}
+        </h1>
+        <Link 
+          to="/" 
+          className="text-primary hover:underline"
+        >
+          {language === 'ar' ? 'العودة إلى الصفحة الرئيسية' : 'Return to Home'}
+        </Link>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -169,11 +180,11 @@ const PDFViewer = () => {
         <div className="container mx-auto px-4 md:px-6 max-w-7xl">
           <div className="flex justify-between items-center mb-6">
             <Link 
-              to="/pdfs" 
+              to="/" 
               className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className={`h-4 w-4 ${direction === 'rtl' ? 'ml-2 rotate-180' : 'mr-2'}`} />
-              {language === 'ar' ? 'العودة إلى الملفات' : 'Back to PDFs'}
+              {language === 'ar' ? 'العودة إلى الصفحة الرئيسية' : 'Back to Home'}
             </Link>
             
             <div className="flex items-center gap-2">
@@ -184,12 +195,14 @@ const PDFViewer = () => {
               >
                 <Share className="h-5 w-5" />
               </button>
-              <button
+              <a
+                href={pdf.dataUrl}
+                download={pdf.title}
                 className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-muted transition-colors"
                 aria-label={language === 'ar' ? 'تنزيل الملف' : 'Download file'}
               >
                 <DownloadCloud className="h-5 w-5" />
-              </button>
+              </a>
             </div>
           </div>
           
@@ -198,7 +211,7 @@ const PDFViewer = () => {
             <div className="lg:w-2/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm">
               <div className="flex justify-between items-center p-4 border-b">
                 <h1 className="font-display text-xl font-medium truncate">
-                  {pdfTitle}
+                  {pdf.title}
                 </h1>
                 <button 
                   onClick={() => setShowPdfControls(!showPdfControls)}
@@ -244,7 +257,7 @@ const PDFViewer = () => {
                   </div>
                   
                   <div className="text-sm text-muted-foreground">
-                    {uploadedPdf ? formatFileSize(uploadedPdf.size) : pdf?.fileSize} • {language === 'ar' ? 'تم التحميل' : 'Uploaded'} {uploadedPdf ? new Date(uploadedPdf.lastModified).toLocaleDateString() : pdf?.uploadDate}
+                    {pdf.fileSize} • {language === 'ar' ? 'تم التحميل' : 'Uploaded'} {pdf.uploadDate}
                   </div>
                 </div>
               )}
@@ -258,7 +271,7 @@ const PDFViewer = () => {
                   </div>
                 ) : (
                   <Document
-                    file={pdfSource}
+                    file={pdf.dataUrl}
                     onLoadSuccess={handleDocumentLoadSuccess}
                     loading={
                       <div className="flex items-center justify-center h-full w-full">
@@ -330,7 +343,10 @@ const PDFViewer = () => {
                         >
                           <p className="text-sm">{message.content}</p>
                           <span className="text-xs opacity-70 mt-1 self-end">
-                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {message.timestamp instanceof Date 
+                              ? message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                              : new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            }
                           </span>
                         </div>
                       ))
