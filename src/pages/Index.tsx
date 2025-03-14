@@ -8,6 +8,7 @@ import { FileUp, ChevronRight, FileText } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils'; // Add this import for cn utility
 
 const Index = () => {
   const [isLoaded, setIsLoaded] = useState(false);

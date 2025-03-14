@@ -174,7 +174,7 @@ interface LanguageContextType {
   language: Language;
   direction: Direction;
   setLanguage: (language: Language) => void;
-  t: (key: keyof typeof translations.en) => string;
+  t: (key: string) => string; // Changed from specific keys to any string
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -191,13 +191,13 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [language]);
 
   // Translation function
-  const t = (key: keyof typeof translations.en): string => {
+  const t = (key: string): string => {
     // @ts-ignore - We know the key might not be in translations, but we'll handle that
     const text = translations[language][key];
     
     // Handle dynamic values like year in copyright
     if (key === 'copyright') {
-      return text.replace('{year}', new Date().getFullYear().toString());
+      return text?.replace('{year}', new Date().getFullYear().toString()) || key;
     }
     
     return text || key;
