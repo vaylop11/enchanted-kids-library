@@ -11,6 +11,8 @@ import PDFViewer from "./pages/PDFViewer";
 import NotFound from "./pages/NotFound";
 import BlogPage from "./pages/BlogPage";
 import BlogPost from "./pages/BlogPost";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +29,8 @@ const App = () => (
             <Route path="/pdf/:id" element={<PDFViewer />} />
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/blog/:id" element={<BlogPost />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

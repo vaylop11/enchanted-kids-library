@@ -58,35 +58,37 @@ const BlogSection = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {blogPosts.map((post, index) => (
-            <Card key={post.id} className="overflow-hidden hover:shadow-md transition-shadow duration-300">
-              <div className="aspect-video w-full overflow-hidden">
-                <img 
-                  src={post.image} 
-                  alt={post.title}
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                />
-              </div>
-              <CardHeader>
-                <div className="flex items-center text-sm text-muted-foreground mb-2">
-                  <Calendar className="h-3.5 w-3.5 mr-1" />
-                  <span>{post.date}</span>
-                  <span className="mx-2">•</span>
-                  <span>{post.readTime}</span>
+          {blogPosts.map((post) => (
+            <Link
+              key={post.id}
+              to={`/blog/${post.id}`}
+            >
+              <Card key={post.id} className="overflow-hidden hover:shadow-md transition-shadow duration-300">
+                <div className="aspect-video w-full overflow-hidden">
+                  <img 
+                    src={post.image} 
+                    alt={post.title}
+                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                  />
                 </div>
-                <CardTitle className="line-clamp-2">{post.title}</CardTitle>
-                <CardDescription className="line-clamp-3">{post.excerpt}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link 
-                  to={`/blog/${post.id}`}
-                  className="text-sm font-medium flex items-center text-primary hover:underline"
-                >
-                  {language === 'ar' ? 'قراءة المزيد' : 'Read More'}
-                  <ArrowRight className="h-4 w-4 ml-1" />
-                </Link>
-              </CardContent>
-            </Card>
+                <CardHeader>
+                  <div className="flex items-center text-sm text-muted-foreground mb-2">
+                    <Calendar className="h-3.5 w-3.5 mr-1" />
+                    <span>{post.date}</span>
+                    <span className="mx-2">•</span>
+                    <span>{post.readTime}</span>
+                  </div>
+                  <CardTitle className="line-clamp-2">{post.title}</CardTitle>
+                  <CardDescription className="line-clamp-3">{post.excerpt}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm font-medium flex items-center text-primary hover:underline">
+                    {language === 'ar' ? 'قراءة المزيد' : 'Read More'}
+                    <ArrowRight className="h-4 w-4 ml-1" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       </div>

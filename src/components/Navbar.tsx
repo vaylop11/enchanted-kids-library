@@ -42,7 +42,7 @@ const Navbar = () => {
           >
             <BookOpen className="h-6 w-6" />
             <span className="font-display text-lg font-medium">
-              {language === 'ar' ? 'وقت القصة' : 'StoryTime'}
+              {language === 'ar' ? 'تشات PDF' : 'ChatPDF'}
             </span>
           </Link>
 
@@ -95,8 +95,12 @@ const NavLinks = () => {
       label: t('home')
     },
     { 
-      href: '/stories', 
-      label: t('stories')
+      href: '/pdfs', 
+      label: t('pdfs')
+    },
+    { 
+      href: '/blog', 
+      label: t('blog')
     },
   ];
   
