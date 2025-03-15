@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
-import { Clock, FileText } from 'lucide-react';
+import { Clock, FileText, MessageSquare } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export interface PDF {
@@ -86,7 +86,8 @@ const PDFCard = ({ pdf, index }: PDFCardProps) => {
         )}
         
         {hasChatMessages && (
-          <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+          <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full flex items-center gap-1">
+            <MessageSquare className="h-3 w-3" />
             {language === 'ar' ? 'مع محادثة' : 'Has Chat'}
           </div>
         )}

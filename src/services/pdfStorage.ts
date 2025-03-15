@@ -40,6 +40,11 @@ export const getSavedPDFs = (): UploadedPDF[] => {
 
 // Save a PDF to localStorage
 export const savePDF = (pdf: UploadedPDF): UploadedPDF => {
+  if (!pdf.dataUrl) {
+    console.error('Attempted to save PDF without dataUrl:', pdf);
+    throw new Error('PDF must have a dataUrl to be saved');
+  }
+  
   const savedPDFs = getSavedPDFs();
   
   // Check if PDF already exists
@@ -60,7 +65,17 @@ export const savePDF = (pdf: UploadedPDF): UploadedPDF => {
 // Get a specific PDF by ID
 export const getPDFById = (id: string): UploadedPDF | null => {
   const savedPDFs = getSavedPDFs();
-  return savedPDFs.find(pdf => pdf.id === id) || null;
+  const pdf = savedPDFs.find(pdf => pdf.id === id);
+  
+  if (!pdf) return null;
+  
+  // Ensure the PDF has a dataUrl
+  if (!pdf.dataUrl) {
+    console.error('Retrieved PDF missing dataUrl:', pdf);
+    return null;
+  }
+  
+  return pdf;
 };
 
 // Add a chat message to a PDF

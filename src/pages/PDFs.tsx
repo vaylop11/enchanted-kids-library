@@ -1,12 +1,12 @@
 
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { pdfs } from '@/data/pdfs';
 import PDFCard from '@/components/PDFCard';
 import Navbar from '@/components/Navbar';
 import { Search, Filter, X, FileUp } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { getSavedPDFs } from '@/services/pdfStorage';
 
 const PDFs = () => {
   const location = useLocation();
@@ -14,23 +14,29 @@ const PDFs = () => {
   const { language } = useLanguage();
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredPDFs, setFilteredPDFs] = useState(pdfs);
+  const [savedPDFs, setSavedPDFs] = useState(getSavedPDFs());
+  const [filteredPDFs, setFilteredPDFs] = useState(savedPDFs);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
-  // Update filtered PDFs when search changes
+  // Load saved PDFs on mount
+  useEffect(() => {
+    setSavedPDFs(getSavedPDFs());
+  }, []);
+  
+  // Update filtered PDFs when search changes or when savedPDFs changes
   useEffect(() => {
     if (searchTerm) {
       const lowercaseSearch = searchTerm.toLowerCase();
-      const results = pdfs.filter(
+      const results = savedPDFs.filter(
         pdf => 
           pdf.title.toLowerCase().includes(lowercaseSearch) || 
           pdf.summary.toLowerCase().includes(lowercaseSearch)
       );
       setFilteredPDFs(results);
     } else {
-      setFilteredPDFs(pdfs);
+      setFilteredPDFs(savedPDFs);
     }
-  }, [searchTerm]);
+  }, [searchTerm, savedPDFs]);
   
   return (
     <div className="min-h-screen flex flex-col">
