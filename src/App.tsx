@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import PDFs from "./pages/PDFs";
 import PDFViewer from "./pages/PDFViewer";
 import NotFound from "./pages/NotFound";
+import BlogPage from "./pages/BlogPage";
+import BlogPost from "./pages/BlogPost";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +25,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/pdfs" element={<PDFs />} />
             <Route path="/pdf/:id" element={<PDFViewer />} />
+            <Route path="/blog" element={<BlogPage />} />
+            <Route path="/blog/:id" element={<BlogPost />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

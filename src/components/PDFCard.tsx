@@ -61,6 +61,7 @@ const PDFCard = ({ pdf, index }: PDFCardProps) => {
         isInView ? 'animate-fade-in opacity-100' : 'opacity-0'
       )}
       style={{ animationDelay }}
+      aria-label={`Open ChatPDF document: ${pdf.title}`}
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/20">
         {pdf.thumbnail ? (
@@ -73,7 +74,7 @@ const PDFCard = ({ pdf, index }: PDFCardProps) => {
             />
             <img
               src={pdf.thumbnail}
-              alt={language === 'ar' ? `صورة مصغرة لـ ${pdf.title}` : `Thumbnail for ${pdf.title}`}
+              alt={language === 'ar' ? `صورة مصغرة لـ ${pdf.title}` : `ChatPDF thumbnail for ${pdf.title}`}
               className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
               onLoad={() => setIsLoaded(true)}
               loading="lazy"

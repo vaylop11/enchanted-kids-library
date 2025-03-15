@@ -11,6 +11,9 @@ import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { getSavedPDFs, createPDFFromFile } from '@/services/pdfStorage';
+import FeaturesSection from '@/components/FeaturesSection';
+import FAQSection from '@/components/FAQSection';
+import BlogSection from '@/components/BlogSection';
 
 const Index = () => {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -133,18 +136,18 @@ const Index = () => {
           <div className="inline-block rounded-full bg-primary px-3 py-1 text-sm font-medium mb-6 animate-fade-in">
             <span className="flex items-center gap-1.5">
               <FileText className="h-3.5 w-3.5" />
-              {language === 'ar' ? 'مرحبًا بك في أداة دردشة PDF' : 'Welcome to PDF Chat Tool'}
+              {language === 'ar' ? 'مرحبًا بك في ChatPDF' : 'Welcome to ChatPDF'}
             </span>
           </div>
           
           <h1 className="heading-1 mb-6 max-w-4xl">
-            {language === 'ar' ? 'تحدث مع ملفات PDF الخاصة بك' : 'Chat with your PDF documents'}
+            {language === 'ar' ? 'ChatPDF: تحدث مع ملفات PDF الخاصة بك' : 'ChatPDF: Chat with your PDF documents'}
           </h1>
           
           <p className="paragraph mb-8 max-w-3xl">
             {language === 'ar' 
-              ? 'قم بتحميل ملفات PDF الخاصة بك، واستعرضها، وطرح الأسئلة عليها. استخدم قوة الذكاء الاصطناعي للحصول على إجابات دقيقة من مستنداتك.'
-              : 'Upload your PDFs, preview them, and ask questions. Leverage the power of AI to get accurate answers from your documents.'
+              ? 'قم بتحميل ملفات PDF الخاصة بك واستخدم ChatPDF لطرح الأسئلة والحصول على إجابات ذكية. استخدم قوة الذكاء الاصطناعي للحصول على إجابات دقيقة من مستنداتك.'
+              : 'Upload your PDFs and use ChatPDF to ask questions and get intelligent answers. Leverage the power of AI to get accurate insights from your documents.'
             }
           </p>
           
@@ -165,11 +168,14 @@ const Index = () => {
         </div>
       </section>
       
+      {/* Features Section */}
+      <FeaturesSection />
+      
       {/* Upload Section */}
       <section id="upload" className="py-16 bg-muted/30">
         <div className="container mx-auto px-4 md:px-6 max-w-3xl">
           <h2 className="heading-2 mb-8 text-center">
-            {language === 'ar' ? 'تحميل ملف PDF' : 'Upload PDF'}
+            {language === 'ar' ? 'تحميل ملف PDF للدردشة' : 'Upload PDF for ChatPDF'}
           </h2>
           
           {isUploading ? (
@@ -204,7 +210,7 @@ const Index = () => {
               <FileUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               
               <h3 className="text-lg font-medium mb-2">
-                {language === 'ar' ? 'اسحب وأفلت ملف PDF هنا' : 'Drag & Drop PDF Here'}
+                {language === 'ar' ? 'اسحب وأفلت ملف PDF هنا لبدء الدردشة' : 'Drag & Drop PDF Here to Start ChatPDF'}
               </h3>
               
               <p className="text-muted-foreground mb-6">
@@ -235,7 +241,7 @@ const Index = () => {
       <section id="recent" className="py-20 px-4 md:px-6 container mx-auto max-w-7xl">
         <div className="flex justify-between items-end mb-10">
           <h2 className="heading-2">
-            {language === 'ar' ? 'ملفات PDF الأخيرة' : 'Recent PDFs'}
+            {language === 'ar' ? 'ملفات ChatPDF الأخيرة' : 'Recent ChatPDF Files'}
           </h2>
           <Link 
             to="/pdfs" 
@@ -255,12 +261,12 @@ const Index = () => {
             <div className="col-span-full text-center py-12">
               <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <h3 className="text-lg font-medium mb-2">
-                {language === 'ar' ? 'لا توجد ملفات PDF حتى الآن' : 'No PDFs Yet'}
+                {language === 'ar' ? 'لا توجد ملفات ChatPDF حتى الآن' : 'No ChatPDF Files Yet'}
               </h3>
               <p className="text-muted-foreground">
                 {language === 'ar' 
-                  ? 'قم بتحميل ملف PDF للبدء' 
-                  : 'Upload a PDF to get started'
+                  ? 'قم بتحميل ملف PDF للبدء في الدردشة' 
+                  : 'Upload a PDF to start ChatPDF'
                 }
               </p>
             </div>
@@ -268,19 +274,25 @@ const Index = () => {
         </div>
       </section>
       
+      {/* Blog Section */}
+      <BlogSection />
+      
+      {/* FAQ Section */}
+      <FAQSection />
+      
       {/* Footer */}
       <footer className="mt-auto py-10 bg-muted/30 border-t border-border">
         <div className="container mx-auto px-4 md:px-6 text-center text-muted-foreground">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <FileText className="h-5 w-5" />
             <span className="font-display text-lg font-medium">
-              {language === 'ar' ? 'أداة دردشة PDF' : 'PDF Chat Tool'}
+              {language === 'ar' ? 'ChatPDF' : 'ChatPDF'}
             </span>
           </div>
           <p className="text-sm">
             {language === 'ar' 
-              ? `© ${new Date().getFullYear()} أداة دردشة PDF. جميع الحقوق محفوظة.`
-              : `© ${new Date().getFullYear()} PDF Chat Tool. All rights reserved.`
+              ? `© ${new Date().getFullYear()} ChatPDF. جميع الحقوق محفوظة.`
+              : `© ${new Date().getFullYear()} ChatPDF. All rights reserved.`
             }
           </p>
         </div>
