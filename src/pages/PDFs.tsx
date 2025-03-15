@@ -1,22 +1,25 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PDFCard from '@/components/PDFCard';
 import Navbar from '@/components/Navbar';
-import { Search, Filter, X, FileUp } from 'lucide-react';
+import { Search, Filter, X, FileUp, Upload } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { getSavedPDFs } from '@/services/pdfStorage';
+import { getSavedPDFs, createPDFFromFile } from '@/services/pdfStorage';
+import { toast } from 'sonner';
 
 const PDFs = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [savedPDFs, setSavedPDFs] = useState(getSavedPDFs());
   const [filteredPDFs, setFilteredPDFs] = useState(savedPDFs);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   
   // Load saved PDFs on mount
   useEffect(() => {
@@ -37,6 +40,74 @@ const PDFs = () => {
       setFilteredPDFs(savedPDFs);
     }
   }, [searchTerm, savedPDFs]);
+
+  // Handle file upload
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      await handleFileUpload(files[0]);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    // Check if file is PDF
+    if (file.type !== 'application/pdf') {
+      toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
+      return;
+    }
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      
+      // Read file as data URL
+      const reader = new FileReader();
+      
+      reader.onload = async (event) => {
+        if (event.target && typeof event.target.result === 'string') {
+          // Create PDF entry
+          const pdf = createPDFFromFile(file, event.target.result);
+          
+          // Show success message
+          toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
+          
+          // Reset state
+          setIsUploading(false);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+          
+          // Refresh the PDF list
+          setSavedPDFs(getSavedPDFs());
+          
+          // Navigate to the PDF viewer
+          navigate(`/pdf/${pdf.id}`);
+        }
+      };
+      
+      reader.onerror = () => {
+        setIsUploading(false);
+        toast.error(language === 'ar' ? 'فشل في قراءة الملف' : 'Failed to read file');
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Upload error:', error);
+      setIsUploading(false);
+      toast.error(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
+    }
+  };
+
+  const handleUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -75,10 +146,32 @@ const PDFs = () => {
             )}
           </div>
           
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept=".pdf"
+            onChange={handleFileChange}
+          />
+          
           {/* Upload Button */}
-          <Button onClick={() => navigate('/')} className="md:w-auto w-full">
-            <FileUp className="h-4 w-4 mr-2" />
-            {language === 'ar' ? 'تحميل ملف PDF' : 'Upload PDF'}
+          <Button 
+            onClick={handleUploadClick}
+            className="md:w-auto w-full"
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <>
+                <div className="h-4 w-4 rounded-full border border-current border-t-transparent animate-spin mr-2" />
+                {language === 'ar' ? 'جارٍ التحميل...' : 'Uploading...'}
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4 mr-2" />
+                {language === 'ar' ? 'تحميل ملف PDF' : 'Upload PDF'}
+              </>
+            )}
           </Button>
         </div>
         
@@ -110,8 +203,9 @@ const PDFs = () => {
                 }
               </p>
               <Button
-                onClick={() => navigate('/')}
+                onClick={handleUploadClick}
                 className="mt-4"
+                disabled={isUploading}
               >
                 {language === 'ar' ? 'تحميل ملف' : 'Upload PDF'}
               </Button>
