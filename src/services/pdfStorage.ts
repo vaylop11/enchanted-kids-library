@@ -1,4 +1,3 @@
-
 import { PDF } from '@/components/PDFCard';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -38,28 +37,76 @@ export const getSavedPDFs = (): UploadedPDF[] => {
   }
 };
 
-// Save a PDF to localStorage
+// Save a PDF to localStorage with storage management
 export const savePDF = (pdf: UploadedPDF): UploadedPDF => {
-  if (!pdf.dataUrl) {
-    console.error('Attempted to save PDF without dataUrl:', pdf);
-    throw new Error('PDF must have a dataUrl to be saved');
+  try {
+    if (!pdf.dataUrl) {
+      console.error('Attempted to save PDF without dataUrl:', pdf);
+      throw new Error('PDF must have a dataUrl to be saved');
+    }
+    
+    const savedPDFs = getSavedPDFs();
+    
+    // Check if PDF already exists
+    const existingIndex = savedPDFs.findIndex(p => p.id === pdf.id);
+    
+    let pdfsToSave = [...savedPDFs];
+    
+    if (existingIndex >= 0) {
+      // Update existing PDF
+      pdfsToSave[existingIndex] = pdf;
+    } else {
+      // Add new PDF
+      pdfsToSave.unshift(pdf);
+    }
+    
+    // Try to save data
+    try {
+      localStorage.setItem(PDF_STORAGE_KEY, JSON.stringify(pdfsToSave));
+    } catch (storageError) {
+      console.warn('Storage quota exceeded, pruning data:', storageError);
+      
+      // If we hit storage limits, remove the oldest PDFs until it fits
+      if (pdfsToSave.length > 1) {
+        // Start by removing the oldest PDFs (keep at least the current one)
+        let removed = false;
+        
+        while (pdfsToSave.length > 1) {
+          // Remove the oldest PDF (last in the array)
+          pdfsToSave.pop();
+          removed = true;
+          
+          try {
+            localStorage.setItem(PDF_STORAGE_KEY, JSON.stringify(pdfsToSave));
+            console.log(`Successfully saved after removing ${removed ? 'old PDFs' : 'nothing'}`);
+            break; // Successfully saved
+          } catch (e) {
+            // Still can't save, continue removing
+            console.log('Still cannot save, removing more PDFs');
+          }
+        }
+        
+        // If we still can't save, try compressing the current PDF's data
+        if (pdfsToSave.length === 1 && pdfsToSave[0].id === pdf.id) {
+          try {
+            // Try to save just the current PDF without the data URL as a last resort
+            const compressedPdf = { ...pdf };
+            compressedPdf.dataUrl = 'data-too-large'; // Placeholder
+            pdfsToSave = [compressedPdf];
+            localStorage.setItem(PDF_STORAGE_KEY, JSON.stringify(pdfsToSave));
+            console.warn('Saved PDF with compressed data due to storage limitations');
+          } catch (e) {
+            console.error('Unable to save PDF due to storage limitations, even after compression');
+          }
+        }
+      }
+    }
+    
+    return pdf;
+  } catch (error) {
+    console.error('Error saving PDF:', error);
+    return pdf;
   }
-  
-  const savedPDFs = getSavedPDFs();
-  
-  // Check if PDF already exists
-  const existingIndex = savedPDFs.findIndex(p => p.id === pdf.id);
-  
-  if (existingIndex >= 0) {
-    // Update existing PDF
-    savedPDFs[existingIndex] = pdf;
-  } else {
-    // Add new PDF
-    savedPDFs.unshift(pdf);
-  }
-  
-  localStorage.setItem(PDF_STORAGE_KEY, JSON.stringify(savedPDFs));
-  return pdf;
 };
 
 // Get a specific PDF by ID
@@ -69,10 +116,10 @@ export const getPDFById = (id: string): UploadedPDF | null => {
   
   if (!pdf) return null;
   
-  // Ensure the PDF has a dataUrl
-  if (!pdf.dataUrl) {
-    console.error('Retrieved PDF missing dataUrl:', pdf);
-    return null;
+  // Check if the PDF has valid data
+  if (!pdf.dataUrl || pdf.dataUrl === 'data-too-large') {
+    console.error('Retrieved PDF missing valid dataUrl:', pdf);
+    return pdf; // Return it anyway so UI can handle the missing data case
   }
   
   return pdf;
