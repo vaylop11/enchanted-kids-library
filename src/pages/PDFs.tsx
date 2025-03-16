@@ -133,7 +133,7 @@ const PDFs = () => {
               placeholder={language === 'ar' ? 'البحث عن ملفات...' : 'Search for PDFs...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full h-11 rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="pl-10 w-full h-11 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             {searchTerm && (
               <button 
@@ -158,18 +158,20 @@ const PDFs = () => {
           {/* Upload Button */}
           <Button 
             onClick={handleUploadClick}
-            className="md:w-auto w-full"
+            className="md:w-auto w-full bg-primary text-primary-foreground hover:bg-primary/90"
             disabled={isUploading}
           >
             {isUploading ? (
               <>
-                <div className="h-4 w-4 rounded-full border border-current border-t-transparent animate-spin mr-2" />
-                {language === 'ar' ? 'جارٍ التحميل...' : 'Uploading...'}
+                <div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin mr-2" />
+                <span className="text-primary-foreground font-medium">
+                  {language === 'ar' ? 'جارٍ التحميل...' : 'Uploading...'}
+                </span>
               </>
             ) : (
               <>
                 <Upload className="h-4 w-4 mr-2" />
-                {language === 'ar' ? 'تحميل ملف PDF' : 'Upload PDF'}
+                <span className="font-medium">{language === 'ar' ? 'تحميل ملف PDF' : 'Upload PDF'}</span>
               </>
             )}
           </Button>
@@ -192,11 +194,11 @@ const PDFs = () => {
               </div>
             </>
           ) : (
-            <div className="text-center py-20">
-              <h3 className="heading-3 mb-2">
+            <div className="text-center py-20 bg-muted/10 rounded-lg border border-border/40">
+              <h3 className="heading-3 mb-2 text-foreground">
                 {language === 'ar' ? 'لم يتم العثور على ملفات' : 'No PDFs found'}
               </h3>
-              <p className="paragraph">
+              <p className="text-foreground/80 mb-6">
                 {language === 'ar' 
                   ? 'حاول تعديل البحث أو قم بتحميل ملف جديد.'
                   : 'Try adjusting your search or upload a new PDF.'
@@ -204,10 +206,21 @@ const PDFs = () => {
               </p>
               <Button
                 onClick={handleUploadClick}
-                className="mt-4"
+                variant="default"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
                 disabled={isUploading}
               >
-                {language === 'ar' ? 'تحميل ملف' : 'Upload PDF'}
+                {isUploading ? (
+                  <>
+                    <div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin mr-2" />
+                    {language === 'ar' ? 'جارٍ التحميل...' : 'Uploading...'}
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    {language === 'ar' ? 'تحميل ملف' : 'Upload PDF'}
+                  </>
+                )}
               </Button>
             </div>
           )}

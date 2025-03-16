@@ -62,9 +62,9 @@ const BlogSection = () => {
             <Link
               key={post.id}
               to={`/blog/${post.id}`}
-              className="group"
+              className="group block cursor-pointer"
             >
-              <Card className="overflow-hidden h-full hover:shadow-md transition-all duration-300 border-border/60 hover:border-primary/20 hover:-translate-y-1">
+              <Card className="overflow-hidden h-full hover:shadow-md transition-all duration-300 border-border/60 hover:border-primary/20 hover:-translate-y-1 relative">
                 <div className="aspect-video w-full overflow-hidden">
                   <img 
                     src={post.image} 
@@ -81,7 +81,7 @@ const BlogSection = () => {
                     <span>{post.readTime}</span>
                   </div>
                   <CardTitle className="group-hover:text-primary transition-colors duration-300">{post.title}</CardTitle>
-                  <CardDescription className="line-clamp-3">{post.excerpt}</CardDescription>
+                  <CardDescription className="line-clamp-3 text-foreground/70">{post.excerpt}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="text-sm font-medium flex items-center text-primary group-hover:underline">
@@ -89,6 +89,9 @@ const BlogSection = () => {
                     <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
                   </div>
                 </CardContent>
+                <div className="absolute inset-0 z-10 cursor-pointer opacity-0">
+                  {/* Invisible overlay to ensure the entire card is clickable */}
+                </div>
               </Card>
             </Link>
           ))}

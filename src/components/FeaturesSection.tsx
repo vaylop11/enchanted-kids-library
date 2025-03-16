@@ -7,42 +7,42 @@ const FeaturesSection = () => {
   
   const features = [
     {
-      icon: <MessageSquare className="h-8 w-8 text-primary" />,
+      icon: <MessageSquare className="h-8 w-8 text-primary-foreground" />,
       title: language === 'ar' ? 'دردشة ذكية مع مستندات PDF' : 'Smart Chat with PDF Documents',
       description: language === 'ar'
         ? 'تحدث بشكل طبيعي مع مستنداتك واحصل على إجابات فورية ودقيقة بناءً على محتوى الملف.'
         : 'Chat naturally with your documents and get instant, accurate answers based on the file content.'
     },
     {
-      icon: <FileSearch className="h-8 w-8 text-primary" />,
+      icon: <FileSearch className="h-8 w-8 text-primary-foreground" />,
       title: language === 'ar' ? 'استخراج معلومات دقيقة' : 'Precise Information Extraction',
       description: language === 'ar'
         ? 'استخرج النقاط والحقائق الرئيسية من مستندات PDF الطويلة بدون الحاجة إلى قراءة الملف بأكمله.'
         : 'Extract key points and facts from lengthy PDF documents without having to read the entire file.'
     },
     {
-      icon: <Bot className="h-8 w-8 text-primary" />,
+      icon: <Bot className="h-8 w-8 text-primary-foreground" />,
       title: language === 'ar' ? 'مدعوم بالذكاء الاصطناعي المتقدم' : 'Powered by Advanced AI',
       description: language === 'ar'
         ? 'استفد من أحدث تقنيات الذكاء الاصطناعي التي تفهم السياق والمعنى في مستنداتك.'
         : 'Leverage the latest AI technology that understands context and meaning in your documents.'
     },
     {
-      icon: <Clock className="h-8 w-8 text-primary" />,
+      icon: <Clock className="h-8 w-8 text-primary-foreground" />,
       title: language === 'ar' ? 'توفير الوقت بنسبة 80%' : '80% Time Savings',
       description: language === 'ar'
         ? 'قلل وقت البحث وتحليل المستندات بشكل كبير مع الحصول على النتائج التي تحتاجها بسرعة.'
         : 'Dramatically reduce document research and analysis time while getting the results you need quickly.'
     },
     {
-      icon: <Lock className="h-8 w-8 text-primary" />,
+      icon: <Lock className="h-8 w-8 text-primary-foreground" />,
       title: language === 'ar' ? 'أمان وخصوصية متقدمة' : 'Advanced Security & Privacy',
       description: language === 'ar'
         ? 'استمتع براحة البال مع تشفير البيانات من طرف إلى طرف وضمانات الخصوصية لمستنداتك الحساسة.'
         : 'Enjoy peace of mind with end-to-end data encryption and privacy guarantees for your sensitive documents.'
     },
     {
-      icon: <Globe className="h-8 w-8 text-primary" />,
+      icon: <Globe className="h-8 w-8 text-primary-foreground" />,
       title: language === 'ar' ? 'دعم متعدد اللغات' : 'Multilingual Support',
       description: language === 'ar'
         ? 'تفاعل مع مستندات PDF بأكثر من 30 لغة مختلفة، مما يجعل المعلومات متاحة على مستوى عالمي.'
@@ -68,15 +68,15 @@ const FeaturesSection = () => {
           {features.map((feature, index) => (
             <div 
               key={index} 
-              className="bg-card rounded-2xl p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:translate-y-[-0.25rem]"
+              className="bg-card rounded-2xl p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:translate-y-[-0.25rem] border border-border/40"
             >
-              <div className="mb-4">
+              <div className="mb-4 bg-primary p-3 rounded-lg w-fit">
                 {feature.icon}
               </div>
-              <h3 className="text-xl font-display font-semibold mb-2">
+              <h3 className="text-xl font-display font-semibold mb-2 text-foreground">
                 {feature.title}
               </h3>
-              <p className="text-muted-foreground">
+              <p className="text-foreground/80">
                 {feature.description}
               </p>
             </div>

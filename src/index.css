@@ -17,8 +17,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
 
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
@@ -135,15 +135,15 @@
   
   /* Typography classes */
   .heading-1 {
-    @apply font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight;
+    @apply font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-foreground;
   }
   
   .heading-2 {
-    @apply font-display text-3xl sm:text-4xl font-bold tracking-tight;
+    @apply font-display text-3xl sm:text-4xl font-bold tracking-tight text-foreground;
   }
   
   .heading-3 {
-    @apply font-display text-2xl sm:text-3xl font-semibold tracking-tight;
+    @apply font-display text-2xl sm:text-3xl font-semibold tracking-tight text-foreground;
   }
   
   .paragraph {
@@ -152,5 +152,20 @@
   
   .caption {
     @apply text-sm text-muted-foreground;
+  }
+
+  /* Focus styles for better accessibility */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring;
+  }
+
+  /* Enhanced button loading state */
+  .btn-loading {
+    @apply relative overflow-hidden;
+  }
+
+  .btn-loading::after {
+    content: "";
+    @apply absolute inset-0 bg-current opacity-20;
   }
 }
