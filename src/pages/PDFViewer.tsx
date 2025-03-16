@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, Clock, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Clock, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -10,13 +10,15 @@ import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  getPDFById, 
-  addChatMessageToPDF, 
-  savePDF, 
-  ChatMessage, 
-  UploadedPDF 
+import {
+  getPDFById,
+  addChatMessageToPDF,
+  savePDF,
+  deletePDFById,
+  ChatMessage,
+  UploadedPDF
 } from '@/services/pdfStorage';
+import { Badge } from '@/components/ui/badge';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -39,6 +41,7 @@ const PDFViewer = () => {
   const [pdf, setPdf] = useState<UploadedPDF | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(true);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!id) {
@@ -50,7 +53,7 @@ const PDFViewer = () => {
     const loadedPdf = getPDFById(id);
     if (!loadedPdf) {
       toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
-      navigate('/');
+      navigate('/pdfs');
       return;
     }
 
@@ -60,7 +63,7 @@ const PDFViewer = () => {
     }
     
     // Check if PDF data is missing
-    if (!loadedPdf.dataUrl || loadedPdf.dataUrl === 'data-too-large') {
+    if (!loadedPdf.dataUrl) {
       setPdfError(language === 'ar' 
         ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
         : 'Could not load PDF data due to storage limitations');
@@ -78,7 +81,7 @@ const PDFViewer = () => {
     return () => {
       clearTimeout(timer);
     };
-  }, [id, navigate, language]);
+  }, [id, navigate, language, retryCount]);
 
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -90,6 +93,27 @@ const PDFViewer = () => {
       const updatedPdf = { ...pdf, pageCount: numPages };
       setPdf(updatedPdf);
       savePDF(updatedPdf);
+    }
+  };
+
+  const handleDocumentLoadError = (error: Error) => {
+    console.error('Error loading PDF:', error);
+    setPdfError(language === 'ar'
+      ? 'فشل في تحميل ملف PDF. قد يكون الملف تالفًا أو غير متوافق.'
+      : 'Failed to load PDF. The file may be corrupted or incompatible.');
+    setIsLoadingPdf(false);
+  };
+
+  const handleDeletePDF = () => {
+    if (!id) return;
+    
+    if (window.confirm(language === 'ar' 
+      ? 'هل أنت متأكد من أنك تريد حذف هذا الملف؟' 
+      : 'Are you sure you want to delete this PDF?')) {
+      
+      if (deletePDFById(id)) {
+        navigate('/pdfs');
+      }
     }
   };
 
@@ -132,6 +156,12 @@ const PDFViewer = () => {
 
   const handleZoomOut = () => {
     setPdfScale(prev => Math.max(prev - 0.2, 0.5));
+  };
+
+  const handleRetryLoading = () => {
+    setIsLoadingPdf(true);
+    setPdfError(null);
+    setRetryCount(prev => prev + 1);
   };
 
   const handleChatSubmit = (e: React.FormEvent) => {
@@ -190,10 +220,10 @@ const PDFViewer = () => {
           {language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF Not Found'}
         </h1>
         <Link 
-          to="/" 
+          to="/pdfs" 
           className="text-primary hover:underline"
         >
-          {language === 'ar' ? 'العودة إلى الصفحة الرئيسية' : 'Return to Home'}
+          {language === 'ar' ? 'العودة إلى قائمة الملفات' : 'Return to PDF List'}
         </Link>
       </div>
     );
@@ -207,11 +237,11 @@ const PDFViewer = () => {
         <div className="container mx-auto px-4 md:px-6 max-w-7xl">
           <div className="flex justify-between items-center mb-6">
             <Link 
-              to="/" 
+              to="/pdfs" 
               className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className={`h-4 w-4 ${direction === 'rtl' ? 'ml-2 rotate-180' : 'mr-2'}`} />
-              {language === 'ar' ? 'العودة إلى الصفحة الرئيسية' : 'Back to Home'}
+              {language === 'ar' ? 'العودة إلى قائمة الملفات' : 'Back to PDFs'}
             </Link>
             
             <div className="flex items-center gap-2">
@@ -222,7 +252,7 @@ const PDFViewer = () => {
               >
                 <Share className="h-5 w-5" />
               </button>
-              {pdf.dataUrl && pdf.dataUrl !== 'data-too-large' && (
+              {pdf.dataUrl && (
                 <a
                   href={pdf.dataUrl}
                   download={pdf.title}
@@ -232,6 +262,13 @@ const PDFViewer = () => {
                   <DownloadCloud className="h-5 w-5" />
                 </a>
               )}
+              <button
+                onClick={handleDeletePDF}
+                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-destructive/10 text-destructive transition-colors"
+                aria-label={language === 'ar' ? 'حذف الملف' : 'Delete file'}
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
             </div>
           </div>
           
@@ -239,9 +276,19 @@ const PDFViewer = () => {
             {/* PDF Viewer */}
             <div className="lg:w-2/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm">
               <div className="flex justify-between items-center p-4 border-b">
-                <h1 className="font-display text-xl font-medium truncate">
-                  {pdf.title}
-                </h1>
+                <div>
+                  <h1 className="font-display text-xl font-medium truncate">
+                    {pdf.title}
+                  </h1>
+                  <div className="flex gap-2 mt-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {pdf.fileSize}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {pdf.pageCount || '?'} {language === 'ar' ? 'صفحات' : 'pages'}
+                    </Badge>
+                  </div>
+                </div>
                 <button 
                   onClick={() => setShowPdfControls(!showPdfControls)}
                   className="p-1 rounded-md hover:bg-muted transition-colors"
@@ -258,7 +305,7 @@ const PDFViewer = () => {
                         variant="outline" 
                         size="sm" 
                         onClick={handlePrevPage}
-                        disabled={pageNumber <= 1 || pdfError !== null}
+                        disabled={pageNumber <= 1 || pdfError !== null || !pdf.dataUrl}
                       >
                         {language === 'ar' ? 'السابق' : 'Prev'}
                       </Button>
@@ -272,7 +319,7 @@ const PDFViewer = () => {
                         variant="outline" 
                         size="sm" 
                         onClick={handleNextPage}
-                        disabled={!numPages || pageNumber >= numPages || pdfError !== null}
+                        disabled={!numPages || pageNumber >= numPages || pdfError !== null || !pdf.dataUrl}
                       >
                         {language === 'ar' ? 'التالي' : 'Next'}
                       </Button>
@@ -283,20 +330,20 @@ const PDFViewer = () => {
                         variant="outline" 
                         size="sm" 
                         onClick={handleZoomOut}
-                        disabled={pdfError !== null}
+                        disabled={pdfError !== null || !pdf.dataUrl}
                       >-</Button>
                       <span className="text-sm">{Math.round(pdfScale * 100)}%</span>
                       <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={handleZoomIn}
-                        disabled={pdfError !== null}
+                        disabled={pdfError !== null || !pdf.dataUrl}
                       >+</Button>
                     </div>
                   </div>
                   
                   <div className="text-sm text-muted-foreground">
-                    {pdf.fileSize} • {language === 'ar' ? 'تم التحميل' : 'Uploaded'} {pdf.uploadDate}
+                    {language === 'ar' ? 'تم التحميل' : 'Uploaded'}: {pdf.uploadDate}
                   </div>
                 </div>
               )}
@@ -304,9 +351,13 @@ const PDFViewer = () => {
               <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
                 {isLoadingPdf ? (
                   <div className="flex flex-col items-center justify-center h-full w-full">
-                    <Skeleton className="h-16 w-16 rounded-full mb-4" />
-                    <Skeleton className="h-6 w-48 mb-2" />
-                    <Skeleton className="h-4 w-32" />
+                    <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
+                    <p className="text-lg font-medium mb-2">
+                      {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'ar' ? 'يرجى الانتظار' : 'Please wait'}
+                    </p>
                   </div>
                 ) : pdfError ? (
                   <div className="flex flex-col items-center justify-center h-full w-full">
@@ -314,10 +365,30 @@ const PDFViewer = () => {
                     <h2 className="text-xl font-medium mb-2 text-center">
                       {language === 'ar' ? 'تعذر تحميل الملف' : 'Failed to load PDF'}
                     </h2>
-                    <p className="text-muted-foreground text-center max-w-md">
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
                       {pdfError}
                     </p>
-                    <Button className="mt-6" onClick={() => navigate('/pdfs')}>
+                    <div className="flex gap-3">
+                      <Button variant="outline" onClick={handleRetryLoading}>
+                        {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                      </Button>
+                      <Button onClick={() => navigate('/pdfs')}>
+                        {language === 'ar' ? 'العودة إلى قائمة الملفات' : 'Back to PDF List'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : !pdf.dataUrl ? (
+                  <div className="flex flex-col items-center justify-center h-full w-full">
+                    <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h2 className="text-xl font-medium mb-2 text-center">
+                      {language === 'ar' ? 'لا توجد بيانات PDF' : 'No PDF Data Available'}
+                    </h2>
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                      {language === 'ar' 
+                        ? 'لم يتم تخزين بيانات PDF بسبب قيود التخزين. حاول حذف بعض الملفات القديمة وتحميل هذا الملف مرة أخرى.'
+                        : 'PDF data was not stored due to storage limitations. Try deleting some older PDFs and upload this file again.'}
+                    </p>
+                    <Button onClick={() => navigate('/pdfs')}>
                       {language === 'ar' ? 'العودة إلى قائمة الملفات' : 'Back to PDF List'}
                     </Button>
                   </div>
@@ -325,11 +396,10 @@ const PDFViewer = () => {
                   <Document
                     file={pdf.dataUrl}
                     onLoadSuccess={handleDocumentLoadSuccess}
+                    onLoadError={handleDocumentLoadError}
                     loading={
                       <div className="flex items-center justify-center h-full w-full">
-                        <div className="animate-pulse text-muted-foreground">
-                          {language === 'ar' ? 'جاري التحميل...' : 'Loading...'}
-                        </div>
+                        <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
                       </div>
                     }
                     error={
@@ -338,11 +408,14 @@ const PDFViewer = () => {
                         <p className="text-muted-foreground text-center mb-2">
                           {language === 'ar' ? 'فشل تحميل الملف' : 'Failed to load PDF'}
                         </p>
-                        <p className="text-sm text-muted-foreground text-center max-w-md">
+                        <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
                           {language === 'ar' 
                             ? 'قد تكون هناك مشكلة في تنسيق الملف أو أن الملف قد يكون كبيرًا جدًا للعرض.' 
                             : 'There might be an issue with the file format or the file may be too large to display.'}
                         </p>
+                        <Button variant="outline" onClick={handleRetryLoading}>
+                          {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                        </Button>
                       </div>
                     }
                   >
@@ -351,6 +424,14 @@ const PDFViewer = () => {
                       scale={pdfScale}
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
+                      error={
+                        <div className="flex flex-col items-center justify-center p-6">
+                          <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
+                          <p className="text-sm text-center">
+                            {language === 'ar' ? 'خطأ في عرض الصفحة' : 'Error rendering page'}
+                          </p>
+                        </div>
+                      }
                     />
                   </Document>
                 )}
@@ -419,13 +500,13 @@ const PDFViewer = () => {
                         placeholder={language === 'ar' ? 'اكتب سؤالك هنا...' : 'Type your question here...'}
                         className="pr-12 resize-none"
                         rows={3}
-                        disabled={pdfError !== null}
+                        disabled={pdfError !== null || !pdf.dataUrl}
                       />
                       <Button 
                         type="submit" 
                         size="icon" 
                         className="absolute bottom-2 right-2"
-                        disabled={!chatInput.trim() || pdfError !== null}
+                        disabled={!chatInput.trim() || pdfError !== null || !pdf.dataUrl}
                       >
                         <Send className="h-4 w-4" />
                       </Button>

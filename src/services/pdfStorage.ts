@@ -77,40 +77,41 @@ export const savePDF = (pdf: UploadedPDF): UploadedPDF => {
       console.warn('Storage quota exceeded, pruning data:', storageError);
       
       // If we hit storage limits, remove the oldest PDFs until it fits
-      if (pdfsToSave.length > 1) {
-        // Start by removing the oldest PDFs (keep at least the current one)
-        let removed = false;
+      let removed = false;
+      
+      while (pdfsToSave.length > 1) {
+        // Remove the oldest PDF (last in the array)
+        pdfsToSave.pop();
+        removed = true;
         
-        while (pdfsToSave.length > 1) {
-          // Remove the oldest PDF (last in the array)
-          pdfsToSave.pop();
-          removed = true;
-          
-          try {
-            localStorage.setItem(PDF_STORAGE_KEY, JSON.stringify(pdfsToSave));
-            console.log(`Successfully saved after removing ${removed ? 'old PDFs' : 'nothing'}`);
-            toast.warning('Some older PDFs were removed due to storage limitations');
-            break; // Successfully saved
-          } catch (e) {
-            // Still can't save, continue removing
-            console.log('Still cannot save, removing more PDFs');
-          }
+        try {
+          localStorage.setItem(PDF_STORAGE_KEY, JSON.stringify(pdfsToSave));
+          console.log(`Successfully saved after removing ${removed ? 'old PDFs' : 'nothing'}`);
+          toast.warning('Some older PDFs were removed due to storage limitations');
+          break; // Successfully saved
+        } catch (e) {
+          // Still can't save, continue removing
+          console.log('Still cannot save, removing more PDFs');
         }
-        
-        // If we still can't save, try compressing the current PDF's data
-        if (pdfsToSave.length === 1 && pdfsToSave[0].id === pdf.id) {
-          try {
-            // Try to save just the current PDF without the data URL as a last resort
-            const compressedPdf = { ...pdf };
-            compressedPdf.dataUrl = 'data-too-large'; // Placeholder
-            pdfsToSave = [compressedPdf];
-            localStorage.setItem(PDF_STORAGE_KEY, JSON.stringify(pdfsToSave));
-            console.warn('Saved PDF with compressed data due to storage limitations');
-            toast.error('PDF data was compressed due to browser storage limitations');
-          } catch (e) {
-            console.error('Unable to save PDF due to storage limitations, even after compression');
-            toast.error('Unable to save PDF due to browser storage limitations');
-          }
+      }
+      
+      // If we still can't save, try saving without the data URL as a last resort
+      if (pdfsToSave.length === 1 && pdfsToSave[0].id === pdf.id) {
+        try {
+          // Try to save just metadata without the large dataUrl
+          const compressedPdf = { ...pdf };
+          delete compressedPdf.dataUrl; // Remove the large dataUrl property
+          compressedPdf.dataUrl = ''; // Set empty string instead
+          pdfsToSave = [compressedPdf];
+          localStorage.setItem(PDF_STORAGE_KEY, JSON.stringify(pdfsToSave));
+          console.warn('Saved PDF without dataUrl due to storage limitations');
+          toast.error('PDF data couldn\'t be stored due to browser storage limitations');
+          
+          // Return the original PDF for this session, even though we couldn't save it fully
+          return pdf;
+        } catch (e) {
+          console.error('Unable to save PDF due to storage limitations, even without dataUrl');
+          toast.error('Unable to save PDF due to browser storage limitations');
         }
       }
     }
@@ -131,9 +132,9 @@ export const getPDFById = (id: string): UploadedPDF | null => {
   if (!pdf) return null;
   
   // Check if the PDF has valid data
-  if (!pdf.dataUrl || pdf.dataUrl === 'data-too-large') {
-    console.error('Retrieved PDF missing valid dataUrl:', pdf);
-    return pdf; // Return it anyway so UI can handle the missing data case
+  if (!pdf.dataUrl) {
+    console.error('Retrieved PDF missing dataUrl:', pdf);
+    toast.error('PDF data is missing. It may have been partially saved due to storage limitations.');
   }
   
   return pdf;
@@ -184,6 +185,10 @@ export const deletePDFById = (id: string): boolean => {
 export const createPDFFromFile = (file: File, dataUrl: string): UploadedPDF => {
   const now = new Date();
   const formattedDate = now.toISOString().split('T')[0];
+  
+  // Generate a thumbnail for the PDF (first page preview)
+  // This would normally use PDF.js to render the first page
+  // For simplicity, we'll use a placeholder or the actual dataUrl
   
   const newPDF: UploadedPDF = {
     id: uuidv4(),

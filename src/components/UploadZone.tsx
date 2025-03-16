@@ -30,12 +30,14 @@ const UploadZone = () => {
     // Check if file is PDF
     if (file.type !== 'application/pdf') {
       toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
+      setUploadError(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       return;
     }
 
     // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast.error(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
+      setUploadError(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
       return;
     }
 
@@ -66,6 +68,11 @@ const UploadZone = () => {
             clearInterval(progressInterval);
             setUploadProgress(100);
             
+            // Check if PDF was successfully created with dataUrl
+            if (!pdf.dataUrl) {
+              throw new Error('PDF data could not be stored');
+            }
+            
             // Show success message
             toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
             
@@ -95,7 +102,8 @@ const UploadZone = () => {
         }
       };
       
-      reader.onerror = () => {
+      reader.onerror = (error) => {
+        console.error('FileReader error:', error);
         clearInterval(progressInterval);
         setIsUploading(false);
         setUploadProgress(0);
