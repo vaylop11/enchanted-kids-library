@@ -1,5 +1,5 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { formatFileSize } from './pdfStorage';
@@ -13,6 +13,7 @@ export interface SupabasePDF {
   fileSize: string;
   thumbnail?: string;
   filePath: string;
+  fileUrl?: string;
 }
 
 export interface SupabaseChatMessage {
@@ -53,14 +54,15 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
     const formattedDate = now.toISOString().split('T')[0];
     
     // Create a record in the pdfs table
-    const { data: pdfData, error: pdfError } = await supabase
+    const { data: pdfData, error: pdfError } = await supabaseUntyped
       .from('pdfs')
       .insert({
         user_id: userId,
         title: file.name,
         summary: `Uploaded on ${formattedDate}`,
         file_path: filePath,
-        file_size: formatFileSize(file.size)
+        file_size: formatFileSize(file.size),
+        upload_date: formattedDate
       })
       .select('id')
       .single();
@@ -79,7 +81,8 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
       uploadDate: formattedDate,
       pageCount: 0, // Will be updated when loaded in the viewer
       fileSize: formatFileSize(file.size),
-      filePath: filePath
+      filePath: filePath,
+      fileUrl: publicURL
     };
     
     return newPDF;
@@ -93,7 +96,7 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
 // Get all PDFs for a user
 export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('pdfs')
       .select('*')
       .eq('user_id', userId)
@@ -105,7 +108,7 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
       return [];
     }
     
-    return data.map(pdf => ({
+    return data.map((pdf: any) => ({
       id: pdf.id,
       title: pdf.title,
       summary: pdf.summary || '',
@@ -125,7 +128,7 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
 // Get a PDF by ID
 export const getPDFById = async (pdfId: string): Promise<SupabasePDF | null> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('pdfs')
       .select('*')
       .eq('id', pdfId)
@@ -163,7 +166,7 @@ export const getPDFById = async (pdfId: string): Promise<SupabasePDF | null> => 
 // Update PDF metadata
 export const updatePDFMetadata = async (pdfId: string, updates: Partial<SupabasePDF>): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseUntyped
       .from('pdfs')
       .update({
         title: updates.title,
@@ -206,7 +209,7 @@ export const deletePDF = async (pdfId: string): Promise<boolean> => {
     }
     
     // Delete the PDF record
-    const { error: recordError } = await supabase
+    const { error: recordError } = await supabaseUntyped
       .from('pdfs')
       .delete()
       .eq('id', pdfId);
@@ -233,7 +236,7 @@ export const addChatMessageToPDF = async (
   isUser: boolean
 ): Promise<SupabaseChatMessage | null> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('pdf_chats')
       .insert({
         pdf_id: pdfId,
@@ -265,7 +268,7 @@ export const addChatMessageToPDF = async (
 // Get chat messages for a PDF
 export const getChatMessagesForPDF = async (pdfId: string): Promise<SupabaseChatMessage[]> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseUntyped
       .from('pdf_chats')
       .select('*')
       .eq('pdf_id', pdfId)
@@ -277,7 +280,7 @@ export const getChatMessagesForPDF = async (pdfId: string): Promise<SupabaseChat
       return [];
     }
     
-    return data.map(message => ({
+    return data.map((message: any) => ({
       id: message.id,
       content: message.content,
       isUser: message.is_user,
