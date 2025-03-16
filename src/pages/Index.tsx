@@ -7,12 +7,13 @@ import FeaturesSection from '@/components/FeaturesSection';
 import BlogSection from '@/components/BlogSection';
 import FAQSection from '@/components/FAQSection';
 import UploadZone from '@/components/UploadZone';
+import RecentPDFs from '@/components/RecentPDFs';
 
 const Index = () => {
   const { language } = useLanguage();
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-b from-background to-background via-muted/5">
       <Navbar />
 
       <main>
@@ -36,6 +37,9 @@ const Index = () => {
             <UploadZone />
           </div>
         </section>
+        
+        {/* Recent PDFs section */}
+        <RecentPDFs />
         
         <FeaturesSection />
         <BlogSection />

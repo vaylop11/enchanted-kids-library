@@ -1,8 +1,9 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { ArrowRight, Calendar } from "lucide-react";
+import { ArrowRight, Calendar, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 const BlogSection = () => {
   const { language } = useLanguage();
@@ -42,33 +43,33 @@ const BlogSection = () => {
   ];
   
   return (
-    <section id="blog" className="py-20 px-4 md:px-6">
+    <section id="blog" className="py-20 px-4 md:px-6 bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto max-w-7xl">
-        <div className="flex justify-between items-end mb-10">
-          <h2 className="heading-2">
-            {language === 'ar' ? 'آخر مدونات ChatPDF' : 'Latest ChatPDF Blog Posts'}
+        <div className="text-center mb-12">
+          <h2 className="heading-2 mb-4">
+            {language === 'ar' ? 'آخر مدونات ChatPDF' : 'Latest from Our Blog'}
           </h2>
-          <Link 
-            to="/blog" 
-            className="text-sm font-medium flex items-center hover:underline text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {language === 'ar' ? 'عرض جميع المقالات' : 'View All Articles'}
-            <ArrowRight className={`h-4 w-4 ${language === 'ar' ? 'mr-1 rotate-180' : 'ml-1'}`} />
-          </Link>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            {language === 'ar' 
+              ? 'اكتشف أحدث المقالات حول كيفية استخدام ChatPDF وجميع الميزات الجديدة'
+              : 'Discover the latest articles about how to use ChatPDF and all the new features'
+            }
+          </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {blogPosts.map((post) => (
             <Link
               key={post.id}
               to={`/blog/${post.id}`}
+              className="group"
             >
-              <Card key={post.id} className="overflow-hidden hover:shadow-md transition-shadow duration-300">
+              <Card className="overflow-hidden h-full hover:shadow-md transition-all duration-300 border-border/60 hover:border-primary/20 hover:-translate-y-1">
                 <div className="aspect-video w-full overflow-hidden">
                   <img 
                     src={post.image} 
                     alt={post.title}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
                 <CardHeader>
@@ -76,20 +77,30 @@ const BlogSection = () => {
                     <Calendar className="h-3.5 w-3.5 mr-1" />
                     <span>{post.date}</span>
                     <span className="mx-2">•</span>
+                    <Clock className="h-3.5 w-3.5 mr-1" />
                     <span>{post.readTime}</span>
                   </div>
-                  <CardTitle className="line-clamp-2">{post.title}</CardTitle>
+                  <CardTitle className="group-hover:text-primary transition-colors duration-300">{post.title}</CardTitle>
                   <CardDescription className="line-clamp-3">{post.excerpt}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-sm font-medium flex items-center text-primary hover:underline">
+                  <div className="text-sm font-medium flex items-center text-primary group-hover:underline">
                     {language === 'ar' ? 'قراءة المزيد' : 'Read More'}
-                    <ArrowRight className="h-4 w-4 ml-1" />
+                    <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
                   </div>
                 </CardContent>
               </Card>
             </Link>
           ))}
+        </div>
+        
+        <div className="text-center mt-10">
+          <Button asChild variant="outline" className="animate-fade-in">
+            <Link to="/blog">
+              {language === 'ar' ? 'عرض جميع المقالات' : 'View All Articles'}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </div>
     </section>
