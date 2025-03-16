@@ -172,6 +172,7 @@ export const updatePDFMetadata = async (pdfId: string, updates: Partial<Supabase
         title: updates.title,
         summary: updates.summary,
         page_count: updates.pageCount,
+        // Use database column naming convention
         updated_at: new Date().toISOString()
       })
       .eq('id', pdfId);
