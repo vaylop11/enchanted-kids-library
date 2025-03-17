@@ -335,7 +335,7 @@ const UploadZone = () => {
                 }}
                 disabled={isUploading}
               >
-                <File className="mr-2 h-4 w-4" />
+                <FileIcon className="mr-2 h-4 w-4" />
                 {language === 'ar' ? 'اختر ملف' : 'Select File'}
               </Button>
             )}
