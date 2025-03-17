@@ -29,6 +29,18 @@ const UploadZone = () => {
     // Reset error state
     setUploadError(null);
     
+    // Check if user is logged in
+    if (!user) {
+      toast.error(language === 'ar' 
+        ? 'يرجى تسجيل الدخول لتحميل الملفات' 
+        : 'Please sign in to upload files');
+      setUploadError(language === 'ar' 
+        ? 'يرجى تسجيل الدخول لتحميل الملفات' 
+        : 'Please sign in to upload files');
+      navigate('/signin');
+      return;
+    }
+    
     // Check if file is PDF
     if (file.type !== 'application/pdf') {
       toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
@@ -57,94 +69,36 @@ const UploadZone = () => {
         });
       }, 200);
 
-      if (user) {
-        // If user is logged in, upload PDF to Supabase
-        const pdf = await uploadPDFToSupabase(file, user.id);
+      // Upload PDF to Supabase
+      const pdf = await uploadPDFToSupabase(file, user.id);
+      
+      // Clear interval and complete progress
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      if (pdf) {
+        // Show success message
+        toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
         
-        // Clear interval and complete progress
-        clearInterval(progressInterval);
-        setUploadProgress(100);
-        
-        if (pdf) {
-          // Show success message
-          toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-          
-          // Reset state
-          setTimeout(() => {
-            setIsUploading(false);
-            setUploadProgress(0);
-            if (fileInputRef.current) {
-              fileInputRef.current.value = '';
-            }
-            
-            // Navigate to the PDF viewer
-            navigate(`/pdf/${pdf.id}`);
-          }, 500);
-        } else {
-          // Handle upload failure
-          clearInterval(progressInterval);
+        // Reset state
+        setTimeout(() => {
           setIsUploading(false);
           setUploadProgress(0);
-          setUploadError(language === 'ar' 
-            ? 'فشل في تحميل الملف. يرجى المحاولة مرة أخرى.' 
-            : 'Failed to upload file. Please try again.');
-        }
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+          
+          // Navigate to the PDF viewer
+          navigate(`/pdf/${pdf.id}`);
+        }, 500);
       } else {
-        // If user is not logged in, handle the file in session storage temporarily
-        try {
-          const fileReader = new FileReader();
-          fileReader.onload = (event) => {
-            if (event.target && event.target.result) {
-              // Store file data in session storage
-              const tempId = `temp-${Date.now()}`;
-              const fileData = {
-                id: tempId,
-                title: file.name,
-                summary: `Uploaded on ${new Date().toISOString().split('T')[0]}`,
-                uploadDate: new Date().toISOString().split('T')[0],
-                pageCount: 0, // Will be updated when loaded in the viewer
-                fileSize: formatFileSize(file.size),
-                dataUrl: event.target.result as string,
-                chatMessages: []
-              };
-              
-              // Store in session storage
-              sessionStorage.setItem('tempPdfFile', JSON.stringify({
-                fileData: fileData,
-                timestamp: Date.now()
-              }));
-              
-              // Clear interval and complete progress
-              clearInterval(progressInterval);
-              setUploadProgress(100);
-              
-              // Show success message
-              toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-              
-              // Reset state
-              setTimeout(() => {
-                setIsUploading(false);
-                setUploadProgress(0);
-                if (fileInputRef.current) {
-                  fileInputRef.current.value = '';
-                }
-                
-                // Navigate to the temporary PDF viewer
-                navigate(`/pdf/temp/${tempId}`);
-              }, 500);
-            }
-          };
-          
-          fileReader.readAsDataURL(file);
-        } catch (error) {
-          console.error('Error reading file:', error);
-          clearInterval(progressInterval);
-          setIsUploading(false);
-          setUploadProgress(0);
-          setUploadError(language === 'ar' 
-            ? 'فشل في قراءة الملف. يرجى المحاولة مرة أخرى.' 
-            : 'Failed to read file. Please try again.');
-        }
+        // Handle upload failure
+        clearInterval(progressInterval);
+        setIsUploading(false);
+        setUploadProgress(0);
+        setUploadError(language === 'ar' 
+          ? 'فشل في تحميل الملف. يرجى المحاولة مرة أخرى.' 
+          : 'Failed to upload file. Please try again.');
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -153,13 +107,6 @@ const UploadZone = () => {
       setUploadError(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
       toast.error(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
     }
-  };
-
-  // Helper function to format file size
-  const formatFileSize = (size: number): string => {
-    if (size < 1024) return `${size} B`;
-    if (size < 1048576) return `${(size / 1024).toFixed(2)} KB`;
-    return `${(size / 1048576).toFixed(2)} MB`;
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -202,10 +149,37 @@ const UploadZone = () => {
     navigate('/signin');
   };
 
-  // Modified rendering to allow non-logged in users to upload
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {uploadError ? (
+      {!user ? (
+        <div className="p-8 border-2 border-amber-300 rounded-xl bg-amber-50 dark:bg-amber-950/20">
+          <div className="flex flex-col items-center justify-center text-center space-y-4">
+            <div className="h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-500" />
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-medium mb-1">
+                {language === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please Sign In First'}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {language === 'ar'
+                  ? 'لتحميل وإدارة ملفات PDF، يجب تسجيل الدخول أولاً'
+                  : 'To upload and manage PDFs, you need to sign in first'
+                }
+              </p>
+              <div className="flex flex-wrap gap-3 justify-center">
+                <Button 
+                  variant="default" 
+                  onClick={handleSignIn}
+                >
+                  {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : uploadError ? (
         <div className="p-8 border-2 border-amber-300 rounded-xl bg-amber-50 dark:bg-amber-950/20">
           <div className="flex flex-col items-center justify-center text-center space-y-4">
             <div className="h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
@@ -226,14 +200,12 @@ const UploadZone = () => {
                 >
                   {language === 'ar' ? 'حاول مرة أخرى' : 'Try Again'}
                 </Button>
-                {user && (
-                  <Button 
-                    variant="default"
-                    onClick={handleNavigateToPDFs}
-                  >
-                    {language === 'ar' ? 'عرض ملفات PDF الخاصة بي' : 'View My PDFs'}
-                  </Button>
-                )}
+                <Button 
+                  variant="default"
+                  onClick={handleNavigateToPDFs}
+                >
+                  {language === 'ar' ? 'عرض ملفات PDF الخاصة بي' : 'View My PDFs'}
+                </Button>
               </div>
             </div>
           </div>
@@ -276,14 +248,6 @@ const UploadZone = () => {
                   : 'Drag and drop or click to select a file (max 10MB)'
                 }
               </p>
-              {!user && (
-                <p className="text-xs text-amber-600 mt-2">
-                  {language === 'ar'
-                    ? 'ملاحظة: يمكنك التحدث مع الملف مؤقتًا. سجل الدخول لحفظ الملفات'
-                    : 'Note: You can chat with the file temporarily. Sign in to save files'
-                  }
-                </p>
-              )}
             </div>
             
             {isUploading ? (
@@ -316,26 +280,11 @@ const UploadZone = () => {
         </div>
       )}
       
-      <div className="mt-4 text-center">
-        <p className="text-sm text-muted-foreground mb-2">
-          {language === 'ar'
-            ? 'يمكنك التحدث مع مستندك بمجرد التحميل'
-            : 'You can chat with your document once uploaded'
-          }
-        </p>
-        
-        {!user && (
-          <Button 
-            variant="link" 
-            onClick={handleSignIn}
-            className="text-xs"
-          >
-            {language === 'ar'
-              ? 'تسجيل الدخول لحفظ ملفات PDF الخاصة بك'
-              : 'Sign in to save your PDF files'
-            }
-          </Button>
-        )}
+      <div className="mt-4 text-center text-sm text-muted-foreground">
+        {language === 'ar'
+          ? 'يمكنك التحدث مع مستندك بمجرد التحميل'
+          : 'You can chat with your document once uploaded'
+        }
       </div>
     </div>
   );

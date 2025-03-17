@@ -19,7 +19,6 @@ import {
   UploadedPDF
 } from '@/services/pdfStorage';
 import { Badge } from '@/components/ui/badge';
-import { getPDFById as getSupabasePDFById } from '@/services/pdfSupabaseService';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -43,7 +42,6 @@ const PDFViewer = () => {
   const [isLoadingPdf, setIsLoadingPdf] = useState(true);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [isTempPdf, setIsTempPdf] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -51,81 +49,29 @@ const PDFViewer = () => {
       return;
     }
 
-    const loadPdf = async () => {
-      // Check if this is a temporary PDF
-      if (id.startsWith('temp-') || window.location.pathname.includes('/pdf/temp/')) {
-        setIsTempPdf(true);
-        const tempPdfData = sessionStorage.getItem('tempPdfFile');
-        if (tempPdfData) {
-          try {
-            const parsedData = JSON.parse(tempPdfData);
-            if (parsedData.fileData && parsedData.fileData.id === id) {
-              // Load the temporary PDF
-              setPdf(parsedData.fileData);
-              setChatMessages(parsedData.fileData.chatMessages || []);
-              setIsLoadingPdf(false);
-              setIsLoaded(true);
-              return;
-            }
-          } catch (error) {
-            console.error('Error parsing temporary PDF:', error);
-          }
-        }
-        // If we reach here, the temporary PDF wasn't found
-        toast.error(language === 'ar' ? 'لم يتم العثور على الملف المؤقت' : 'Temporary PDF not found');
-        navigate('/');
-        return;
-      }
+    // Load PDF from storage
+    const loadedPdf = getPDFById(id);
+    if (!loadedPdf) {
+      toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
+      navigate('/pdfs');
+      return;
+    }
 
-      // Not a temporary PDF, load from storage or Supabase
-      const loadedPdf = getPDFById(id);
-      if (loadedPdf) {
-        setPdf(loadedPdf);
-        if (loadedPdf.chatMessages) {
-          setChatMessages(loadedPdf.chatMessages);
-        }
-        
-        // Check if PDF data is missing
-        if (!loadedPdf.dataUrl) {
-          setPdfError(language === 'ar' 
-            ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
-            : 'Could not load PDF data due to storage limitations');
-          toast.error(language === 'ar' 
-            ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
-            : 'Could not load PDF data due to storage limitations');
-          setIsLoadingPdf(false);
-        }
-      } else {
-        // Try loading from Supabase
-        try {
-          const supabasePdf = await getSupabasePDFById(id);
-          if (supabasePdf && supabasePdf.fileUrl) {
-            const newPdf: UploadedPDF = {
-              id: supabasePdf.id,
-              title: supabasePdf.title,
-              summary: supabasePdf.summary,
-              uploadDate: supabasePdf.uploadDate,
-              pageCount: supabasePdf.pageCount,
-              fileSize: supabasePdf.fileSize,
-              dataUrl: supabasePdf.fileUrl,
-              chatMessages: []
-            };
-            setPdf(newPdf);
-          } else {
-            toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
-            navigate('/pdfs');
-            return;
-          }
-        } catch (error) {
-          console.error('Error loading PDF from Supabase:', error);
-          toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
-          navigate('/pdfs');
-          return;
-        }
-      }
-    };
-
-    loadPdf();
+    setPdf(loadedPdf);
+    if (loadedPdf.chatMessages) {
+      setChatMessages(loadedPdf.chatMessages);
+    }
+    
+    // Check if PDF data is missing
+    if (!loadedPdf.dataUrl) {
+      setPdfError(language === 'ar' 
+        ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
+        : 'Could not load PDF data due to storage limitations');
+      toast.error(language === 'ar' 
+        ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
+        : 'Could not load PDF data due to storage limitations');
+      setIsLoadingPdf(false);
+    }
     
     // Simulate loading to ensure animations trigger correctly
     const timer = setTimeout(() => {
@@ -146,23 +92,7 @@ const PDFViewer = () => {
     if (pdf && pdf.pageCount !== numPages) {
       const updatedPdf = { ...pdf, pageCount: numPages };
       setPdf(updatedPdf);
-      
-      // Only save to persistent storage if it's not a temporary PDF
-      if (!isTempPdf) {
-        savePDF(updatedPdf);
-      } else if (updatedPdf.id.startsWith('temp-')) {
-        // Update session storage for temp PDF
-        const tempPdfData = sessionStorage.getItem('tempPdfFile');
-        if (tempPdfData) {
-          try {
-            const parsedData = JSON.parse(tempPdfData);
-            parsedData.fileData.pageCount = numPages;
-            sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
-          } catch (error) {
-            console.error('Error updating temporary PDF page count:', error);
-          }
-        }
-      }
+      savePDF(updatedPdf);
     }
   };
 
@@ -180,13 +110,6 @@ const PDFViewer = () => {
     if (window.confirm(language === 'ar' 
       ? 'هل أنت متأكد من أنك تريد حذف هذا الملف؟' 
       : 'Are you sure you want to delete this PDF?')) {
-      
-      if (isTempPdf) {
-        // Delete from session storage
-        sessionStorage.removeItem('tempPdfFile');
-        navigate('/');
-        return;
-      }
       
       if (deletePDFById(id)) {
         navigate('/pdfs');
@@ -253,38 +176,7 @@ const PDFViewer = () => {
     };
 
     try {
-      let savedMessage;
-      
-      if (isTempPdf) {
-        // For temporary PDFs, manage chat messages in session storage
-        const tempPdfData = sessionStorage.getItem('tempPdfFile');
-        if (tempPdfData) {
-          try {
-            const parsedData = JSON.parse(tempPdfData);
-            if (!parsedData.fileData.chatMessages) {
-              parsedData.fileData.chatMessages = [];
-            }
-            
-            // Create a message with ID
-            savedMessage = {
-              ...userMessage,
-              id: `temp-msg-${Date.now()}`
-            };
-            
-            // Add to the chat messages array
-            parsedData.fileData.chatMessages.push(savedMessage);
-            
-            // Update session storage
-            sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
-          } catch (error) {
-            console.error('Error adding user message to temporary PDF:', error);
-          }
-        }
-      } else {
-        // For permanent PDFs, use the storage service
-        savedMessage = addChatMessageToPDF(id, userMessage);
-      }
-      
+      const savedMessage = addChatMessageToPDF(id, userMessage);
       if (savedMessage) {
         // Update local state
         setChatMessages(prev => [...prev, savedMessage]);
@@ -301,38 +193,7 @@ const PDFViewer = () => {
             timestamp: new Date()
           };
           
-          let savedAiMessage;
-          
-          if (isTempPdf) {
-            // For temporary PDFs, manage chat messages in session storage
-            const tempPdfData = sessionStorage.getItem('tempPdfFile');
-            if (tempPdfData) {
-              try {
-                const parsedData = JSON.parse(tempPdfData);
-                if (!parsedData.fileData.chatMessages) {
-                  parsedData.fileData.chatMessages = [];
-                }
-                
-                // Create a message with ID
-                savedAiMessage = {
-                  ...aiMessage,
-                  id: `temp-msg-${Date.now()}`
-                };
-                
-                // Add to the chat messages array
-                parsedData.fileData.chatMessages.push(savedAiMessage);
-                
-                // Update session storage
-                sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
-              } catch (error) {
-                console.error('Error adding AI message to temporary PDF:', error);
-              }
-            }
-          } else {
-            // For permanent PDFs, use the storage service
-            savedAiMessage = addChatMessageToPDF(id, aiMessage);
-          }
-          
+          const savedAiMessage = addChatMessageToPDF(id, aiMessage);
           if (savedAiMessage) {
             setChatMessages(prev => [...prev, savedAiMessage]);
           }
@@ -359,10 +220,10 @@ const PDFViewer = () => {
           {language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF Not Found'}
         </h1>
         <Link 
-          to="/" 
+          to="/pdfs" 
           className="text-primary hover:underline"
         >
-          {language === 'ar' ? 'العودة إلى الصفحة الرئيسية' : 'Return to Home'}
+          {language === 'ar' ? 'العودة إلى قائمة الملفات' : 'Return to PDF List'}
         </Link>
       </div>
     );
@@ -376,13 +237,11 @@ const PDFViewer = () => {
         <div className="container mx-auto px-4 md:px-6 max-w-7xl">
           <div className="flex justify-between items-center mb-6">
             <Link 
-              to={isTempPdf ? "/" : "/pdfs"} 
+              to="/pdfs" 
               className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className={`h-4 w-4 ${direction === 'rtl' ? 'ml-2 rotate-180' : 'mr-2'}`} />
-              {language === 'ar' 
-                ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
-                : isTempPdf ? 'Back to Home' : 'Back to PDFs'}
+              {language === 'ar' ? 'العودة إلى قائمة الملفات' : 'Back to PDFs'}
             </Link>
             
             <div className="flex items-center gap-2">
@@ -393,7 +252,7 @@ const PDFViewer = () => {
               >
                 <Share className="h-5 w-5" />
               </button>
-              {pdf.dataUrl && !isTempPdf && (
+              {pdf.dataUrl && (
                 <a
                   href={pdf.dataUrl}
                   download={pdf.title}
@@ -428,11 +287,6 @@ const PDFViewer = () => {
                     <Badge variant="outline" className="text-xs">
                       {pdf.pageCount || '?'} {language === 'ar' ? 'صفحات' : 'pages'}
                     </Badge>
-                    {isTempPdf && (
-                      <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/30">
-                        {language === 'ar' ? 'مؤقت' : 'Temporary'}
-                      </Badge>
-                    )}
                   </div>
                 </div>
                 <button 
@@ -518,10 +372,8 @@ const PDFViewer = () => {
                       <Button variant="outline" onClick={handleRetryLoading}>
                         {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
                       </Button>
-                      <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
-                        {language === 'ar'
-                          ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
-                          : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
+                      <Button onClick={() => navigate('/pdfs')}>
+                        {language === 'ar' ? 'العودة إلى قائمة الملفات' : 'Back to PDF List'}
                       </Button>
                     </div>
                   </div>
@@ -536,10 +388,8 @@ const PDFViewer = () => {
                         ? 'لم يتم تخزين بيانات PDF بسبب قيود التخزين. حاول حذف بعض الملفات القديمة وتحميل هذا الملف مرة أخرى.'
                         : 'PDF data was not stored due to storage limitations. Try deleting some older PDFs and upload this file again.'}
                     </p>
-                    <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
-                      {language === 'ar'
-                        ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
-                        : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
+                    <Button onClick={() => navigate('/pdfs')}>
+                      {language === 'ar' ? 'العودة إلى قائمة الملفات' : 'Back to PDF List'}
                     </Button>
                   </div>
                 ) : (
@@ -617,13 +467,6 @@ const PDFViewer = () => {
                             : 'You can ask questions about the content of the PDF and get AI-powered answers'
                           }
                         </p>
-                        {isTempPdf && (
-                          <p className="text-xs text-amber-600 mt-4">
-                            {language === 'ar'
-                              ? 'ملاحظة: هذا ملف مؤقت. سيتم فقدان المحادثة عند إغلاق المتصفح.'
-                              : 'Note: This is a temporary file. Chat will be lost when you close the browser.'}
-                          </p>
-                        )}
                       </div>
                     ) : (
                       chatMessages.map(message => (
