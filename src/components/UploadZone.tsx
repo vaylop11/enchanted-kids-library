@@ -91,47 +91,60 @@ const UploadZone = () => {
         }
       } else {
         // If user is not logged in, handle the file in session storage temporarily
-        // This allows viewing and chatting without saving to account
-        const fileReader = new FileReader();
-        fileReader.onload = (event) => {
-          if (event.target && event.target.result) {
-            // Store file data in session storage
-            const fileData = {
-              id: `temp-${Date.now()}`,
-              name: file.name,
-              size: file.size,
-              data: event.target.result,
-              uploadDate: new Date().toISOString()
-            };
-            
-            // Store in session storage
-            sessionStorage.setItem('tempPdfFile', JSON.stringify({
-              fileData: fileData,
-              timestamp: Date.now()
-            }));
-            
-            // Clear interval and complete progress
-            clearInterval(progressInterval);
-            setUploadProgress(100);
-            
-            // Show success message
-            toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-            
-            // Reset state
-            setTimeout(() => {
-              setIsUploading(false);
-              setUploadProgress(0);
-              if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-              }
+        try {
+          const fileReader = new FileReader();
+          fileReader.onload = (event) => {
+            if (event.target && event.target.result) {
+              // Store file data in session storage
+              const tempId = `temp-${Date.now()}`;
+              const fileData = {
+                id: tempId,
+                title: file.name,
+                summary: `Uploaded on ${new Date().toISOString().split('T')[0]}`,
+                uploadDate: new Date().toISOString().split('T')[0],
+                pageCount: 0, // Will be updated when loaded in the viewer
+                fileSize: formatFileSize(file.size),
+                dataUrl: event.target.result as string,
+                chatMessages: []
+              };
               
-              // Navigate to the temporary PDF viewer
-              navigate(`/pdf/temp-view`);
-            }, 500);
-          }
-        };
-        
-        fileReader.readAsDataURL(file);
+              // Store in session storage
+              sessionStorage.setItem('tempPdfFile', JSON.stringify({
+                fileData: fileData,
+                timestamp: Date.now()
+              }));
+              
+              // Clear interval and complete progress
+              clearInterval(progressInterval);
+              setUploadProgress(100);
+              
+              // Show success message
+              toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
+              
+              // Reset state
+              setTimeout(() => {
+                setIsUploading(false);
+                setUploadProgress(0);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = '';
+                }
+                
+                // Navigate to the temporary PDF viewer
+                navigate(`/pdf/temp/${tempId}`);
+              }, 500);
+            }
+          };
+          
+          fileReader.readAsDataURL(file);
+        } catch (error) {
+          console.error('Error reading file:', error);
+          clearInterval(progressInterval);
+          setIsUploading(false);
+          setUploadProgress(0);
+          setUploadError(language === 'ar' 
+            ? 'فشل في قراءة الملف. يرجى المحاولة مرة أخرى.' 
+            : 'Failed to read file. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -140,6 +153,13 @@ const UploadZone = () => {
       setUploadError(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
       toast.error(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
     }
+  };
+
+  // Helper function to format file size
+  const formatFileSize = (size: number): string => {
+    if (size < 1024) return `${size} B`;
+    if (size < 1048576) return `${(size / 1024).toFixed(2)} KB`;
+    return `${(size / 1048576).toFixed(2)} MB`;
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {

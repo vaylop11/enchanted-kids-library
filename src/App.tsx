@@ -32,6 +32,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/pdfs" element={<PDFs />} />
               <Route path="/pdf/:id" element={<PDFViewer />} />
+              <Route path="/pdf/temp/:id" element={<PDFViewer />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/blog/:id" element={<BlogPost />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
