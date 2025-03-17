@@ -1,6 +1,0 @@
-
-# A string used as a friendly name for your project
-project_id = "pdf-chat-app"
-
-[functions.chat-with-pdf]
-verify_jwt = false
