@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 export const setupDatabase = async (): Promise<boolean> => {
   try {
-    // Check if pdfs table exists
+    // Check if pdfs table exists - use supabaseUntyped for untyped table access
     const { error: tableCheckError } = await supabaseUntyped
       .from('pdfs')
       .select('id')
@@ -14,7 +14,7 @@ export const setupDatabase = async (): Promise<boolean> => {
     if (tableCheckError && tableCheckError.message.includes('relation "pdfs" does not exist')) {
       console.log('PDFs table does not exist, creating...');
       
-      // Create pdfs table
+      // Create pdfs table - call the stored procedure
       const { error: createTableError } = await supabaseUntyped.rpc('create_pdfs_table');
       
       if (createTableError) {

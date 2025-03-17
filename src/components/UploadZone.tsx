@@ -26,17 +26,14 @@ const UploadZone = () => {
   };
 
   const handleFileUpload = async (file: File) => {
-    // Reset error state
     setUploadError(null);
     
-    // Check if file is PDF
     if (file.type !== 'application/pdf') {
       toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       setUploadError(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       return;
     }
 
-    // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast.error(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
       setUploadError(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
@@ -46,7 +43,6 @@ const UploadZone = () => {
     try {
       setIsUploading(true);
       
-      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
@@ -58,18 +54,14 @@ const UploadZone = () => {
       }, 200);
 
       if (user) {
-        // If user is logged in, upload PDF to Supabase
         const pdf = await uploadPDFToSupabase(file, user.id);
         
-        // Clear interval and complete progress
         clearInterval(progressInterval);
         setUploadProgress(100);
         
         if (pdf) {
-          // Show success message
           toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
           
-          // Reset state
           setTimeout(() => {
             setIsUploading(false);
             setUploadProgress(0);
@@ -77,11 +69,9 @@ const UploadZone = () => {
               fileInputRef.current.value = '';
             }
             
-            // Navigate to the PDF viewer
             navigate(`/pdf/${pdf.id}`);
           }, 500);
         } else {
-          // Handle upload failure
           clearInterval(progressInterval);
           setIsUploading(false);
           setUploadProgress(0);
@@ -90,38 +80,32 @@ const UploadZone = () => {
             : 'Failed to upload file. Please try again.');
         }
       } else {
-        // If user is not logged in, handle the file in session storage temporarily
         try {
           const fileReader = new FileReader();
           fileReader.onload = (event) => {
             if (event.target && event.target.result) {
-              // Store file data in session storage
               const tempId = `temp-${Date.now()}`;
               const fileData = {
                 id: tempId,
                 title: file.name,
                 summary: `Uploaded on ${new Date().toISOString().split('T')[0]}`,
                 uploadDate: new Date().toISOString().split('T')[0],
-                pageCount: 0, // Will be updated when loaded in the viewer
+                pageCount: 0,
                 fileSize: formatFileSize(file.size),
                 dataUrl: event.target.result as string,
                 chatMessages: []
               };
               
-              // Store in session storage
               sessionStorage.setItem('tempPdfFile', JSON.stringify({
                 fileData: fileData,
                 timestamp: Date.now()
               }));
               
-              // Clear interval and complete progress
               clearInterval(progressInterval);
               setUploadProgress(100);
               
-              // Show success message
               toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
               
-              // Reset state
               setTimeout(() => {
                 setIsUploading(false);
                 setUploadProgress(0);
@@ -129,7 +113,6 @@ const UploadZone = () => {
                   fileInputRef.current.value = '';
                 }
                 
-                // Navigate to the temporary PDF viewer
                 navigate(`/pdf/${tempId}`);
               }, 500);
             }
@@ -213,7 +196,6 @@ const UploadZone = () => {
       
       const { fileData } = JSON.parse(tempPdfData);
       
-      // Convert data URL to file
       const dataUrlParts = fileData.dataUrl.split(',');
       const mimeString = dataUrlParts[0].split(':')[1].split(';')[0];
       const byteString = atob(dataUrlParts[1]);
@@ -227,17 +209,13 @@ const UploadZone = () => {
       const blob = new Blob([arrayBuffer], { type: mimeString });
       const file = new File([blob], fileData.title, { type: mimeString });
       
-      // Upload to Supabase
       const pdf = await uploadPDFToSupabase(file, user.id);
       
       if (pdf) {
-        // Clear temporary storage
         sessionStorage.removeItem('tempPdfFile');
         
-        // Show success message
         toast.success(language === 'ar' ? 'تم حفظ الملف بنجاح' : 'File saved successfully');
         
-        // Navigate to the PDF viewer
         navigate(`/pdf/${pdf.id}`);
       } else {
         throw new Error('Failed to save file');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
@@ -295,7 +295,7 @@ const PDFViewer = () => {
         <div className="md:w-3/5 flex flex-col items-center border-r border-border/40 md:pr-6">
           <div className="w-full max-w-3xl">
             <Document
-              file={pdfData.fileUrl || (pdfData as UploadedPDF).dataUrl}
+              file={isUploadedPDF(pdfData) ? pdfData.dataUrl : (pdfData as SupabasePDF).fileUrl}
               onLoadSuccess={onDocumentLoadSuccess}
               className="w-full"
             >
