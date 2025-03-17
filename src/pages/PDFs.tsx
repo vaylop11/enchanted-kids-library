@@ -3,65 +3,43 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PDFCard from '@/components/PDFCard';
 import Navbar from '@/components/Navbar';
-import { Search, X, Upload } from 'lucide-react';
+import { Search, Filter, X, FileUp, Upload } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { getSavedPDFs, createPDFFromFile } from '@/services/pdfStorage';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
-import { getUserPDFs, uploadPDFToSupabase, SupabasePDF } from '@/services/pdfSupabaseService';
 
 const PDFs = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const { user, loading: authLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [pdfs, setPdfs] = useState<SupabasePDF[]>([]);
-  const [filteredPDFs, setFilteredPDFs] = useState<SupabasePDF[]>([]);
+  const [savedPDFs, setSavedPDFs] = useState(getSavedPDFs());
+  const [filteredPDFs, setFilteredPDFs] = useState(savedPDFs);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   
-  // Load PDFs when component mounts or user changes
+  // Load saved PDFs on mount
   useEffect(() => {
-    const loadPDFs = async () => {
-      if (authLoading) return;
-      
-      if (!user) {
-        navigate('/signin');
-        return;
-      }
-      
-      setIsLoading(true);
-      try {
-        const loadedPDFs = await getUserPDFs(user.id);
-        setPdfs(loadedPDFs);
-      } catch (error) {
-        console.error('Error loading PDFs:', error);
-        toast.error(language === 'ar' ? 'فشل في تحميل الملفات' : 'Failed to load PDFs');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadPDFs();
-  }, [user, authLoading, navigate, language]);
+    setSavedPDFs(getSavedPDFs());
+  }, []);
   
-  // Update filtered PDFs when search changes or when pdfs changes
+  // Update filtered PDFs when search changes or when savedPDFs changes
   useEffect(() => {
     if (searchTerm) {
       const lowercaseSearch = searchTerm.toLowerCase();
-      const results = pdfs.filter(
+      const results = savedPDFs.filter(
         pdf => 
           pdf.title.toLowerCase().includes(lowercaseSearch) || 
-          (pdf.summary && pdf.summary.toLowerCase().includes(lowercaseSearch))
+          pdf.summary.toLowerCase().includes(lowercaseSearch)
       );
       setFilteredPDFs(results);
     } else {
-      setFilteredPDFs(pdfs);
+      setFilteredPDFs(savedPDFs);
     }
-  }, [searchTerm, pdfs]);
+  }, [searchTerm, savedPDFs]);
 
   // Handle file upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,13 +50,6 @@ const PDFs = () => {
   };
 
   const handleFileUpload = async (file: File) => {
-    // Check if user is logged in
-    if (!user) {
-      toast.error(language === 'ar' ? 'يرجى تسجيل الدخول لتحميل الملفات' : 'Please sign in to upload files');
-      navigate('/signin');
-      return;
-    }
-    
     // Check if file is PDF
     if (file.type !== 'application/pdf') {
       toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
@@ -94,27 +65,37 @@ const PDFs = () => {
     try {
       setIsUploading(true);
       
-      // Upload PDF to Supabase
-      const pdf = await uploadPDFToSupabase(file, user.id);
+      // Read file as data URL
+      const reader = new FileReader();
       
-      if (pdf) {
-        // Show success message
-        toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-        
-        // Add the new PDF to the list
-        setPdfs(prevPDFs => [pdf, ...prevPDFs]);
-        
-        // Reset state
-        setIsUploading(false);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+      reader.onload = async (event) => {
+        if (event.target && typeof event.target.result === 'string') {
+          // Create PDF entry
+          const pdf = createPDFFromFile(file, event.target.result);
+          
+          // Show success message
+          toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
+          
+          // Reset state
+          setIsUploading(false);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+          
+          // Refresh the PDF list
+          setSavedPDFs(getSavedPDFs());
+          
+          // Navigate to the PDF viewer
+          navigate(`/pdf/${pdf.id}`);
         }
-        
-        // Navigate to the PDF viewer
-        navigate(`/pdf/${pdf.id}`);
-      } else {
-        throw new Error('Upload failed');
-      }
+      };
+      
+      reader.onerror = () => {
+        setIsUploading(false);
+        toast.error(language === 'ar' ? 'فشل في قراءة الملف' : 'Failed to read file');
+      };
+      
+      reader.readAsDataURL(file);
     } catch (error) {
       console.error('Upload error:', error);
       setIsUploading(false);
@@ -127,23 +108,6 @@ const PDFs = () => {
       fileInputRef.current.click();
     }
   };
-  
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 pt-24 pb-20 px-4 md:px-6 container mx-auto max-w-7xl flex items-center justify-center">
-          <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
-        </main>
-      </div>
-    );
-  }
-  
-  if (!user) {
-    // This should redirect in the useEffect, but just in case
-    navigate('/signin');
-    return null;
-  }
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -215,14 +179,7 @@ const PDFs = () => {
         
         {/* PDF Grid */}
         <div>
-          {isLoading ? (
-            <div className="text-center py-20 bg-muted/10 rounded-lg border border-border/40">
-              <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4 mx-auto" />
-              <p className="text-muted-foreground">
-                {language === 'ar' ? 'جارٍ تحميل الملفات...' : 'Loading PDFs...'}
-              </p>
-            </div>
-          ) : filteredPDFs.length > 0 ? (
+          {filteredPDFs.length > 0 ? (
             <>
               <div className="text-sm text-muted-foreground mb-6">
                 {language === 'ar' 

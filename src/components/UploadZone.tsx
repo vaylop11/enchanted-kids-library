@@ -1,17 +1,15 @@
 
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { File, Upload, AlertTriangle } from 'lucide-react';
+import { File, Upload, Check, X, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { createPDFFromFile } from '@/services/pdfStorage';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { uploadPDFToSupabase } from '@/services/pdfSupabaseService';
 
 const UploadZone = () => {
   const { language } = useLanguage();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -28,18 +26,6 @@ const UploadZone = () => {
   const handleFileUpload = async (file: File) => {
     // Reset error state
     setUploadError(null);
-    
-    // Check if user is logged in
-    if (!user) {
-      toast.error(language === 'ar' 
-        ? 'يرجى تسجيل الدخول لتحميل الملفات' 
-        : 'Please sign in to upload files');
-      setUploadError(language === 'ar' 
-        ? 'يرجى تسجيل الدخول لتحميل الملفات' 
-        : 'Please sign in to upload files');
-      navigate('/signin');
-      return;
-    }
     
     // Check if file is PDF
     if (file.type !== 'application/pdf') {
@@ -69,37 +55,63 @@ const UploadZone = () => {
         });
       }, 200);
 
-      // Upload PDF to Supabase
-      const pdf = await uploadPDFToSupabase(file, user.id);
+      // Read file as data URL
+      const reader = new FileReader();
       
-      // Clear interval and complete progress
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      
-      if (pdf) {
-        // Show success message
-        toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-        
-        // Reset state
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploadProgress(0);
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+      reader.onload = async (event) => {
+        if (event.target && typeof event.target.result === 'string') {
+          try {
+            // Create PDF entry
+            const pdf = createPDFFromFile(file, event.target.result);
+            
+            // Clear interval and complete progress
+            clearInterval(progressInterval);
+            setUploadProgress(100);
+            
+            // Check if PDF was successfully created with dataUrl
+            if (!pdf.dataUrl) {
+              throw new Error('PDF data could not be stored');
+            }
+            
+            // Show success message
+            toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
+            
+            // Reset state
+            setTimeout(() => {
+              setIsUploading(false);
+              setUploadProgress(0);
+              if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+              }
+              
+              // Navigate to the PDF viewer
+              navigate(`/pdf/${pdf.id}`);
+            }, 500);
+          } catch (error) {
+            console.error('Error storing PDF:', error);
+            clearInterval(progressInterval);
+            setIsUploading(false);
+            setUploadProgress(0);
+            setUploadError(language === 'ar' 
+              ? 'حدث خطأ أثناء تخزين الملف. قد يكون المتصفح ممتلئًا، حاول حذف بعض الملفات أولاً.'
+              : 'Error storing the file. Your browser storage might be full, try deleting some files first.');
+            toast.error(language === 'ar' 
+              ? 'فشل في تخزين الملف'
+              : 'Failed to store file');
           }
-          
-          // Navigate to the PDF viewer
-          navigate(`/pdf/${pdf.id}`);
-        }, 500);
-      } else {
-        // Handle upload failure
+        }
+      };
+      
+      reader.onerror = (error) => {
+        console.error('FileReader error:', error);
         clearInterval(progressInterval);
         setIsUploading(false);
         setUploadProgress(0);
-        setUploadError(language === 'ar' 
-          ? 'فشل في تحميل الملف. يرجى المحاولة مرة أخرى.' 
-          : 'Failed to upload file. Please try again.');
-      }
+        setUploadError(language === 'ar' ? 'فشل في قراءة الملف' : 'Failed to read file');
+        toast.error(language === 'ar' ? 'فشل في قراءة الملف' : 'Failed to read file');
+      };
+      
+      reader.readAsDataURL(file);
     } catch (error) {
       console.error('Upload error:', error);
       setIsUploading(false);
@@ -145,41 +157,9 @@ const UploadZone = () => {
     navigate('/pdfs');
   };
 
-  const handleSignIn = () => {
-    navigate('/signin');
-  };
-
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {!user ? (
-        <div className="p-8 border-2 border-amber-300 rounded-xl bg-amber-50 dark:bg-amber-950/20">
-          <div className="flex flex-col items-center justify-center text-center space-y-4">
-            <div className="h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-500" />
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-medium mb-1">
-                {language === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please Sign In First'}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {language === 'ar'
-                  ? 'لتحميل وإدارة ملفات PDF، يجب تسجيل الدخول أولاً'
-                  : 'To upload and manage PDFs, you need to sign in first'
-                }
-              </p>
-              <div className="flex flex-wrap gap-3 justify-center">
-                <Button 
-                  variant="default" 
-                  onClick={handleSignIn}
-                >
-                  {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : uploadError ? (
+      {uploadError ? (
         <div className="p-8 border-2 border-amber-300 rounded-xl bg-amber-50 dark:bg-amber-950/20">
           <div className="flex flex-col items-center justify-center text-center space-y-4">
             <div className="h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
