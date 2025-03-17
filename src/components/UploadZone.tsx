@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { File, Upload, AlertTriangle } from 'lucide-react';
@@ -7,7 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { uploadPDFToSupabase } from '@/services/pdfSupabaseService';
-import { createPDFFromFile } from '@/services/pdfStorage';
+import { formatFileSize } from '@/services/pdfStorage';
 
 const UploadZone = () => {
   const { language } = useLanguage();
@@ -131,7 +130,7 @@ const UploadZone = () => {
                 }
                 
                 // Navigate to the temporary PDF viewer
-                navigate(`/pdf/temp/${tempId}`);
+                navigate(`/pdf/${tempId}`);
               }, 500);
             }
           };
@@ -154,13 +153,6 @@ const UploadZone = () => {
       setUploadError(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
       toast.error(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
     }
-  };
-
-  // Helper function to format file size
-  const formatFileSize = (size: number): string => {
-    if (size < 1024) return `${size} B`;
-    if (size < 1048576) return `${(size / 1024).toFixed(2)} KB`;
-    return `${(size / 1048576).toFixed(2)} MB`;
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -203,7 +195,6 @@ const UploadZone = () => {
     navigate('/signin');
   };
 
-  // Save the temporary PDF to Supabase when user signs in
   const handleSaveTemporaryPDF = async () => {
     if (!user) {
       toast.error(language === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please sign in first');
@@ -259,7 +250,6 @@ const UploadZone = () => {
     }
   };
 
-  // Modified rendering to allow non-logged in users to upload
   return (
     <div className="w-full max-w-3xl mx-auto">
       {uploadError ? (

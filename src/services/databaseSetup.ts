@@ -1,11 +1,11 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export const setupDatabase = async (): Promise<boolean> => {
   try {
     // Check if pdfs table exists
-    const { error: tableCheckError } = await supabase
+    const { error: tableCheckError } = await supabaseUntyped
       .from('pdfs')
       .select('id')
       .limit(1);
@@ -15,7 +15,7 @@ export const setupDatabase = async (): Promise<boolean> => {
       console.log('PDFs table does not exist, creating...');
       
       // Create pdfs table
-      const { error: createTableError } = await supabase.rpc('create_pdfs_table');
+      const { error: createTableError } = await supabaseUntyped.rpc('create_pdfs_table');
       
       if (createTableError) {
         console.error('Error creating pdfs table:', createTableError);
@@ -25,7 +25,7 @@ export const setupDatabase = async (): Promise<boolean> => {
     }
     
     // Check if pdf_chats table exists
-    const { error: chatsTableCheckError } = await supabase
+    const { error: chatsTableCheckError } = await supabaseUntyped
       .from('pdf_chats')
       .select('id')
       .limit(1);
@@ -35,7 +35,7 @@ export const setupDatabase = async (): Promise<boolean> => {
       console.log('PDF Chats table does not exist, creating...');
       
       // Create pdf_chats table
-      const { error: createChatsTableError } = await supabase.rpc('create_pdf_chats_table');
+      const { error: createChatsTableError } = await supabaseUntyped.rpc('create_pdf_chats_table');
       
       if (createChatsTableError) {
         console.error('Error creating pdf_chats table:', createChatsTableError);

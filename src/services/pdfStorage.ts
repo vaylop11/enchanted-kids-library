@@ -1,11 +1,22 @@
-
 import { PDF } from '@/components/PDFCard';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 
-export interface UploadedPDF extends PDF {
+export interface UploadedPDF {
+  id: string;
+  title: string;
+  summary: string;
+  uploadDate: string;
+  pageCount: number;
+  fileSize: string;
   dataUrl: string;
-  chatMessages?: ChatMessage[];
+  thumbnail?: string;
+  chatMessages?: Array<{
+    id: string;
+    content: string;
+    isUser: boolean;
+    timestamp: Date;
+  }>;
 }
 
 export interface ChatMessage {

@@ -6,8 +6,20 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getPDFById, addChatMessageToPDF, getChatMessagesForPDF, SupabasePDF, uploadPDFToSupabase } from '@/services/pdfSupabaseService';
-import { getSavedPDFs, savePDF, getPDFById as getLocalPDFById, UploadedPDF, addChatMessageToPDF as addLocalChatMessageToPDF } from '@/services/pdfStorage';
+import { 
+  getPDFById, 
+  addChatMessageToPDF, 
+  getChatMessagesForPDF, 
+  SupabasePDF, 
+  uploadPDFToSupabase 
+} from '@/services/pdfSupabaseService';
+import { 
+  getSavedPDFs, 
+  savePDF, 
+  getPDFById as getLocalPDFById, 
+  UploadedPDF, 
+  addChatMessageToPDF as addLocalChatMessageToPDF 
+} from '@/services/pdfStorage';
 import { formatFileSize } from '@/services/pdfStorage';
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -15,6 +27,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Send, FileDown, ArrowLeft, Save } from "lucide-react"
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+
+const isUploadedPDF = (pdf: SupabasePDF | UploadedPDF): pdf is UploadedPDF => {
+  return 'dataUrl' in pdf;
+};
 
 const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,7 +53,6 @@ const PDFViewer = () => {
       setIsLoading(true);
       try {
         if (id?.startsWith('temp-')) {
-          // Load temporary PDF from session storage
           setIsTemporaryFile(true);
           const tempPdfData = sessionStorage.getItem('tempPdfFile');
           if (tempPdfData) {
@@ -51,12 +66,11 @@ const PDFViewer = () => {
           }
         } else {
           setIsTemporaryFile(false);
-          // Load PDF from Supabase or local storage
           let pdf;
           if (user) {
-            pdf = await getPDFById(id);
+            pdf = await getPDFById(id!);
           } else {
-            pdf = getLocalPDFById(id);
+            pdf = getLocalPDFById(id!);
           }
           if (pdf) {
             setPdfData(pdf);
@@ -67,8 +81,7 @@ const PDFViewer = () => {
           }
         }
         
-        // Load chat messages
-        if (!isTemporaryFile) {
+        if (!isTemporaryFile && id) {
           const loadedMessages = await getChatMessagesForPDF(id);
           setChatMessages(loadedMessages);
         }
@@ -84,7 +97,6 @@ const PDFViewer = () => {
   }, [id, navigate, language, user]);
 
   useEffect(() => {
-    // Scroll to the bottom of the chat container when messages change
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
@@ -93,14 +105,14 @@ const PDFViewer = () => {
   const onDocumentLoadSuccess = ({ numPages: nextNumPages }: { numPages: number }) => {
     setNumPages(nextNumPages);
     if (pdfData) {
-      // Update page count in local storage
       if (user) {
-        // No need to update Supabase for temporary files
       } else {
-        savePDF({
-          ...pdfData,
-          pageCount: nextNumPages
-        });
+        if (isUploadedPDF(pdfData)) {
+          savePDF({
+            ...pdfData,
+            pageCount: nextNumPages
+          });
+        }
       }
     }
   };
@@ -118,7 +130,6 @@ const PDFViewer = () => {
     if (!message.trim()) return;
 
     if (isTemporaryFile) {
-      // Handle temporary file chat
       const newMessage = addLocalChatMessageToPDF(id || '', {
         content: message,
         isUser: true,
@@ -129,7 +140,6 @@ const PDFViewer = () => {
         setChatMessages(prevMessages => [...prevMessages, newMessage]);
         setMessage('');
 
-        // Update the PDF data in session storage
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
         if (tempPdfData) {
           const { fileData } = JSON.parse(tempPdfData);
@@ -146,7 +156,6 @@ const PDFViewer = () => {
         toast.error(language === 'ar' ? 'فشل في إرسال الرسالة' : 'Failed to send message');
       }
     } else {
-      // Handle permanent file chat
       const newMessage = await addChatMessageToPDF(id || '', message, true);
       if (newMessage) {
         setChatMessages(prevMessages => [...prevMessages, newMessage]);
@@ -169,16 +178,17 @@ const PDFViewer = () => {
   };
 
   const handleDownload = () => {
-    if (pdfData && 'dataUrl' in pdfData) {
-      const link = document.createElement('a');
-      link.href = pdfData.dataUrl;
-      link.download = pdfData.title || 'document.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else if (pdfData && 'fileUrl' in pdfData) {
-      // For Supabase PDFs, open the URL in a new tab
-      window.open(pdfData.fileUrl, '_blank');
+    if (pdfData) {
+      if (isUploadedPDF(pdfData)) {
+        const link = document.createElement('a');
+        link.href = pdfData.dataUrl;
+        link.download = pdfData.title || 'document.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else if ('fileUrl' in pdfData) {
+        window.open(pdfData.fileUrl, '_blank');
+      }
     } else {
       toast.error(language === 'ar' ? 'لا يمكن تنزيل الملف' : 'Cannot download file');
     }
@@ -195,40 +205,37 @@ const PDFViewer = () => {
     setIsSaving(true);
     
     try {
-      // Convert data URL to File object
-      const dataUrlParts = (pdfData as UploadedPDF).dataUrl.split(',');
-      const mimeString = dataUrlParts[0].split(':')[1].split(';')[0];
-      const byteString = atob(dataUrlParts[1]);
-      const arrayBuffer = new ArrayBuffer(byteString.length);
-      const intArray = new Uint8Array(arrayBuffer);
-      
-      for (let i = 0; i < byteString.length; i++) {
-        intArray[i] = byteString.charCodeAt(i);
-      }
-      
-      const blob = new Blob([arrayBuffer], { type: mimeString });
-      const file = new File([blob], pdfData.title, { type: mimeString });
-      
-      // Upload to Supabase
-      const pdf = await uploadPDFToSupabase(file, user.id);
-      
-      if (pdf) {
-        // Copy chat messages if any
-        if ((pdfData as UploadedPDF).chatMessages && (pdfData as UploadedPDF).chatMessages.length > 0) {
-          for (const message of (pdfData as UploadedPDF).chatMessages!) {
-            await addChatMessageToPDF(pdf.id, message.content, message.isUser);
-          }
+      if (isUploadedPDF(pdfData)) {
+        const dataUrlParts = pdfData.dataUrl.split(',');
+        const mimeString = dataUrlParts[0].split(':')[1].split(';')[0];
+        const byteString = atob(dataUrlParts[1]);
+        const arrayBuffer = new ArrayBuffer(byteString.length);
+        const intArray = new Uint8Array(arrayBuffer);
+        
+        for (let i = 0; i < byteString.length; i++) {
+          intArray[i] = byteString.charCodeAt(i);
         }
         
-        // Clear temporary data
-        sessionStorage.removeItem('tempPdfFile');
+        const blob = new Blob([arrayBuffer], { type: mimeString });
+        const file = new File([blob], pdfData.title, { type: mimeString });
         
-        toast.success(language === 'ar' ? 'تم حفظ الملف بنجاح' : 'File saved successfully');
+        const pdf = await uploadPDFToSupabase(file, user.id);
         
-        // Navigate to the permanent PDF
-        navigate(`/pdf/${pdf.id}`);
-      } else {
-        throw new Error('Failed to save PDF');
+        if (pdf) {
+          if (pdfData.chatMessages && pdfData.chatMessages.length > 0) {
+            for (const message of pdfData.chatMessages) {
+              await addChatMessageToPDF(pdf.id, message.content, message.isUser);
+            }
+          }
+          
+          sessionStorage.removeItem('tempPdfFile');
+          
+          toast.success(language === 'ar' ? 'تم حفظ الملف بنجاح' : 'File saved successfully');
+          
+          navigate(`/pdf/${pdf.id}`);
+        } else {
+          throw new Error('Failed to save PDF');
+        }
       }
     } catch (error) {
       console.error('Error saving PDF:', error);
@@ -256,7 +263,6 @@ const PDFViewer = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
       <header className="bg-background border-b border-border/40 py-4">
         <div className="container mx-auto px-4 md:px-6 flex items-center">
           <Button variant="ghost" onClick={handleGoBack} className="mr-2">
@@ -286,7 +292,6 @@ const PDFViewer = () => {
       </header>
 
       <div className="flex-grow flex flex-col md:flex-row container mx-auto px-4 md:px-6 py-6">
-        {/* PDF Viewer */}
         <div className="md:w-3/5 flex flex-col items-center border-r border-border/40 md:pr-6">
           <div className="w-full max-w-3xl">
             <Document
@@ -298,7 +303,6 @@ const PDFViewer = () => {
             </Document>
           </div>
 
-          {/* Page Navigation */}
           <div className="flex justify-center space-x-4 mt-4 w-full max-w-3xl">
             <Button
               variant="outline"
@@ -320,7 +324,6 @@ const PDFViewer = () => {
           </div>
         </div>
 
-        {/* Chat Section */}
         <div className="md:w-2/5 flex flex-col md:pl-6">
           <h2 className="heading-3 mb-4">{language === 'ar' ? 'الدردشة' : 'Chat'}</h2>
           <div className="flex-grow overflow-y-auto mb-4" ref={chatContainerRef}>
@@ -346,7 +349,6 @@ const PDFViewer = () => {
             </ScrollArea>
           </div>
 
-          {/* Chat Input */}
           <div className="flex items-center">
             <Input
               type="text"
@@ -364,7 +366,6 @@ const PDFViewer = () => {
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="mt-auto py-10 bg-muted/30 border-t border-border">
         <div className="container mx-auto px-4 md:px-6 text-center text-muted-foreground">
           <p className="text-sm">
