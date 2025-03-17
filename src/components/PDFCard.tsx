@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
@@ -46,21 +45,19 @@ const PDFCard = ({ pdf, index }: PDFCardProps) => {
     };
   }, [pdf.id]);
 
-  // Add a staggered animation delay based on the index
-  const animationDelay = `${index * 100}ms`;
-
-  // Check if this is an uploaded PDF with chat messages
-  const hasChatMessages = 'chatMessages' in pdf && Array.isArray((pdf as any).chatMessages) && (pdf as any).chatMessages.length > 0;
+  const handleCardClick = () => {
+    localStorage.setItem('lastViewedPDF', JSON.stringify(pdf));
+  };
 
   return (
     <Link 
       to={`/pdf/${pdf.id}`}
+      onClick={handleCardClick}
       id={`pdf-card-${pdf.id}`}
       className={cn(
         'group relative flex flex-col rounded-2xl overflow-hidden bg-card border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 h-full hover-lift',
         isInView ? 'animate-fade-in opacity-100' : 'opacity-0'
       )}
-      style={{ animationDelay }}
       aria-label={`Open ChatPDF document: ${pdf.title}`}
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/20">
@@ -86,7 +83,7 @@ const PDFCard = ({ pdf, index }: PDFCardProps) => {
           </div>
         )}
         
-        {hasChatMessages && (
+        {'chatMessages' in pdf && Array.isArray((pdf as any).chatMessages) && (pdf as any).chatMessages.length > 0 && (
           <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full flex items-center gap-1">
             <MessageSquare className="h-3 w-3" />
             {language === 'ar' ? 'مع محادثة' : 'Has Chat'}
