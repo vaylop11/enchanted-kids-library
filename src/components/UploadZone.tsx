@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { uploadPDFToSupabase } from '@/services/pdfSupabaseService';
+import { createPDFFromFile } from '@/services/pdfStorage';
 
 const UploadZone = () => {
   const { language } = useLanguage();
@@ -202,6 +203,62 @@ const UploadZone = () => {
     navigate('/signin');
   };
 
+  // Save the temporary PDF to Supabase when user signs in
+  const handleSaveTemporaryPDF = async () => {
+    if (!user) {
+      toast.error(language === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please sign in first');
+      navigate('/signin');
+      return;
+    }
+    
+    const tempPdfData = sessionStorage.getItem('tempPdfFile');
+    if (!tempPdfData) {
+      toast.error(language === 'ar' ? 'لا يوجد ملف مؤقت للحفظ' : 'No temporary file to save');
+      return;
+    }
+    
+    try {
+      setIsUploading(true);
+      
+      const { fileData } = JSON.parse(tempPdfData);
+      
+      // Convert data URL to file
+      const dataUrlParts = fileData.dataUrl.split(',');
+      const mimeString = dataUrlParts[0].split(':')[1].split(';')[0];
+      const byteString = atob(dataUrlParts[1]);
+      const arrayBuffer = new ArrayBuffer(byteString.length);
+      const intArray = new Uint8Array(arrayBuffer);
+      
+      for (let i = 0; i < byteString.length; i++) {
+        intArray[i] = byteString.charCodeAt(i);
+      }
+      
+      const blob = new Blob([arrayBuffer], { type: mimeString });
+      const file = new File([blob], fileData.title, { type: mimeString });
+      
+      // Upload to Supabase
+      const pdf = await uploadPDFToSupabase(file, user.id);
+      
+      if (pdf) {
+        // Clear temporary storage
+        sessionStorage.removeItem('tempPdfFile');
+        
+        // Show success message
+        toast.success(language === 'ar' ? 'تم حفظ الملف بنجاح' : 'File saved successfully');
+        
+        // Navigate to the PDF viewer
+        navigate(`/pdf/${pdf.id}`);
+      } else {
+        throw new Error('Failed to save file');
+      }
+    } catch (error) {
+      console.error('Error saving temporary PDF:', error);
+      toast.error(language === 'ar' ? 'فشل في حفظ الملف' : 'Failed to save file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // Modified rendering to allow non-logged in users to upload
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -333,6 +390,23 @@ const UploadZone = () => {
             {language === 'ar'
               ? 'تسجيل الدخول لحفظ ملفات PDF الخاصة بك'
               : 'Sign in to save your PDF files'
+            }
+          </Button>
+        )}
+        
+        {user && sessionStorage.getItem('tempPdfFile') && (
+          <Button 
+            variant="default" 
+            onClick={handleSaveTemporaryPDF}
+            className="mt-2 text-sm"
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin mr-2" />
+            ) : null}
+            {language === 'ar'
+              ? 'حفظ الملف المؤقت في حسابك'
+              : 'Save temporary file to your account'
             }
           </Button>
         )}
