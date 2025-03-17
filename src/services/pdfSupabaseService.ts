@@ -1,4 +1,3 @@
-
 import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,6 +29,22 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
     const fileExt = file.name.split('.').pop();
     const fileName = `${uuidv4()}.${fileExt}`;
     const filePath = `${userId}/${fileName}`;
+    
+    // Check if pdfs bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    
+    if (!buckets?.find(bucket => bucket.name === 'pdfs')) {
+      // Create pdfs bucket if it doesn't exist
+      const { error: createBucketError } = await supabase.storage.createBucket('pdfs', {
+        public: true
+      });
+      
+      if (createBucketError) {
+        console.error('Error creating pdfs bucket:', createBucketError);
+        toast.error('Failed to create storage for PDFs');
+        return null;
+      }
+    }
     
     // Upload file to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -69,6 +84,18 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
       
     if (pdfError) {
       console.error('Error creating PDF record:', pdfError);
+      
+      // Check if the pdfs table exists
+      const { error: tableError } = await supabaseUntyped
+        .from('pdfs')
+        .select('id')
+        .limit(1);
+        
+      if (tableError && tableError.message.includes('relation "pdfs" does not exist')) {
+        toast.error('PDF table not set up in Supabase. Please contact admin.');
+        return null;
+      }
+      
       toast.error('Failed to save PDF metadata');
       return null;
     }
@@ -108,16 +135,28 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
       return [];
     }
     
-    return data.map((pdf: any) => ({
-      id: pdf.id,
-      title: pdf.title,
-      summary: pdf.summary || '',
-      uploadDate: new Date(pdf.upload_date).toISOString().split('T')[0],
-      pageCount: pdf.page_count || 0,
-      fileSize: pdf.file_size || '0 B',
-      filePath: pdf.file_path,
-      thumbnail: pdf.thumbnail
-    }));
+    if (!data || data.length === 0) {
+      return [];
+    }
+    
+    return data.map((pdf: any) => {
+      // Get the file URL
+      const { data: publicURLData } = supabase.storage
+        .from('pdfs')
+        .getPublicUrl(pdf.file_path);
+        
+      return {
+        id: pdf.id,
+        title: pdf.title,
+        summary: pdf.summary || '',
+        uploadDate: new Date(pdf.upload_date).toISOString().split('T')[0],
+        pageCount: pdf.page_count || 0,
+        fileSize: pdf.file_size || '0 B',
+        filePath: pdf.file_path,
+        thumbnail: pdf.thumbnail,
+        fileUrl: publicURLData.publicUrl
+      };
+    });
   } catch (error) {
     console.error('Error in getUserPDFs:', error);
     toast.error('Failed to fetch PDFs');

@@ -1,12 +1,13 @@
 
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { File, Upload, AlertTriangle } from 'lucide-react';
+import { File as FileIcon, Upload, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { uploadPDFToSupabase } from '@/services/pdfSupabaseService';
+import { formatFileSize } from '@/services/pdfStorage';
 
 const UploadZone = () => {
   const { language } = useLanguage();
@@ -26,17 +27,14 @@ const UploadZone = () => {
   };
 
   const handleFileUpload = async (file: File) => {
-    // Reset error state
     setUploadError(null);
     
-    // Check if file is PDF
     if (file.type !== 'application/pdf') {
       toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       setUploadError(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       return;
     }
 
-    // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast.error(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
       setUploadError(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
@@ -46,7 +44,6 @@ const UploadZone = () => {
     try {
       setIsUploading(true);
       
-      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
@@ -58,18 +55,14 @@ const UploadZone = () => {
       }, 200);
 
       if (user) {
-        // If user is logged in, upload PDF to Supabase
         const pdf = await uploadPDFToSupabase(file, user.id);
         
-        // Clear interval and complete progress
         clearInterval(progressInterval);
         setUploadProgress(100);
         
         if (pdf) {
-          // Show success message
           toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
           
-          // Reset state
           setTimeout(() => {
             setIsUploading(false);
             setUploadProgress(0);
@@ -77,11 +70,9 @@ const UploadZone = () => {
               fileInputRef.current.value = '';
             }
             
-            // Navigate to the PDF viewer
             navigate(`/pdf/${pdf.id}`);
           }, 500);
         } else {
-          // Handle upload failure
           clearInterval(progressInterval);
           setIsUploading(false);
           setUploadProgress(0);
@@ -90,38 +81,32 @@ const UploadZone = () => {
             : 'Failed to upload file. Please try again.');
         }
       } else {
-        // If user is not logged in, handle the file in session storage temporarily
         try {
           const fileReader = new FileReader();
           fileReader.onload = (event) => {
             if (event.target && event.target.result) {
-              // Store file data in session storage
               const tempId = `temp-${Date.now()}`;
               const fileData = {
                 id: tempId,
                 title: file.name,
                 summary: `Uploaded on ${new Date().toISOString().split('T')[0]}`,
                 uploadDate: new Date().toISOString().split('T')[0],
-                pageCount: 0, // Will be updated when loaded in the viewer
+                pageCount: 0,
                 fileSize: formatFileSize(file.size),
                 dataUrl: event.target.result as string,
                 chatMessages: []
               };
               
-              // Store in session storage
               sessionStorage.setItem('tempPdfFile', JSON.stringify({
                 fileData: fileData,
                 timestamp: Date.now()
               }));
               
-              // Clear interval and complete progress
               clearInterval(progressInterval);
               setUploadProgress(100);
               
-              // Show success message
               toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
               
-              // Reset state
               setTimeout(() => {
                 setIsUploading(false);
                 setUploadProgress(0);
@@ -129,8 +114,7 @@ const UploadZone = () => {
                   fileInputRef.current.value = '';
                 }
                 
-                // Navigate to the temporary PDF viewer
-                navigate(`/pdf/temp/${tempId}`);
+                navigate(`/pdf/${tempId}`);
               }, 500);
             }
           };
@@ -153,13 +137,6 @@ const UploadZone = () => {
       setUploadError(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
       toast.error(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
     }
-  };
-
-  // Helper function to format file size
-  const formatFileSize = (size: number): string => {
-    if (size < 1024) return `${size} B`;
-    if (size < 1048576) return `${(size / 1024).toFixed(2)} KB`;
-    return `${(size / 1048576).toFixed(2)} MB`;
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -202,7 +179,57 @@ const UploadZone = () => {
     navigate('/signin');
   };
 
-  // Modified rendering to allow non-logged in users to upload
+  const handleSaveTemporaryPDF = async () => {
+    if (!user) {
+      toast.error(language === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please sign in first');
+      navigate('/signin');
+      return;
+    }
+    
+    const tempPdfData = sessionStorage.getItem('tempPdfFile');
+    if (!tempPdfData) {
+      toast.error(language === 'ar' ? 'لا يوجد ملف مؤقت للحفظ' : 'No temporary file to save');
+      return;
+    }
+    
+    try {
+      setIsUploading(true);
+      
+      const { fileData } = JSON.parse(tempPdfData);
+      
+      const dataUrlParts = fileData.dataUrl.split(',');
+      const mimeString = dataUrlParts[0].split(':')[1].split(';')[0];
+      const byteString = atob(dataUrlParts[1]);
+      const arrayBuffer = new ArrayBuffer(byteString.length);
+      const intArray = new Uint8Array(arrayBuffer);
+      
+      for (let i = 0; i < byteString.length; i++) {
+        intArray[i] = byteString.charCodeAt(i);
+      }
+      
+      const blob = new Blob([arrayBuffer], { type: mimeString });
+      // Fix: Create a File object correctly
+      const file = new File([blob], fileData.title, { type: mimeString });
+      
+      const pdf = await uploadPDFToSupabase(file, user.id);
+      
+      if (pdf) {
+        sessionStorage.removeItem('tempPdfFile');
+        
+        toast.success(language === 'ar' ? 'تم حفظ الملف بنجاح' : 'File saved successfully');
+        
+        navigate(`/pdf/${pdf.id}`);
+      } else {
+        throw new Error('Failed to save file');
+      }
+    } catch (error) {
+      console.error('Error saving temporary PDF:', error);
+      toast.error(language === 'ar' ? 'فشل في حفظ الملف' : 'Failed to save file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="w-full max-w-3xl mx-auto">
       {uploadError ? (
@@ -308,7 +335,7 @@ const UploadZone = () => {
                 }}
                 disabled={isUploading}
               >
-                <File className="mr-2 h-4 w-4" />
+                <FileIcon className="mr-2 h-4 w-4" />
                 {language === 'ar' ? 'اختر ملف' : 'Select File'}
               </Button>
             )}
@@ -333,6 +360,23 @@ const UploadZone = () => {
             {language === 'ar'
               ? 'تسجيل الدخول لحفظ ملفات PDF الخاصة بك'
               : 'Sign in to save your PDF files'
+            }
+          </Button>
+        )}
+        
+        {user && sessionStorage.getItem('tempPdfFile') && (
+          <Button 
+            variant="default" 
+            onClick={handleSaveTemporaryPDF}
+            className="mt-2 text-sm"
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin mr-2" />
+            ) : null}
+            {language === 'ar'
+              ? 'حفظ الملف المؤقت في حسابك'
+              : 'Save temporary file to your account'
             }
           </Button>
         )}
