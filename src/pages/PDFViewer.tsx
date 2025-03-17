@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -25,9 +26,11 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Send, FileDown, ArrowLeft, Save } from "lucide-react"
+import { supabase } from '@/integrations/supabase/client';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
+// Type guard to check if the PDF is UploadedPDF (local storage) or SupabasePDF
 const isUploadedPDF = (pdf: SupabasePDF | UploadedPDF): pdf is UploadedPDF => {
   return 'dataUrl' in pdf;
 };
@@ -45,6 +48,7 @@ const PDFViewer = () => {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isProcessingChat, setIsProcessingChat] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isTemporaryFile, setIsTemporaryFile] = useState(false);
 
@@ -69,25 +73,30 @@ const PDFViewer = () => {
           let pdf;
           if (user) {
             pdf = await getPDFById(id!);
+            if (pdf) {
+              setPdfData(pdf);
+              // Load chat messages for authenticated users
+              const loadedMessages = await getChatMessagesForPDF(id!);
+              setChatMessages(loadedMessages);
+            }
           } else {
             pdf = getLocalPDFById(id!);
+            if (pdf) {
+              setPdfData(pdf);
+              setChatMessages(pdf.chatMessages || []);
+            }
           }
-          if (pdf) {
-            setPdfData(pdf);
-          } else {
+          
+          if (!pdf) {
             toast.error(language === 'ar' ? 'الملف غير موجود' : 'File not found');
-            navigate('/pdfs');
+            navigate('/');
             return;
           }
-        }
-        
-        if (!isTemporaryFile && id) {
-          const loadedMessages = await getChatMessagesForPDF(id);
-          setChatMessages(loadedMessages);
         }
       } catch (error) {
         console.error('Error loading PDF:', error);
         toast.error(language === 'ar' ? 'فشل في تحميل الملف' : 'Failed to load file');
+        navigate('/');
       } finally {
         setIsLoading(false);
       }
@@ -105,14 +114,26 @@ const PDFViewer = () => {
   const onDocumentLoadSuccess = ({ numPages: nextNumPages }: { numPages: number }) => {
     setNumPages(nextNumPages);
     if (pdfData) {
-      if (user) {
-      } else {
-        if (isUploadedPDF(pdfData)) {
-          savePDF({
-            ...pdfData,
+      if (isTemporaryFile) {
+        // Update page count in session storage
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          const { fileData } = JSON.parse(tempPdfData);
+          const updatedFileData = {
+            ...fileData,
             pageCount: nextNumPages
-          });
+          };
+          sessionStorage.setItem('tempPdfFile', JSON.stringify({
+            fileData: updatedFileData,
+            timestamp: Date.now()
+          }));
         }
+      } else if (isUploadedPDF(pdfData)) {
+        // Update page count in local storage
+        savePDF({
+          ...pdfData,
+          pageCount: nextNumPages
+        });
       }
     }
   };
@@ -127,42 +148,146 @@ const PDFViewer = () => {
   const goToNextPage = () => changePage(1);
 
   const handleSendMessage = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() || isProcessingChat) return;
 
-    if (isTemporaryFile) {
-      const newMessage = addLocalChatMessageToPDF(id || '', {
-        content: message,
+    // Add user message immediately
+    const userMessageContent = message;
+    const userMessageTimestamp = new Date();
+    setMessage('');
+    setIsProcessingChat(true);
+
+    // Create a new user message
+    let userMessage;
+    
+    if (isTemporaryFile || !user) {
+      userMessage = {
+        id: `temp-${Date.now()}`,
+        content: userMessageContent,
         isUser: true,
-        timestamp: new Date()
-      });
-
-      if (newMessage) {
-        setChatMessages(prevMessages => [...prevMessages, newMessage]);
-        setMessage('');
-
+        timestamp: userMessageTimestamp
+      };
+      
+      setChatMessages(prevMessages => [...prevMessages, userMessage]);
+      
+      // Save to temporary storage if needed
+      if (isTemporaryFile) {
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
         if (tempPdfData) {
           const { fileData } = JSON.parse(tempPdfData);
+          const updatedMessages = [...(fileData.chatMessages || []), userMessage];
           const updatedFileData = {
             ...fileData,
-            chatMessages: [...(fileData.chatMessages || []), newMessage]
+            chatMessages: updatedMessages
           };
           sessionStorage.setItem('tempPdfFile', JSON.stringify({
             fileData: updatedFileData,
             timestamp: Date.now()
           }));
         }
-      } else {
-        toast.error(language === 'ar' ? 'فشل في إرسال الرسالة' : 'Failed to send message');
+      } else if (pdfData && isUploadedPDF(pdfData)) {
+        // Update local storage for non-authenticated users
+        savePDF({
+          ...pdfData,
+          chatMessages: [...(pdfData.chatMessages || []), userMessage]
+        });
       }
     } else {
-      const newMessage = await addChatMessageToPDF(id || '', message, true);
-      if (newMessage) {
-        setChatMessages(prevMessages => [...prevMessages, newMessage]);
-        setMessage('');
+      // Add message to Supabase for authenticated users
+      userMessage = await addChatMessageToPDF(id!, userMessageContent, true);
+      if (userMessage) {
+        setChatMessages(prevMessages => [...prevMessages, userMessage]);
       } else {
         toast.error(language === 'ar' ? 'فشل في إرسال الرسالة' : 'Failed to send message');
+        setIsProcessingChat(false);
+        return;
       }
+    }
+
+    try {
+      // Display a typing indicator message
+      const tempBotMessageId = `typing-${Date.now()}`;
+      const typingMessage = {
+        id: tempBotMessageId,
+        content: language === 'ar' ? 'جاري الكتابة...' : 'Typing...',
+        isUser: false,
+        timestamp: new Date(),
+        isTyping: true
+      };
+      
+      setChatMessages(prevMessages => [...prevMessages, typingMessage]);
+      
+      // Call Gemini API via Edge Function
+      const { data, error } = await supabase.functions.invoke('chat-with-pdf', {
+        body: {
+          message: userMessageContent,
+          pdfTitle: pdfData?.title || 'Untitled PDF',
+          pdfContent: `This is a PDF with ${numPages || 'multiple'} pages.` // In a real app, you'd extract text from the PDF
+        }
+      });
+      
+      if (error) {
+        console.error('Error calling Gemini API:', error);
+        throw new Error(error.message);
+      }
+      
+      // Remove typing indicator and add the actual bot response
+      setChatMessages(prevMessages => {
+        const filteredMessages = prevMessages.filter(msg => msg.id !== tempBotMessageId);
+        const botMessage = {
+          id: `bot-${Date.now()}`,
+          content: data.response || (language === 'ar' ? 'عذراً، لم أستطع معالجة طلبك.' : 'Sorry, I could not process your request.'),
+          isUser: false,
+          timestamp: new Date()
+        };
+        
+        if (isTemporaryFile) {
+          const tempPdfData = sessionStorage.getItem('tempPdfFile');
+          if (tempPdfData) {
+            const { fileData } = JSON.parse(tempPdfData);
+            const updatedMessages = [...fileData.chatMessages.filter(msg => msg.id !== tempBotMessageId), userMessage, botMessage];
+            const updatedFileData = {
+              ...fileData,
+              chatMessages: updatedMessages
+            };
+            sessionStorage.setItem('tempPdfFile', JSON.stringify({
+              fileData: updatedFileData,
+              timestamp: Date.now()
+            }));
+          }
+        } else if (!user && pdfData && isUploadedPDF(pdfData)) {
+          // Update local storage for non-authenticated users
+          savePDF({
+            ...pdfData,
+            chatMessages: [...pdfData.chatMessages.filter(msg => msg.id !== tempBotMessageId), botMessage]
+          });
+        } else if (user && id && !isTemporaryFile) {
+          // Add bot message to Supabase for authenticated users
+          addChatMessageToPDF(id, botMessage.content, false);
+        }
+        
+        return [...filteredMessages, botMessage];
+      });
+    } catch (error) {
+      console.error('Error processing message:', error);
+      
+      // Remove typing indicator and add an error message
+      setChatMessages(prevMessages => {
+        const filteredMessages = prevMessages.filter(msg => !msg.isTyping);
+        const errorMessage = {
+          id: `error-${Date.now()}`,
+          content: language === 'ar' 
+            ? 'عذراً، حدث خطأ أثناء معالجة رسالتك. يرجى المحاولة مرة أخرى.' 
+            : 'Sorry, an error occurred while processing your message. Please try again.',
+          isUser: false,
+          timestamp: new Date()
+        };
+        
+        return [...filteredMessages, errorMessage];
+      });
+      
+      toast.error(language === 'ar' ? 'فشل في معالجة الرسالة' : 'Failed to process message');
+    } finally {
+      setIsProcessingChat(false);
     }
   };
 
@@ -180,6 +305,7 @@ const PDFViewer = () => {
   const handleDownload = () => {
     if (pdfData) {
       if (isUploadedPDF(pdfData)) {
+        // For locally stored PDFs
         const link = document.createElement('a');
         link.href = pdfData.dataUrl;
         link.download = pdfData.title || 'document.pdf';
@@ -187,6 +313,7 @@ const PDFViewer = () => {
         link.click();
         document.body.removeChild(link);
       } else if ('fileUrl' in pdfData) {
+        // For Supabase PDFs
         window.open(pdfData.fileUrl, '_blank');
       }
     } else {
@@ -222,6 +349,7 @@ const PDFViewer = () => {
         const pdf = await uploadPDFToSupabase(file, user.id);
         
         if (pdf) {
+          // Transfer chat messages to the new saved PDF
           if (pdfData.chatMessages && pdfData.chatMessages.length > 0) {
             for (const message of pdfData.chatMessages) {
               await addChatMessageToPDF(pdf.id, message.content, message.isUser);
@@ -283,8 +411,10 @@ const PDFViewer = () => {
               >
                 {isSaving ? (
                   <div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin mr-2" />
-                ) : null}
-                {language === 'ar' ? 'حفظ في ملفاتي' : 'Save to My PDFs'}
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {language === 'ar' ? 'حفظ في ملفاتي' : 'Save to My Files'}
               </Button>
             )}
           </div>
@@ -312,7 +442,7 @@ const PDFViewer = () => {
               {language === 'ar' ? 'السابق' : 'Previous'}
             </Button>
             <span className="text-sm text-muted-foreground">
-              {pageNumber ? `Page ${pageNumber} of ${numPages}` : null}
+              {pageNumber ? `${language === 'ar' ? 'صفحة' : 'Page'} ${pageNumber} ${language === 'ar' ? 'من' : 'of'} ${numPages}` : null}
             </span>
             <Button
               variant="outline"
@@ -324,24 +454,37 @@ const PDFViewer = () => {
           </div>
         </div>
 
-        <div className="md:w-2/5 flex flex-col md:pl-6">
-          <h2 className="heading-3 mb-4">{language === 'ar' ? 'الدردشة' : 'Chat'}</h2>
+        <div className="md:w-2/5 flex flex-col md:pl-6 mt-6 md:mt-0">
+          <h2 className="text-xl font-semibold mb-4">{language === 'ar' ? 'الدردشة' : 'Chat'}</h2>
           <div className="flex-grow overflow-y-auto mb-4" ref={chatContainerRef}>
             <ScrollArea className="h-[500px] rounded-md border border-border/40 p-4">
-              <div className="flex flex-col space-y-2">
+              <div className="flex flex-col space-y-4">
+                {chatMessages.length === 0 && (
+                  <div className="text-center text-muted-foreground py-10">
+                    {language === 'ar' 
+                      ? 'ابدأ الدردشة مع هذا المستند. اسأل أي سؤال!'
+                      : 'Start chatting with this document. Ask any question!'}
+                  </div>
+                )}
+                
                 {chatMessages.map((msg, index) => (
                   <div
-                    key={index}
+                    key={msg.id || index}
                     className={`flex flex-col ${msg.isUser ? 'items-end' : 'items-start'}`}
                   >
                     <div
-                      className={`rounded-lg px-3 py-2 text-sm ${msg.isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                        }`}
+                      className={`rounded-lg px-4 py-2 max-w-[85%] ${
+                        msg.isUser 
+                          ? 'bg-primary text-primary-foreground' 
+                          : msg.isTyping
+                            ? 'bg-muted/80 animate-pulse'
+                            : 'bg-muted'
+                      }`}
                     >
                       {msg.content}
                     </div>
-                    <span className="text-xs text-muted-foreground mt-1">
-                      {new Date(msg.timestamp).toLocaleTimeString()}
+                    <span className="text-xs text-muted-foreground mt-1 px-1">
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                 ))}
@@ -357,10 +500,17 @@ const PDFViewer = () => {
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               className="flex-grow mr-2"
+              disabled={isProcessingChat}
             />
-            <Button onClick={handleSendMessage}>
-              <Send className="h-4 w-4 mr-2" />
-              {language === 'ar' ? 'إرسال' : 'Send'}
+            <Button 
+              onClick={handleSendMessage} 
+              disabled={isProcessingChat || !message.trim()}
+            >
+              {isProcessingChat ? (
+                <div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </div>

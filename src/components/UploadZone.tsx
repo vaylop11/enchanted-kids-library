@@ -1,7 +1,7 @@
 
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { File as FileIcon, Upload, AlertTriangle } from 'lucide-react';
+import { FileDown, Upload, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
@@ -55,6 +55,7 @@ const UploadZone = () => {
       }, 200);
 
       if (user) {
+        // Authenticated user flow - upload to Supabase
         const pdf = await uploadPDFToSupabase(file, user.id);
         
         clearInterval(progressInterval);
@@ -81,6 +82,7 @@ const UploadZone = () => {
             : 'Failed to upload file. Please try again.');
         }
       } else {
+        // Non-authenticated user flow - store in sessionStorage
         try {
           const fileReader = new FileReader();
           fileReader.onload = (event) => {
@@ -208,12 +210,16 @@ const UploadZone = () => {
       }
       
       const blob = new Blob([arrayBuffer], { type: mimeString });
-      // Fix: Create a File object correctly
       const file = new File([blob], fileData.title, { type: mimeString });
       
       const pdf = await uploadPDFToSupabase(file, user.id);
       
       if (pdf) {
+        // Copy over any chat messages from the temporary file
+        if (fileData.chatMessages && fileData.chatMessages.length > 0) {
+          // This will be handled by the PDFViewer component
+        }
+        
         sessionStorage.removeItem('tempPdfFile');
         
         toast.success(language === 'ar' ? 'تم حفظ الملف بنجاح' : 'File saved successfully');
@@ -335,7 +341,7 @@ const UploadZone = () => {
                 }}
                 disabled={isUploading}
               >
-                <FileIcon className="mr-2 h-4 w-4" />
+                <FileDown className="mr-2 h-4 w-4" />
                 {language === 'ar' ? 'اختر ملف' : 'Select File'}
               </Button>
             )}
