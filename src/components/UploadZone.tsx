@@ -1,6 +1,7 @@
+
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { File, Upload, AlertTriangle } from 'lucide-react';
+import { File as FileIcon, Upload, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
@@ -207,6 +208,7 @@ const UploadZone = () => {
       }
       
       const blob = new Blob([arrayBuffer], { type: mimeString });
+      // Fix: Create a File object correctly
       const file = new File([blob], fileData.title, { type: mimeString });
       
       const pdf = await uploadPDFToSupabase(file, user.id);
