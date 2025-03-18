@@ -8,6 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { getSavedPDFs, createPDFFromFile } from '@/services/pdfStorage';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const PDFs = () => {
   const location = useLocation();
@@ -16,15 +17,29 @@ const PDFs = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [savedPDFs, setSavedPDFs] = useState(getSavedPDFs());
-  const [filteredPDFs, setFilteredPDFs] = useState(savedPDFs);
+  const [savedPDFs, setSavedPDFs] = useState<any[]>([]);
+  const [filteredPDFs, setFilteredPDFs] = useState<any[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Load saved PDFs on mount
   useEffect(() => {
-    setSavedPDFs(getSavedPDFs());
-  }, []);
+    const loadPDFs = async () => {
+      setIsLoading(true);
+      try {
+        const pdfs = await getSavedPDFs();
+        setSavedPDFs(pdfs);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading PDFs:', error);
+        toast.error(language === 'ar' ? 'حدث خطأ أثناء تحميل الملفات' : 'Error loading PDFs');
+        setIsLoading(false);
+      }
+    };
+    
+    loadPDFs();
+  }, [language]);
   
   // Update filtered PDFs when search changes or when savedPDFs changes
   useEffect(() => {
@@ -71,7 +86,7 @@ const PDFs = () => {
       reader.onload = async (event) => {
         if (event.target && typeof event.target.result === 'string') {
           // Create PDF entry
-          const pdf = createPDFFromFile(file, event.target.result);
+          const pdf = await createPDFFromFile(file, event.target.result);
           
           // Show success message
           toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
@@ -83,7 +98,8 @@ const PDFs = () => {
           }
           
           // Refresh the PDF list
-          setSavedPDFs(getSavedPDFs());
+          const updatedPdfs = await getSavedPDFs();
+          setSavedPDFs(updatedPdfs);
           
           // Navigate to the PDF viewer
           navigate(`/pdf/${pdf.id}`);
@@ -179,7 +195,14 @@ const PDFs = () => {
         
         {/* PDF Grid */}
         <div>
-          {filteredPDFs.length > 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
+              <p className="text-lg font-medium">
+                {language === 'ar' ? 'جاري تحميل الملفات...' : 'Loading PDFs...'}
+              </p>
+            </div>
+          ) : filteredPDFs.length > 0 ? (
             <>
               <div className="text-sm text-muted-foreground mb-6">
                 {language === 'ar' 
