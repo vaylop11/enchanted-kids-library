@@ -10,87 +10,156 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 
+// Sample blog posts with enhanced SEO and formatting
+const blogPosts = [
+  {
+    id: 'chatpdf-vs-traditional',
+    title: {
+      en: 'ChatPDF vs Traditional PDF Reading: A Comprehensive Comparison',
+      ar: 'ChatPDF مقابل قراءة PDF التقليدية: مقارنة شاملة'
+    },
+    excerpt: {
+      en: 'Discover how ChatPDF technology is changing the way we interact with documents and why it\'s more efficient than traditional reading methods.',
+      ar: 'اكتشف كيف تغير تقنية ChatPDF الطريقة التي نتفاعل بها مع المستندات ولماذا هي أكثر كفاءة من أساليب القراءة التقليدية.'
+    },
+    date: '2023-10-15',
+    readTime: {
+      en: '5 min read',
+      ar: '5 دقائق للقراءة'
+    },
+    category: {
+      en: 'Technology',
+      ar: 'تكنولوجيا'
+    },
+    image: 'https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  },
+  {
+    id: 'chatpdf-education',
+    title: {
+      en: 'How ChatPDF is Transforming Education for Students and Teachers',
+      ar: 'كيف يغير ChatPDF مشهد التعليم للطلاب والمعلمين'
+    },
+    excerpt: {
+      en: 'Explore how ChatPDF\'s innovative technology can improve student comprehension and save time for teachers by facilitating information extraction from academic documents.',
+      ar: 'استكشف كيف يمكن لتقنية ChatPDF المبتكرة أن تحسن فهم الطلاب وتوفر الوقت للمعلمين من خلال تسهيل استخراج المعلومات من المستندات الأكاديمية.'
+    },
+    date: '2023-11-02',
+    readTime: {
+      en: '7 min read',
+      ar: '7 دقائق للقراءة'
+    },
+    category: {
+      en: 'Education',
+      ar: 'تعليم'
+    },
+    image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  },
+  {
+    id: 'chatpdf-business',
+    title: {
+      en: 'Accelerating Business Processes with ChatPDF: A Case Study',
+      ar: 'تسريع عمليات الأعمال باستخدام ChatPDF: دراسة حالة'
+    },
+    excerpt: {
+      en: 'Learn how businesses are using ChatPDF technology to analyze contracts and legal documents 10x faster than traditional methods.',
+      ar: 'تعرف على كيفية استخدام الشركات لتقنية ChatPDF لتحليل العقود والمستندات القانونية بسرعة أكبر بـ 10 مرات من الطرق التقليدية.'
+    },
+    date: '2023-12-08',
+    readTime: {
+      en: '6 min read',
+      ar: '6 دقائق للقراءة'
+    },
+    category: {
+      en: 'Business',
+      ar: 'أعمال'
+    },
+    image: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  },
+  {
+    id: 'chatpdf-research',
+    title: {
+      en: 'How Researchers Can Use ChatPDF to Accelerate Literature Reviews',
+      ar: 'كيف يمكن للباحثين استخدام ChatPDF لتسريع مراجعة الأدبيات العلمية'
+    },
+    excerpt: {
+      en: 'A comprehensive guide for researchers on how to use ChatPDF to summarize research papers and extract key findings efficiently.',
+      ar: 'دليل شامل للباحثين حول كيفية استخدام ChatPDF لتلخيص الأوراق البحثية واستخلاص النتائج الرئيسية بكفاءة.'
+    },
+    date: '2024-01-15',
+    readTime: {
+      en: '8 min read',
+      ar: '8 دقائق للقراءة'
+    },
+    category: {
+      en: 'Research',
+      ar: 'بحث علمي'
+    },
+    image: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  },
+  {
+    id: 'chatpdf-legal',
+    title: {
+      en: 'ChatPDF for Lawyers: How to Improve Legal Document Review',
+      ar: 'ChatPDF للمحامين: كيفية تحسين مراجعة المستندات القانونية'
+    },
+    excerpt: {
+      en: 'Discover how lawyers can use ChatPDF to analyze contracts, discover legal loopholes, and save hours of manual work.',
+      ar: 'اكتشف كيف يمكن للمحامين استخدام ChatPDF لتحليل العقود واكتشاف الثغرات القانونية وتوفير ساعات من العمل اليدوي.'
+    },
+    date: '2024-02-22',
+    readTime: {
+      en: '9 min read',
+      ar: '9 دقائق للقراءة'
+    },
+    category: {
+      en: 'Legal',
+      ar: 'قانون'
+    },
+    image: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  },
+  {
+    id: 'chatpdf-student',
+    title: {
+      en: 'The Student\'s Guide to Using ChatPDF for Effective Studying',
+      ar: 'دليل الطالب لاستخدام ChatPDF للدراسة الفعالة'
+    },
+    excerpt: {
+      en: 'Tips and tricks for students on how to use ChatPDF to understand complex textbooks, summarize lectures, and prepare for exams.',
+      ar: 'نصائح وحيل للطلاب حول كيفية استخدام ChatPDF لفهم الكتب المدرسية المعقدة وتلخيص المحاضرات والاستعداد للاختبارات.'
+    },
+    date: '2024-03-10',
+    readTime: {
+      en: '6 min read',
+      ar: '6 دقائق للقراءة'
+    },
+    category: {
+      en: 'Education',
+      ar: 'تعليم'
+    },
+    image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  }
+];
+
 const BlogPage = () => {
   const { language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   
-  // Sample blog posts with ChatPDF as the main keyword focus
-  const allBlogPosts = [
-    {
-      id: 'chatpdf-vs-traditional',
-      title: language === 'ar' ? 'ChatPDF مقابل قراءة PDF التقليدية: مقارنة شاملة' : 'ChatPDF vs Traditional PDF Reading: A Comprehensive Comparison',
-      excerpt: language === 'ar' 
-        ? 'اكتشف كيف تغير تقنية ChatPDF الطريقة التي نتفاعل بها مع المستندات ولماذا هي أكثر كفاءة من أساليب القراءة التقليدية.'
-        : 'Discover how ChatPDF technology is changing the way we interact with documents and why it\'s more efficient than traditional reading methods.',
-      date: '2023-10-15',
-      readTime: language === 'ar' ? '5 دقائق للقراءة' : '5 min read',
-      category: language === 'ar' ? 'تكنولوجيا' : 'Technology',
-      image: 'https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
-    },
-    {
-      id: 'chatpdf-education',
-      title: language === 'ar' ? 'كيف يغير ChatPDF مشهد التعليم للطلاب والمعلمين' : 'How ChatPDF is Transforming Education for Students and Teachers',
-      excerpt: language === 'ar'
-        ? 'استكشف كيف يمكن لتقنية ChatPDF المبتكرة أن تحسن فهم الطلاب وتوفر الوقت للمعلمين من خلال تسهيل استخراج المعلومات من المستندات الأكاديمية.'
-        : 'Explore how ChatPDF\'s innovative technology can improve student comprehension and save time for teachers by facilitating information extraction from academic documents.',
-      date: '2023-11-02',
-      readTime: language === 'ar' ? '7 دقائق للقراءة' : '7 min read',
-      category: language === 'ar' ? 'تعليم' : 'Education',
-      image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
-    },
-    {
-      id: 'chatpdf-business',
-      title: language === 'ar' ? 'تسريع عمليات الأعمال باستخدام ChatPDF: دراسة حالة' : 'Accelerating Business Processes with ChatPDF: A Case Study',
-      excerpt: language === 'ar'
-        ? 'تعرف على كيفية استخدام الشركات لتقنية ChatPDF لتحليل العقود والمستندات القانونية بسرعة أكبر بـ 10 مرات من الطرق التقليدية.'
-        : 'Learn how businesses are using ChatPDF technology to analyze contracts and legal documents 10x faster than traditional methods.',
-      date: '2023-12-08',
-      readTime: language === 'ar' ? '6 دقائق للقراءة' : '6 min read',
-      category: language === 'ar' ? 'أعمال' : 'Business',
-      image: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
-    },
-    {
-      id: 'chatpdf-research',
-      title: language === 'ar' ? 'كيف يمكن للباحثين استخدام ChatPDF لتسريع مراجعة الأدبيات العلمية' : 'How Researchers Can Use ChatPDF to Accelerate Literature Reviews',
-      excerpt: language === 'ar'
-        ? 'دليل شامل للباحثين حول كيفية استخدام ChatPDF لتلخيص الأوراق البحثية واستخلاص النتائج الرئيسية بكفاءة.'
-        : 'A comprehensive guide for researchers on how to use ChatPDF to summarize research papers and extract key findings efficiently.',
-      date: '2024-01-15',
-      readTime: language === 'ar' ? '8 دقائق للقراءة' : '8 min read',
-      category: language === 'ar' ? 'بحث علمي' : 'Research',
-      image: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
-    },
-    {
-      id: 'chatpdf-legal',
-      title: language === 'ar' ? 'ChatPDF للمحامين: كيفية تحسين مراجعة المستندات القانونية' : 'ChatPDF for Lawyers: How to Improve Legal Document Review',
-      excerpt: language === 'ar'
-        ? 'اكتشف كيف يمكن للمحامين استخدام ChatPDF لتحليل العقود واكتشاف الثغرات القانونية وتوفير ساعات من العمل اليدوي.'
-        : 'Discover how lawyers can use ChatPDF to analyze contracts, discover legal loopholes, and save hours of manual work.',
-      date: '2024-02-22',
-      readTime: language === 'ar' ? '9 دقائق للقراءة' : '9 min read',
-      category: language === 'ar' ? 'قانون' : 'Legal',
-      image: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
-    },
-    {
-      id: 'chatpdf-student',
-      title: language === 'ar' ? 'دليل الطالب لاستخدام ChatPDF للدراسة الفعالة' : 'The Student\'s Guide to Using ChatPDF for Effective Studying',
-      excerpt: language === 'ar'
-        ? 'نصائح وحيل للطلاب حول كيفية استخدام ChatPDF لفهم الكتب المدرسية المعقدة وتلخيص المحاضرات والاستعداد للاختبارات.'
-        : 'Tips and tricks for students on how to use ChatPDF to understand complex textbooks, summarize lectures, and prepare for exams.',
-      date: '2024-03-10',
-      readTime: language === 'ar' ? '6 دقائق للقراءة' : '6 min read',
-      category: language === 'ar' ? 'تعليم' : 'Education',
-      image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
-    }
-  ];
+  // Get localized blog posts based on the current language
+  const localizedPosts = blogPosts.map(post => ({
+    ...post,
+    title: post.title[language as 'en' | 'ar'] || post.title.en,
+    excerpt: post.excerpt[language as 'en' | 'ar'] || post.excerpt.en,
+    readTime: post.readTime[language as 'en' | 'ar'] || post.readTime.en,
+    category: post.category[language as 'en' | 'ar'] || post.category.en
+  }));
   
   // Get unique categories
-  const categories = Array.from(new Set(allBlogPosts.map(post => post.category)));
+  const categories = Array.from(new Set(localizedPosts.map(post => post.category)));
   
   // Filter blog posts based on search term and category
-  const filteredPosts = allBlogPosts.filter(post => {
+  const filteredPosts = localizedPosts.filter(post => {
     const matchesSearch = !searchTerm || 
       post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       post.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -134,11 +203,11 @@ const BlogPage = () => {
       
       <div className="pt-32 pb-20 px-4 md:px-6 container mx-auto max-w-7xl animate-fade-in">
         <div className="mb-16 max-w-3xl">
-          <h1 className="heading-1 mb-6">
+          <h1 className="text-4xl font-bold tracking-tight mb-6">
             {language === 'ar' ? 'مدونة ChatPDF' : 'ChatPDF Blog'}
           </h1>
           
-          <p className="paragraph mb-10">
+          <p className="text-lg text-muted-foreground mb-10">
             {language === 'ar'
               ? 'استكشف أحدث المقالات حول كيفية استخدام ChatPDF وفوائده وكيف يمكن أن يساعدك في العمل والدراسة.'
               : 'Explore the latest articles about how to use ChatPDF, its benefits, and how it can help you in work and study.'}
@@ -244,10 +313,10 @@ const BlogPage = () => {
           </motion.div>
         ) : (
           <div className="text-center py-20 bg-muted/20 rounded-lg">
-            <h3 className="heading-3 mb-2">
+            <h3 className="text-xl font-semibold mb-2">
               {language === 'ar' ? 'لم يتم العثور على مقالات' : 'No articles found'}
             </h3>
-            <p className="paragraph">
+            <p className="text-muted-foreground">
               {language === 'ar' 
                 ? 'حاول تعديل معايير البحث الخاصة بك'
                 : 'Try adjusting your search criteria'

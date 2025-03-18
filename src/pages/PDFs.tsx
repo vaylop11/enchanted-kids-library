@@ -3,58 +3,65 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PDFCard from '@/components/PDFCard';
 import Navbar from '@/components/Navbar';
-import { Search, Filter, X, FileUp, Upload } from 'lucide-react';
+import { Search, X, Upload } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { getSavedPDFs, createPDFFromFile } from '@/services/pdfStorage';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { getUserPDFs, uploadPDFToSupabase, SupabasePDF } from '@/services/pdfSupabaseService';
 
 const PDFs = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const { user, loading: authLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [savedPDFs, setSavedPDFs] = useState<any[]>([]);
-  const [filteredPDFs, setFilteredPDFs] = useState<any[]>([]);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [pdfs, setPdfs] = useState<SupabasePDF[]>([]);
+  const [filteredPDFs, setFilteredPDFs] = useState<SupabasePDF[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Load saved PDFs on mount
+  // Load PDFs when component mounts or user changes
   useEffect(() => {
     const loadPDFs = async () => {
+      if (authLoading) return;
+      
+      if (!user) {
+        navigate('/signin');
+        return;
+      }
+      
       setIsLoading(true);
       try {
-        const pdfs = await getSavedPDFs();
-        setSavedPDFs(pdfs);
-        setIsLoading(false);
+        const loadedPDFs = await getUserPDFs(user.id);
+        setPdfs(loadedPDFs);
       } catch (error) {
         console.error('Error loading PDFs:', error);
-        toast.error(language === 'ar' ? 'حدث خطأ أثناء تحميل الملفات' : 'Error loading PDFs');
+        toast.error(language === 'ar' ? 'فشل في تحميل الملفات' : 'Failed to load PDFs');
+      } finally {
         setIsLoading(false);
       }
     };
     
     loadPDFs();
-  }, [language]);
+  }, [user, authLoading, navigate, language]);
   
-  // Update filtered PDFs when search changes or when savedPDFs changes
+  // Update filtered PDFs when search changes or when pdfs changes
   useEffect(() => {
     if (searchTerm) {
       const lowercaseSearch = searchTerm.toLowerCase();
-      const results = savedPDFs.filter(
+      const results = pdfs.filter(
         pdf => 
           pdf.title.toLowerCase().includes(lowercaseSearch) || 
-          pdf.summary.toLowerCase().includes(lowercaseSearch)
+          (pdf.summary && pdf.summary.toLowerCase().includes(lowercaseSearch))
       );
       setFilteredPDFs(results);
     } else {
-      setFilteredPDFs(savedPDFs);
+      setFilteredPDFs(pdfs);
     }
-  }, [searchTerm, savedPDFs]);
+  }, [searchTerm, pdfs]);
 
   // Handle file upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,6 +72,13 @@ const PDFs = () => {
   };
 
   const handleFileUpload = async (file: File) => {
+    // Check if user is logged in
+    if (!user) {
+      toast.error(language === 'ar' ? 'يرجى تسجيل الدخول لتحميل الملفات' : 'Please sign in to upload files');
+      navigate('/signin');
+      return;
+    }
+    
     // Check if file is PDF
     if (file.type !== 'application/pdf') {
       toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
@@ -80,38 +94,27 @@ const PDFs = () => {
     try {
       setIsUploading(true);
       
-      // Read file as data URL
-      const reader = new FileReader();
+      // Upload PDF to Supabase
+      const pdf = await uploadPDFToSupabase(file, user.id);
       
-      reader.onload = async (event) => {
-        if (event.target && typeof event.target.result === 'string') {
-          // Create PDF entry
-          const pdf = await createPDFFromFile(file, event.target.result);
-          
-          // Show success message
-          toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-          
-          // Reset state
-          setIsUploading(false);
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-          
-          // Refresh the PDF list
-          const updatedPdfs = await getSavedPDFs();
-          setSavedPDFs(updatedPdfs);
-          
-          // Navigate to the PDF viewer
-          navigate(`/pdf/${pdf.id}`);
-        }
-      };
-      
-      reader.onerror = () => {
+      if (pdf) {
+        // Show success message
+        toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
+        
+        // Add the new PDF to the list
+        setPdfs(prevPDFs => [pdf, ...prevPDFs]);
+        
+        // Reset state
         setIsUploading(false);
-        toast.error(language === 'ar' ? 'فشل في قراءة الملف' : 'Failed to read file');
-      };
-      
-      reader.readAsDataURL(file);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        
+        // Navigate to the PDF viewer
+        navigate(`/pdf/${pdf.id}`);
+      } else {
+        throw new Error('Upload failed');
+      }
     } catch (error) {
       console.error('Upload error:', error);
       setIsUploading(false);
@@ -124,6 +127,23 @@ const PDFs = () => {
       fileInputRef.current.click();
     }
   };
+  
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 pt-24 pb-20 px-4 md:px-6 container mx-auto max-w-7xl flex items-center justify-center">
+          <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+        </main>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    // This should redirect in the useEffect, but just in case
+    navigate('/signin');
+    return null;
+  }
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -196,10 +216,10 @@ const PDFs = () => {
         {/* PDF Grid */}
         <div>
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
-              <p className="text-lg font-medium">
-                {language === 'ar' ? 'جاري تحميل الملفات...' : 'Loading PDFs...'}
+            <div className="text-center py-20 bg-muted/10 rounded-lg border border-border/40">
+              <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4 mx-auto" />
+              <p className="text-muted-foreground">
+                {language === 'ar' ? 'جارٍ تحميل الملفات...' : 'Loading PDFs...'}
               </p>
             </div>
           ) : filteredPDFs.length > 0 ? (

@@ -11,12 +11,5 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Helper functions for storage
-export const getStorageUrl = (path: string): string => {
-  return `${SUPABASE_URL}/storage/v1/object/public/${path}`;
-};
-
-// Create Google Docs viewer URL
-export const createGoogleDocsViewerUrl = (pdfUrl: string): string => {
-  return `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-};
+// Create an untyped client for working with custom tables not in the generated types
+export const supabaseUntyped = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);

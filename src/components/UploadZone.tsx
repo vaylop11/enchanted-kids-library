@@ -1,14 +1,17 @@
+
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { File, Upload, Check, X, AlertTriangle } from 'lucide-react';
+import { File, Upload, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { createPDFFromFile } from '@/services/pdfStorage';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { uploadPDFToSupabase } from '@/services/pdfSupabaseService';
 
 const UploadZone = () => {
   const { language } = useLanguage();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -54,63 +57,95 @@ const UploadZone = () => {
         });
       }, 200);
 
-      // Read file as data URL
-      const reader = new FileReader();
-      
-      reader.onload = async (event) => {
-        if (event.target && typeof event.target.result === 'string') {
-          try {
-            // Create PDF entry
-            const pdf = createPDFFromFile(file, event.target.result);
-            
-            // Clear interval and complete progress
-            clearInterval(progressInterval);
-            setUploadProgress(100);
-            
-            // Check if PDF was successfully created with dataUrl
-            if (!pdf.dataUrl) {
-              throw new Error('PDF data could not be stored');
-            }
-            
-            // Show success message
-            toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-            
-            // Reset state
-            setTimeout(() => {
-              setIsUploading(false);
-              setUploadProgress(0);
-              if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-              }
-              
-              // Navigate to the PDF viewer
-              navigate(`/pdf/${pdf.id}`);
-            }, 500);
-          } catch (error) {
-            console.error('Error storing PDF:', error);
-            clearInterval(progressInterval);
+      if (user) {
+        // If user is logged in, upload PDF to Supabase
+        const pdf = await uploadPDFToSupabase(file, user.id);
+        
+        // Clear interval and complete progress
+        clearInterval(progressInterval);
+        setUploadProgress(100);
+        
+        if (pdf) {
+          // Show success message
+          toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
+          
+          // Reset state
+          setTimeout(() => {
             setIsUploading(false);
             setUploadProgress(0);
-            setUploadError(language === 'ar' 
-              ? 'حدث خطأ أثناء تخزين الملف. قد يكون المتصفح ممتلئًا، حاول حذف بعض الملفات أولاً.'
-              : 'Error storing the file. Your browser storage might be full, try deleting some files first.');
-            toast.error(language === 'ar' 
-              ? 'فشل في تخزين الملف'
-              : 'Failed to store file');
-          }
+            if (fileInputRef.current) {
+              fileInputRef.current.value = '';
+            }
+            
+            // Navigate to the PDF viewer
+            navigate(`/pdf/${pdf.id}`);
+          }, 500);
+        } else {
+          // Handle upload failure
+          clearInterval(progressInterval);
+          setIsUploading(false);
+          setUploadProgress(0);
+          setUploadError(language === 'ar' 
+            ? 'فشل في تحميل الملف. يرجى المحاولة مرة أخرى.' 
+            : 'Failed to upload file. Please try again.');
         }
-      };
-      
-      reader.onerror = (error) => {
-        console.error('FileReader error:', error);
-        clearInterval(progressInterval);
-        setIsUploading(false);
-        setUploadProgress(0);
-        setUploadError(language === 'ar' ? 'فشل في قراءة الملف' : 'Failed to read file');
-        toast.error(language === 'ar' ? 'فشل في قراءة الملف' : 'Failed to read file');
-      };
-      
-      reader.readAsDataURL(file);
+      } else {
+        // If user is not logged in, handle the file in session storage temporarily
+        try {
+          const fileReader = new FileReader();
+          fileReader.onload = (event) => {
+            if (event.target && event.target.result) {
+              // Store file data in session storage
+              const tempId = `temp-${Date.now()}`;
+              const fileData = {
+                id: tempId,
+                title: file.name,
+                summary: `Uploaded on ${new Date().toISOString().split('T')[0]}`,
+                uploadDate: new Date().toISOString().split('T')[0],
+                pageCount: 0, // Will be updated when loaded in the viewer
+                fileSize: formatFileSize(file.size),
+                dataUrl: event.target.result as string,
+                chatMessages: []
+              };
+              
+              // Store in session storage
+              sessionStorage.setItem('tempPdfFile', JSON.stringify({
+                fileData: fileData,
+                timestamp: Date.now()
+              }));
+              
+              // Clear interval and complete progress
+              clearInterval(progressInterval);
+              setUploadProgress(100);
+              
+              // Show success message
+              toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
+              
+              // Reset state
+              setTimeout(() => {
+                setIsUploading(false);
+                setUploadProgress(0);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = '';
+                }
+                
+                // Navigate to the temporary PDF viewer
+                navigate(`/pdf/temp/${tempId}`);
+              }, 500);
+            }
+          };
+          
+          fileReader.readAsDataURL(file);
+        } catch (error) {
+          console.error('Error reading file:', error);
+          clearInterval(progressInterval);
+          setIsUploading(false);
+          setUploadProgress(0);
+          setUploadError(language === 'ar' 
+            ? 'فشل في قراءة الملف. يرجى المحاولة مرة أخرى.' 
+            : 'Failed to read file. Please try again.');
+        }
+      }
     } catch (error) {
       console.error('Upload error:', error);
       setIsUploading(false);
@@ -118,6 +153,13 @@ const UploadZone = () => {
       setUploadError(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
       toast.error(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
     }
+  };
+
+  // Helper function to format file size
+  const formatFileSize = (size: number): string => {
+    if (size < 1024) return `${size} B`;
+    if (size < 1048576) return `${(size / 1024).toFixed(2)} KB`;
+    return `${(size / 1048576).toFixed(2)} MB`;
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -156,6 +198,11 @@ const UploadZone = () => {
     navigate('/pdfs');
   };
 
+  const handleSignIn = () => {
+    navigate('/signin');
+  };
+
+  // Modified rendering to allow non-logged in users to upload
   return (
     <div className="w-full max-w-3xl mx-auto">
       {uploadError ? (
@@ -179,12 +226,14 @@ const UploadZone = () => {
                 >
                   {language === 'ar' ? 'حاول مرة أخرى' : 'Try Again'}
                 </Button>
-                <Button 
-                  variant="default"
-                  onClick={handleNavigateToPDFs}
-                >
-                  {language === 'ar' ? 'عرض ملفات PDF الخاصة بي' : 'View My PDFs'}
-                </Button>
+                {user && (
+                  <Button 
+                    variant="default"
+                    onClick={handleNavigateToPDFs}
+                  >
+                    {language === 'ar' ? 'عرض ملفات PDF الخاصة بي' : 'View My PDFs'}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -227,6 +276,14 @@ const UploadZone = () => {
                   : 'Drag and drop or click to select a file (max 10MB)'
                 }
               </p>
+              {!user && (
+                <p className="text-xs text-amber-600 mt-2">
+                  {language === 'ar'
+                    ? 'ملاحظة: يمكنك التحدث مع الملف مؤقتًا. سجل الدخول لحفظ الملفات'
+                    : 'Note: You can chat with the file temporarily. Sign in to save files'
+                  }
+                </p>
+              )}
             </div>
             
             {isUploading ? (
@@ -259,11 +316,26 @@ const UploadZone = () => {
         </div>
       )}
       
-      <div className="mt-4 text-center text-sm text-muted-foreground">
-        {language === 'ar'
-          ? 'يمكنك التحدث مع مستندك بمجرد التحميل'
-          : 'You can chat with your document once uploaded'
-        }
+      <div className="mt-4 text-center">
+        <p className="text-sm text-muted-foreground mb-2">
+          {language === 'ar'
+            ? 'يمكنك التحدث مع مستندك بمجرد التحميل'
+            : 'You can chat with your document once uploaded'
+          }
+        </p>
+        
+        {!user && (
+          <Button 
+            variant="link" 
+            onClick={handleSignIn}
+            className="text-xs"
+          >
+            {language === 'ar'
+              ? 'تسجيل الدخول لحفظ ملفات PDF الخاصة بك'
+              : 'Sign in to save your PDF files'
+            }
+          </Button>
+        )}
       </div>
     </div>
   );
