@@ -14,6 +14,7 @@ export type Database = {
           content: string
           created_at: string | null
           id: string
+          is_user: boolean | null
           pdf_document_id: string | null
           role: string
           user_id: string | null
@@ -22,6 +23,7 @@ export type Database = {
           content: string
           created_at?: string | null
           id?: string
+          is_user?: boolean | null
           pdf_document_id?: string | null
           role: string
           user_id?: string | null
@@ -30,6 +32,7 @@ export type Database = {
           content?: string
           created_at?: string | null
           id?: string
+          is_user?: boolean | null
           pdf_document_id?: string | null
           role?: string
           user_id?: string | null
@@ -49,12 +52,18 @@ export type Database = {
           content: string
           created_at: string | null
           embedding: string | null
+          file_size: string | null
           file_url: string
           filename: string
           id: string
           metadata: Json | null
           name: string
+          page_count: number | null
           status: string | null
+          storage_path: string | null
+          summary: string | null
+          thumbnail_url: string | null
+          title: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -62,12 +71,18 @@ export type Database = {
           content: string
           created_at?: string | null
           embedding?: string | null
+          file_size?: string | null
           file_url: string
           filename: string
           id?: string
           metadata?: Json | null
           name: string
+          page_count?: number | null
           status?: string | null
+          storage_path?: string | null
+          summary?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -75,12 +90,18 @@ export type Database = {
           content?: string
           created_at?: string | null
           embedding?: string | null
+          file_size?: string | null
           file_url?: string
           filename?: string
           id?: string
           metadata?: Json | null
           name?: string
+          page_count?: number | null
           status?: string | null
+          storage_path?: string | null
+          summary?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
