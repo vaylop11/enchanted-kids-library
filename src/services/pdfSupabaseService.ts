@@ -12,8 +12,8 @@ import {
 
 // Re-export all types and functions for backward compatibility
 export type { SupabasePDF, AnalysisStage } from './pdfTypes';
+export type { SupabaseChatMessage };
 export { 
-  SupabaseChatMessage,
   generatePDFThumbnail,
   uploadThumbnail,
   uploadPDFToSupabase,
