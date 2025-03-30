@@ -1,6 +1,6 @@
 
 import { Progress } from "@/components/ui/progress";
-import { AnalysisProgress, AnalysisStage } from "@/services/pdfAnalysisService";
+import { AnalysisProgress } from "@/services/pdfAnalysisService";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { FileText, Brain, Sparkles, CheckCircle, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -15,15 +15,15 @@ const PDFAnalysisProgress = ({ analysis }: PDFAnalysisProgressProps) => {
 
   const getStageIcon = () => {
     switch (analysis.stage) {
-      case AnalysisStage.Extracting:
+      case 'extracting':
         return <FileText className="h-5 w-5 animate-pulse" />;
-      case AnalysisStage.Analyzing:
+      case 'analyzing':
         return <Brain className="h-5 w-5 animate-pulse" />;
-      case AnalysisStage.Generating:
+      case 'generating':
         return <Sparkles className="h-5 w-5 animate-pulse" />;
-      case AnalysisStage.Complete:
+      case 'complete':
         return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case AnalysisStage.Error:
+      case 'error':
         return <AlertTriangle className="h-5 w-5 text-red-500" />;
       default:
         return <FileText className="h-5 w-5" />;
@@ -33,20 +33,20 @@ const PDFAnalysisProgress = ({ analysis }: PDFAnalysisProgressProps) => {
   const getStageLabel = () => {
     if (language === 'ar') {
       switch (analysis.stage) {
-        case AnalysisStage.Extracting: return 'استخراج النص';
-        case AnalysisStage.Analyzing: return 'تحليل المحتوى';
-        case AnalysisStage.Generating: return 'إنشاء الإجابة';
-        case AnalysisStage.Complete: return 'اكتمل';
-        case AnalysisStage.Error: return 'خطأ';
+        case 'extracting': return 'استخراج النص';
+        case 'analyzing': return 'تحليل المحتوى';
+        case 'generating': return 'إنشاء الإجابة';
+        case 'complete': return 'اكتمل';
+        case 'error': return 'خطأ';
         default: return '';
       }
     } else {
       switch (analysis.stage) {
-        case AnalysisStage.Extracting: return 'Extracting Text';
-        case AnalysisStage.Analyzing: return 'Analyzing Content';
-        case AnalysisStage.Generating: return 'Generating Answer';
-        case AnalysisStage.Complete: return 'Complete';
-        case AnalysisStage.Error: return 'Error';
+        case 'extracting': return 'Extracting Text';
+        case 'analyzing': return 'Analyzing Content';
+        case 'generating': return 'Generating Answer';
+        case 'complete': return 'Complete';
+        case 'error': return 'Error';
         default: return '';
       }
     }
@@ -59,8 +59,8 @@ const PDFAnalysisProgress = ({ analysis }: PDFAnalysisProgressProps) => {
           variant="outline"
           className={cn(
             "flex items-center gap-1 text-xs font-medium",
-            analysis.stage === AnalysisStage.Error ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" :
-            analysis.stage === AnalysisStage.Complete ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
+            analysis.stage === 'error' ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" :
+            analysis.stage === 'complete' ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
             "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
           )}
         >

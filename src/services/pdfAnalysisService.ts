@@ -7,14 +7,12 @@ import { toast } from "sonner";
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 // Analysis stages for the progress indicator
-export enum AnalysisStage {
-  NotStarted = 'not_started',
-  Extracting = 'extracting', 
-  Analyzing = 'analyzing', 
-  Generating = 'generating', 
-  Complete = 'complete', 
-  Error = 'error'
-}
+export type AnalysisStage = 
+  | 'extracting' 
+  | 'analyzing' 
+  | 'generating' 
+  | 'complete' 
+  | 'error';
 
 export interface AnalysisProgress {
   stage: AnalysisStage;
@@ -31,7 +29,7 @@ export const extractTextFromPDF = async (
 ): Promise<string> => {
   try {
     updateProgress?.({
-      stage: AnalysisStage.Extracting,
+      stage: 'extracting',
       progress: 0,
       message: 'Initializing PDF extraction...'
     });
@@ -44,7 +42,7 @@ export const extractTextFromPDF = async (
     
     for (let i = 1; i <= totalPages; i++) {
       updateProgress?.({
-        stage: AnalysisStage.Extracting,
+        stage: 'extracting',
         progress: Math.round((i - 1) / totalPages * 100),
         message: `Extracting text from page ${i} of ${totalPages}...`
       });
@@ -56,14 +54,14 @@ export const extractTextFromPDF = async (
       
       // Update progress after each page
       updateProgress?.({
-        stage: AnalysisStage.Extracting,
+        stage: 'extracting',
         progress: Math.round(i / totalPages * 100),
         message: `Extracted page ${i} of ${totalPages}`
       });
     }
     
     updateProgress?.({
-      stage: AnalysisStage.Analyzing,
+      stage: 'analyzing',
       progress: 100,
       message: 'Text extraction complete'
     });
@@ -72,7 +70,7 @@ export const extractTextFromPDF = async (
   } catch (error) {
     console.error('Error extracting text from PDF:', error);
     updateProgress?.({
-      stage: AnalysisStage.Error,
+      stage: 'error',
       progress: 0,
       message: 'Failed to extract text from PDF'
     });
@@ -90,7 +88,7 @@ export const analyzePDFWithGemini = async (
 ): Promise<string> => {
   try {
     updateProgress?.({
-      stage: AnalysisStage.Analyzing,
+      stage: 'analyzing',
       progress: 30,
       message: 'Sending PDF content to Gemini AI...'
     });
@@ -101,7 +99,7 @@ export const analyzePDFWithGemini = async (
 
     if (error) {
       updateProgress?.({
-        stage: AnalysisStage.Error,
+        stage: 'error',
         progress: 0,
         message: 'Failed to analyze PDF content'
       });
@@ -109,7 +107,7 @@ export const analyzePDFWithGemini = async (
     }
     
     updateProgress?.({
-      stage: AnalysisStage.Generating,
+      stage: 'generating',
       progress: 70,
       message: 'Generating response...'
     });
@@ -118,7 +116,7 @@ export const analyzePDFWithGemini = async (
     await new Promise(resolve => setTimeout(resolve, 500));
     
     updateProgress?.({
-      stage: AnalysisStage.Complete,
+      stage: 'complete',
       progress: 100,
       message: 'Analysis complete'
     });
@@ -127,7 +125,7 @@ export const analyzePDFWithGemini = async (
   } catch (error) {
     console.error('Error analyzing PDF with Gemini:', error);
     updateProgress?.({
-      stage: AnalysisStage.Error,
+      stage: 'error',
       progress: 0,
       message: error instanceof Error ? error.message : 'Failed to analyze PDF content'
     });
