@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
@@ -24,9 +25,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 interface PDFPreviewProps {
   pdfUrl: string;
   maxHeight?: number;
+  onPageChange?: (pageNumber: number) => void;
 }
 
-const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
+const PDFPreview = ({ pdfUrl, maxHeight = 500, onPageChange }: PDFPreviewProps) => {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -49,6 +51,11 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
     setViewMode('original');
     setActiveTranslation(null);
   }, [pdfUrl]);
+
+  // Call onPageChange prop when pageNumber changes
+  useEffect(() => {
+    onPageChange?.(pageNumber);
+  }, [pageNumber, onPageChange]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -78,8 +85,11 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
     setActiveTranslation(targetLang);
     
     try {
-      // Check if this page is already translated to this language
-      const cacheKey = `${pageNumber}-${targetLang.code}`;
+      // تأكد من أننا نترجم فقط الصفحة الحالية المعروضة
+      const currentPageToTranslate = pageNumber;
+      
+      // تحقق مما إذا كانت هذه الصفحة مترجمة بالفعل إلى هذه اللغة
+      const cacheKey = `${currentPageToTranslate}-${targetLang.code}`;
       const existingTranslation = sessionStorage.getItem(cacheKey);
       
       if (existingTranslation) {
@@ -88,7 +98,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
           
           setTranslatedPages(prev => ({
             ...prev,
-            [pageNumber]: {
+            [currentPageToTranslate]: {
               text: parsed.text,
               isRTL: parsed.isRTL
             }
@@ -96,8 +106,8 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
           
           setViewMode('translated');
           toast.success(language === 'ar' 
-            ? `تم تحميل الترجمة المحفوظة للصفحة ${pageNumber} إلى ${targetLang.localName}` 
-            : `Loaded cached translation of page ${pageNumber} to ${targetLang.name}`);
+            ? `تم تحميل الترجمة المحفوظة للصفحة ${currentPageToTranslate} إلى ${targetLang.localName}` 
+            : `Loaded cached translation of page ${currentPageToTranslate} to ${targetLang.name}`);
           
           setIsTranslating(false);
           return;
@@ -109,12 +119,13 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
       
       // Show loading toast
       const loadingId = toast.loading(language === 'ar' 
-        ? `جاري ترجمة الصفحة ${pageNumber} إلى ${targetLang.localName}...` 
-        : `Translating page ${pageNumber} to ${targetLang.name}...`);
+        ? `جاري ترجمة الصفحة ${currentPageToTranslate} إلى ${targetLang.localName}...` 
+        : `Translating page ${currentPageToTranslate} to ${targetLang.name}...`);
       
+      // استدعاء وظيفة ترجمة الصفحة الحالية فقط
       const { translatedText, isRTL } = await translatePDFPage(
         pdfUrl,
-        pageNumber,
+        currentPageToTranslate,
         targetLang.name,
         targetLang.code,
         (progress) => {
@@ -125,7 +136,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
       // Save the translation
       setTranslatedPages(prev => ({
         ...prev,
-        [pageNumber]: {
+        [currentPageToTranslate]: {
           text: translatedText,
           isRTL: isRTL
         }
@@ -143,8 +154,8 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
       
       toast.dismiss(loadingId);
       toast.success(language === 'ar' 
-        ? `تمت ترجمة الصفحة ${pageNumber} إلى ${targetLang.localName}` 
-        : `Page ${pageNumber} translated to ${targetLang.name}`);
+        ? `تمت ترجمة الصفحة ${currentPageToTranslate} إلى ${targetLang.localName}` 
+        : `Page ${currentPageToTranslate} translated to ${targetLang.name}`);
       
       setViewMode('translated');
     } catch (error) {
@@ -187,7 +198,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
         style={{ minHeight: '400px', maxHeight: `${maxHeight}px` }} 
         dir={contentDirection}
       >
-        <div className="whitespace-pre-wrap">
+        <div className="whitespace-pre-wrap text-right font-arabic" style={{ textAlign: contentDirection === 'rtl' ? 'right' : 'left' }}>
           {translatedContent.text}
         </div>
       </div>
@@ -206,6 +217,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
             size="sm" 
             onClick={goToPreviousPage} 
             disabled={pageNumber <= 1 || loading || !!error}
+            aria-label={language === 'ar' ? 'الصفحة السابقة' : 'Previous page'}
           >
             <ChevronLeft className={cn("h-4 w-4", direction === 'rtl' ? 'ml-1 rotate-180' : 'mr-1')} />
             {language === 'ar' ? 'السابق' : 'Previous'}
@@ -213,7 +225,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
           
           <span className="text-sm">
             {language === 'ar' 
-              ? `${pageNumber} من ${numPages || '?'}` 
+              ? `${pageNumber} من ${numPages || '؟'}` 
               : `Page ${pageNumber} of ${numPages || '?'}`
             }
           </span>
@@ -223,6 +235,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
             size="sm" 
             onClick={goToNextPage} 
             disabled={pageNumber >= (numPages || 1) || loading || !!error}
+            aria-label={language === 'ar' ? 'الصفحة التالية' : 'Next page'}
           >
             {language === 'ar' ? 'التالي' : 'Next'}
             <ChevronRight className={cn("h-4 w-4", direction === 'rtl' ? 'mr-1 rotate-180' : 'ml-1')} />
@@ -236,6 +249,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
               size="sm"
               onClick={resetView}
               className="flex items-center gap-1"
+              aria-label={language === 'ar' ? 'العودة للعرض الأصلي' : 'Return to original view'}
             >
               <RotateCw className="h-3 w-3" />
               {language === 'ar' ? 'العرض الأصلي' : 'Original View'}
@@ -249,6 +263,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
                 size="sm"
                 disabled={isTranslating || loading || !!error || !numPages}
                 className="flex items-center gap-1"
+                aria-label={language === 'ar' ? 'ترجمة الصفحة الحالية' : 'Translate current page'}
               >
                 {isTranslating ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -258,7 +273,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
                 {language === 'ar' ? 'ترجمة الصفحة' : 'Translate Page'}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align={direction === 'rtl' ? 'end' : 'start'}>
+            <DropdownMenuContent align={direction === 'rtl' ? 'end' : 'start'} className={direction === 'rtl' ? 'rtl' : 'ltr'}>
               <DropdownMenuLabel>
                 {language === 'ar' ? 'اختر لغة الترجمة' : 'Select translation language'}
               </DropdownMenuLabel>
@@ -295,14 +310,14 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
           </div>
         ) : (
           <>
-            {/* Show translated content when in translated view mode */}
+            {/* عرض المحتوى المترجم عندما تكون في وضع عرض الترجمة */}
             {viewMode === 'translated' && translatedPages[pageNumber] ? (
               <CustomPageRenderer 
                 canvasRef={{ current: null }}
                 pageNumber={pageNumber}
               />
             ) : (
-              /* Show original PDF */
+              /* عرض PDF الأصلي */
               <Document
                 file={pdfUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
