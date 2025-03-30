@@ -6,13 +6,8 @@ import { Clock, FileText, MessageSquare, Download, Trash2, History, FileText as 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { deletePDF } from '@/services/pdfSupabaseService';
 import { toast } from 'sonner';
-import { 
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 
 export interface PDF {
   id: string;
@@ -142,96 +137,129 @@ const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
   };
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger>
-        <Link 
-          to={`/pdf/${pdf.id}`}
-          id={`pdf-card-${pdf.id}`}
-          className={cn(
-            'group relative flex flex-col rounded-2xl overflow-hidden bg-card border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 h-full hover-lift',
-            isInView ? 'animate-fade-in opacity-100' : 'opacity-0'
-          )}
-          style={{ animationDelay }}
-          aria-label={`Open ChatPDF document: ${pdf.title}`}
-        >
-          <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/20">
-            {pdf.thumbnail ? (
-              <>
-                <div 
-                  className={cn(
-                    "absolute inset-0 bg-muted/20 backdrop-blur-sm transition-opacity duration-500",
-                    isLoaded ? "opacity-0" : "opacity-100"
-                  )}
-                />
-                <img
-                  src={pdf.thumbnail}
-                  alt={language === 'ar' ? `صورة مصغرة لـ ${pdf.title}` : `ChatPDF thumbnail for ${pdf.title}`}
-                  className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                  onLoad={() => setIsLoaded(true)}
-                  loading="lazy"
-                />
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <FileText className="h-20 w-20 text-muted-foreground/50" />
-              </div>
-            )}
-            
-            {hasChatMessages && (
-              <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                <MessageSquare className="h-3 w-3" />
-                {language === 'ar' ? 'مع محادثة' : 'Has Chat'}
-              </div>
-            )}
-          </div>
-          
-          <div className="flex flex-col flex-grow p-4">
-            <h3 className="font-display font-medium text-lg leading-tight mb-2 group-hover:text-foreground/80 transition-colors">
-              {pdf.title}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4 flex-grow">
-              {pdf.summary}
-            </p>
-            <div className="flex justify-between items-center text-xs text-muted-foreground">
-              <span>{pdf.uploadDate}</span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {pdf.pageCount} {language === 'ar' ? 'صفحات' : 'pages'}
-              </span>
+    <Card 
+      id={`pdf-card-${pdf.id}`}
+      className={cn(
+        'group relative flex flex-col overflow-hidden h-full hover-lift',
+        isInView ? 'animate-fade-in opacity-100' : 'opacity-0'
+      )}
+      style={{ animationDelay }}
+    >
+      <Link 
+        to={`/pdf/${pdf.id}`}
+        className="flex-1 flex flex-col"
+        aria-label={`Open ChatPDF document: ${pdf.title}`}
+      >
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/20">
+          {pdf.thumbnail ? (
+            <>
+              <div 
+                className={cn(
+                  "absolute inset-0 bg-muted/20 backdrop-blur-sm transition-opacity duration-500",
+                  isLoaded ? "opacity-0" : "opacity-100"
+                )}
+              />
+              <img
+                src={pdf.thumbnail}
+                alt={language === 'ar' ? `صورة مصغرة لـ ${pdf.title}` : `ChatPDF thumbnail for ${pdf.title}`}
+                className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                onLoad={() => setIsLoaded(true)}
+                loading="lazy"
+              />
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <FileText className="h-20 w-20 text-muted-foreground/50" />
             </div>
+          )}
+          
+          {hasChatMessages && (
+            <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" />
+              {language === 'ar' ? 'مع محادثة' : 'Has Chat'}
+            </div>
+          )}
+        </div>
+        
+        <CardContent className="flex-1 p-4">
+          <h3 className="font-display font-medium text-lg leading-tight mb-2 group-hover:text-foreground/80 transition-colors">
+            {pdf.title}
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4 flex-grow">
+            {pdf.summary}
+          </p>
+          <div className="flex justify-between items-center text-xs text-muted-foreground">
+            <span>{pdf.uploadDate}</span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {pdf.pageCount} {language === 'ar' ? 'صفحات' : 'pages'}
+            </span>
           </div>
-        </Link>
-      </ContextMenuTrigger>
+        </CardContent>
+      </Link>
       
-      <ContextMenuContent className="w-56">
-        <ContextMenuItem onClick={handleDownload} className="cursor-pointer">
-          <Download className="mr-2 h-4 w-4" />
-          <span>{language === 'ar' ? 'تنزيل' : 'Download'}</span>
-        </ContextMenuItem>
+      <CardFooter className="flex flex-wrap gap-2 p-3 pt-0 border-t">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 px-2 rounded-md flex-1"
+          onClick={handleDownload}
+        >
+          <Download className="h-3.5 w-3.5 mr-1" />
+          <span className="text-xs">
+            {language === 'ar' ? 'تنزيل' : 'Download'}
+          </span>
+        </Button>
         
-        <ContextMenuItem onClick={generateSummary} className="cursor-pointer">
-          <Summarize className="mr-2 h-4 w-4" />
-          <span>{language === 'ar' ? 'تلخيص' : 'Summarize'}</span>
-        </ContextMenuItem>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 px-2 rounded-md flex-1"
+          onClick={viewHistory}
+        >
+          <History className="h-3.5 w-3.5 mr-1" />
+          <span className="text-xs">
+            {language === 'ar' ? 'السجل' : 'History'}
+          </span>
+        </Button>
         
-        <ContextMenuItem onClick={translatePDF} className="cursor-pointer">
-          <Languages className="mr-2 h-4 w-4" />
-          <span>{language === 'ar' ? 'ترجمة' : 'Translate'}</span>
-        </ContextMenuItem>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 px-2 rounded-md flex-1"
+          onClick={generateSummary}
+        >
+          <Summarize className="h-3.5 w-3.5 mr-1" />
+          <span className="text-xs">
+            {language === 'ar' ? 'تلخيص' : 'Summary'}
+          </span>
+        </Button>
         
-        <ContextMenuItem onClick={viewHistory} className="cursor-pointer">
-          <History className="mr-2 h-4 w-4" />
-          <span>{language === 'ar' ? 'السجل' : 'History'}</span>
-        </ContextMenuItem>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 px-2 rounded-md flex-1"
+          onClick={translatePDF}
+        >
+          <Languages className="h-3.5 w-3.5 mr-1" />
+          <span className="text-xs">
+            {language === 'ar' ? 'ترجمة' : 'Translate'}
+          </span>
+        </Button>
         
-        <ContextMenuSeparator />
-        
-        <ContextMenuItem onClick={handleDelete} className="cursor-pointer text-destructive focus:text-destructive">
-          <Trash2 className="mr-2 h-4 w-4" />
-          <span>{language === 'ar' ? 'حذف' : 'Delete'}</span>
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 px-2 rounded-md text-destructive hover:bg-destructive/10 hover:text-destructive flex-1"
+          onClick={handleDelete}
+        >
+          <Trash2 className="h-3.5 w-3.5 mr-1" />
+          <span className="text-xs">
+            {language === 'ar' ? 'حذف' : 'Delete'}
+          </span>
+        </Button>
+      </CardFooter>
+    </Card>
   );
 };
 
