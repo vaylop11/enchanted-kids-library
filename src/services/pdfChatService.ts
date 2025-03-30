@@ -106,30 +106,32 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
     
     console.log(`Found ${existingMessages.length} messages to delete for PDF ID:`, pdfId);
     
-    // Delete the messages one batch at a time to avoid RLS issues
-    // We'll delete in batches to ensure all messages are properly removed
-    const batchSize = 50;
-    const totalMessages = existingMessages.length;
-    let deletedCount = 0;
+    // Instead of batch deletion by IDs, use a direct delete with eq filter and retry logic
+    let attempts = 0;
+    const maxAttempts = 3;
+    let success = false;
     
-    // Get all message IDs to delete
-    const messageIds = existingMessages.map((msg: any) => msg.id);
-    
-    // Delete in batches
-    for (let i = 0; i < totalMessages; i += batchSize) {
-      const batchIds = messageIds.slice(i, i + batchSize);
+    while (attempts < maxAttempts && !success) {
+      attempts++;
+      console.log(`Attempt ${attempts} to delete messages for PDF ID: ${pdfId}`);
       
       const { error: deleteError } = await supabase
         .from('pdf_chats')
         .delete()
-        .in('id', batchIds);
-        
+        .eq('pdf_id', pdfId);
+      
       if (deleteError) {
-        console.error(`Error deleting batch of messages (${i} to ${i + batchSize}):`, deleteError);
-        toast.error(`Failed to delete some messages: ${deleteError.message}`);
-        // Continue with other batches even if this one failed
+        console.error(`Error deleting messages (attempt ${attempts}):`, deleteError);
+        
+        if (attempts === maxAttempts) {
+          toast.error(`Failed to delete messages: ${deleteError.message}`);
+          return false;
+        }
+        
+        // Wait a short time before retrying
+        await new Promise(resolve => setTimeout(resolve, 500));
       } else {
-        deletedCount += batchIds.length;
+        success = true;
       }
     }
     
@@ -142,12 +144,12 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
     if (countError) {
       console.error('Error verifying message deletion:', countError);
       toast.error('Could not verify complete message deletion');
-      return deletedCount > 0; // Return true if we deleted at least some messages
+      return success; // Return true if we successfully executed the delete command
     }
     
     if (count && count > 0) {
-      console.error(`Delete operation partially successful. ${count} messages still remain.`);
-      toast.warning(`Deleted ${deletedCount} messages, but ${count} messages remain`);
+      console.error(`Delete operation not fully successful. ${count} messages still remain.`);
+      toast.warning(`${count} messages could not be deleted. Please try again.`);
       return false;
     }
     
