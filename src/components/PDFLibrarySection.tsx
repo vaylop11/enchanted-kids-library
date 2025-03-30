@@ -6,7 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { getUserPDFs } from '@/services/pdfManagementService';
 import { SupabasePDF } from '@/services/pdfTypes';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, FileText } from 'lucide-react';
+import { ArrowRight, FileText, Languages } from 'lucide-react'; // Replace Translate with Languages icon
 import PDFCard from '@/components/PDFCard';
 
 const PDFLibrarySection = () => {
@@ -61,8 +61,8 @@ const PDFLibrarySection = () => {
             </h2>
             <p className="text-muted-foreground">
               {language === 'ar' 
-                ? 'جميع ملفات PDF التي قمت بتحميلها. يمكنك الوصول إليها في أي وقت.' 
-                : 'All the PDFs you have uploaded. Access them anytime.'}
+                ? 'جميع ملفات PDF التي قمت بتحميلها. يمكنك ترجمتها في أي وقت.' 
+                : 'All the PDFs you have uploaded. Translate them anytime.'}
             </p>
           </div>
           

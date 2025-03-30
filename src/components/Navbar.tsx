@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { BookOpen, Menu, X } from 'lucide-react';
+import { BookOpen, Menu, X, Languages } from 'lucide-react'; // Replace Translate with Languages icon
 import LanguageSwitcher from './LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -57,7 +56,7 @@ const Navbar = () => {
           >
             <BookOpen className="h-6 w-6" />
             <span className="font-display text-lg font-medium">
-              {language === 'ar' ? 'تشات PDF' : 'ChatPDF'}
+              {language === 'ar' ? 'ترانسليت PDF' : 'TranslatePDF'}
             </span>
           </Link>
 
@@ -88,19 +87,6 @@ const Navbar = () => {
                       )}
                     >
                       {t('pdfs')}
-                    </NavigationMenuLink>
-                  </Link>
-                </NavigationMenuItem>
-                <NavigationMenuItem>
-                  <Link to="/blog">
-                    <NavigationMenuLink 
-                      className={cn(
-                        navigationMenuTriggerStyle(),
-                        location.pathname === '/blog' && "bg-accent text-accent-foreground",
-                        "px-3 py-2 text-sm font-medium rounded-full"
-                      )}
-                    >
-                      {t('blog')}
                     </NavigationMenuLink>
                   </Link>
                 </NavigationMenuItem>
@@ -152,7 +138,7 @@ const Navbar = () => {
                     >
                       <BookOpen className="h-8 w-8 mb-4" />
                       <span className="font-display text-xl font-medium ml-2 mb-4">
-                        {language === 'ar' ? 'تشات PDF' : 'ChatPDF'}
+                        {language === 'ar' ? 'ترانسليت PDF' : 'TranslatePDF'}
                       </span>
                     </Link>
                     
@@ -180,18 +166,6 @@ const Navbar = () => {
                         )}
                       >
                         {t('pdfs')}
-                      </Link>
-                      <Link 
-                        to="/blog"
-                        onClick={() => setIsDrawerOpen(false)}
-                        className={cn(
-                          "w-full px-4 py-3 text-lg font-medium rounded-lg transition-colors",
-                          location.pathname === '/blog' 
-                            ? "bg-accent text-accent-foreground" 
-                            : "hover:bg-muted"
-                        )}
-                      >
-                        {t('blog')}
                       </Link>
                     </nav>
                     

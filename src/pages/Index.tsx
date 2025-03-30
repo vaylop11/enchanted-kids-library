@@ -4,7 +4,6 @@ import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import HeroSection from '@/components/HeroSection';
 import FeaturesSection from '@/components/FeaturesSection';
-import BlogSection from '@/components/BlogSection';
 import FAQSection from '@/components/FAQSection';
 import UploadZone from '@/components/UploadZone';
 import PDFLibrarySection from '@/components/PDFLibrarySection';
@@ -30,8 +29,8 @@ const Index = () => {
               </h2>
               <p className="text-lg text-muted-foreground max-w-xl mx-auto">
                 {language === 'ar'
-                  ? 'قم بتحميل مستند PDF وابدأ التحدث معه فورًا. يمكنك طرح الأسئلة واستخراج المعلومات بسهولة.'
-                  : 'Upload a PDF document and start chatting with it instantly. Ask questions and extract information with ease.'
+                  ? 'قم بتحميل مستند PDF وترجمه فورًا. يمكنك ترجمة المستندات بسهولة.'
+                  : 'Upload a PDF document and translate it instantly. Translate documents with ease.'
                 }
               </p>
             </div>
@@ -44,7 +43,6 @@ const Index = () => {
         {user && <PDFLibrarySection />}
         
         <FeaturesSection />
-        <BlogSection />
         <FAQSection />
       </main>
 

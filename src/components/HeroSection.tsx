@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Link } from 'react-router-dom';
+import { Languages } from 'lucide-react'; // Replace Translate with Languages icon
 
 const HeroSection = () => {
   const { language } = useLanguage();
@@ -12,14 +13,14 @@ const HeroSection = () => {
         <div className="flex flex-col items-center text-center space-y-8 md:space-y-12">
           <h1 className="text-4xl md:text-6xl font-bold tracking-tighter max-w-3xl">
             {language === 'ar' 
-              ? 'تفاعل مع ملفات PDF بطريقة ذكية مع تشات PDF'
-              : 'Chat with your PDFs intelligently with ChatPDF'}
+              ? 'ترجم ملفات PDF بكفاءة مع ترانسليت PDF'
+              : 'Translate PDFs efficiently with TranslatePDF'}
           </h1>
           
           <p className="text-xl text-muted-foreground max-w-2xl">
             {language === 'ar'
-              ? 'تحدث مع مستنداتك وملفاتك الرقمية بشكل طبيعي. تحليل، استخراج واستكشاف محتويات PDF الخاصة بك بكفاءة.'
-              : 'Talk to your documents naturally. Analyze, extract, and explore your PDF contents efficiently.'}
+              ? 'ترجم مستنداتك بشكل طبيعي. ترجمة سريعة ودقيقة لمحتويات PDF الخاصة بك.'
+              : 'Translate your documents naturally. Fast and accurate translation of your PDF contents.'}
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4">
@@ -29,8 +30,8 @@ const HeroSection = () => {
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="px-8">
-              <Link to="/blog">
-                {language === 'ar' ? 'تعلم المزيد' : 'Learn More'}
+              <Link to="/pdfs">
+                {language === 'ar' ? 'استكشف المزيد' : 'Explore More'}
               </Link>
             </Button>
           </div>
