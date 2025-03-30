@@ -7,8 +7,7 @@ import FeaturesSection from '@/components/FeaturesSection';
 import BlogSection from '@/components/BlogSection';
 import FAQSection from '@/components/FAQSection';
 import UploadZone from '@/components/UploadZone';
-import RecentPDFs from '@/components/RecentPDFs';
-import FeaturedPDF from '@/components/FeaturedPDF';
+import PDFLibrarySection from '@/components/PDFLibrarySection';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
@@ -41,11 +40,8 @@ const Index = () => {
           </div>
         </section>
         
-        {/* Featured PDF section (only shown if user is logged in) */}
-        {user && <FeaturedPDF />}
-        
-        {/* Recent PDFs section */}
-        <RecentPDFs />
+        {/* PDF Library Section - showing all uploaded PDFs */}
+        {user && <PDFLibrarySection />}
         
         <FeaturesSection />
         <BlogSection />
