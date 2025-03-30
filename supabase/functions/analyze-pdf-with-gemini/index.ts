@@ -23,6 +23,10 @@ serve(async (req) => {
       throw new Error('Missing Gemini API Key');
     }
 
+    // Detect if question is in Arabic
+    const containsArabic = /[\u0600-\u06FF]/.test(userQuestion);
+    const responseLanguage = containsArabic ? 'Arabic' : 'English';
+
     // Build context and prompt
     const prompt = `
       You are an AI assistant that helps users analyze PDF documents and answer questions about them.
@@ -35,6 +39,8 @@ serve(async (req) => {
       User question: ${userQuestion}
       
       Provide a relevant, accurate, and helpful response based on the PDF content. If the answer cannot be determined from the PDF content, clearly state that.
+      
+      IMPORTANT: The user's question is in ${containsArabic ? 'Arabic' : 'English'}. You MUST respond in ${responseLanguage}.
     `;
 
     // Call Gemini API
@@ -64,6 +70,8 @@ serve(async (req) => {
 
     // Extract the response text
     const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 
+                        containsArabic ? 
+                        "عذراً، لم أتمكن من إنشاء استجابة بناءً على محتوى ملف PDF." : 
                         "Sorry, I couldn't generate a response based on the PDF content.";
 
     return new Response(JSON.stringify({ response: generatedText }), {
