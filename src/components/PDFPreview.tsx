@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
@@ -187,7 +188,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
         style={{ minHeight: '400px', maxHeight: `${maxHeight}px` }} 
         dir={contentDirection}
       >
-        <div className="whitespace-pre-wrap">
+        <div className="whitespace-pre-wrap text-right font-arabic" style={{ textAlign: contentDirection === 'rtl' ? 'right' : 'left' }}>
           {translatedContent.text}
         </div>
       </div>
@@ -206,6 +207,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
             size="sm" 
             onClick={goToPreviousPage} 
             disabled={pageNumber <= 1 || loading || !!error}
+            aria-label={language === 'ar' ? 'الصفحة السابقة' : 'Previous page'}
           >
             <ChevronLeft className={cn("h-4 w-4", direction === 'rtl' ? 'ml-1 rotate-180' : 'mr-1')} />
             {language === 'ar' ? 'السابق' : 'Previous'}
@@ -213,7 +215,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
           
           <span className="text-sm">
             {language === 'ar' 
-              ? `${pageNumber} من ${numPages || '?'}` 
+              ? `${pageNumber} من ${numPages || '؟'}` 
               : `Page ${pageNumber} of ${numPages || '?'}`
             }
           </span>
@@ -223,6 +225,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
             size="sm" 
             onClick={goToNextPage} 
             disabled={pageNumber >= (numPages || 1) || loading || !!error}
+            aria-label={language === 'ar' ? 'الصفحة التالية' : 'Next page'}
           >
             {language === 'ar' ? 'التالي' : 'Next'}
             <ChevronRight className={cn("h-4 w-4", direction === 'rtl' ? 'mr-1 rotate-180' : 'ml-1')} />
@@ -236,6 +239,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
               size="sm"
               onClick={resetView}
               className="flex items-center gap-1"
+              aria-label={language === 'ar' ? 'العودة للعرض الأصلي' : 'Return to original view'}
             >
               <RotateCw className="h-3 w-3" />
               {language === 'ar' ? 'العرض الأصلي' : 'Original View'}
@@ -249,6 +253,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
                 size="sm"
                 disabled={isTranslating || loading || !!error || !numPages}
                 className="flex items-center gap-1"
+                aria-label={language === 'ar' ? 'ترجمة الصفحة الحالية' : 'Translate current page'}
               >
                 {isTranslating ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -258,7 +263,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
                 {language === 'ar' ? 'ترجمة الصفحة' : 'Translate Page'}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align={direction === 'rtl' ? 'end' : 'start'}>
+            <DropdownMenuContent align={direction === 'rtl' ? 'end' : 'start'} className={direction === 'rtl' ? 'rtl' : 'ltr'}>
               <DropdownMenuLabel>
                 {language === 'ar' ? 'اختر لغة الترجمة' : 'Select translation language'}
               </DropdownMenuLabel>
