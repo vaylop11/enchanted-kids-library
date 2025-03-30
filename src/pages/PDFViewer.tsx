@@ -435,7 +435,12 @@ const PDFViewer = () => {
             : 'Generating accurate answer...'
         });
         
-        const aiContent = await analyzePDFWithGemini(textContent, userMessageContent, updateAnalysisProgress);
+        const userLanguage = language === 'ar' ? 'Arabic' : 'English';
+        const aiContent = await analyzePDFWithGemini(
+          textContent, 
+          userMessageContent + `\n\nPlease respond in ${userLanguage}.`, 
+          updateAnalysisProgress
+        );
         
         let savedAiMessage: ChatMessage | null = null;
         
@@ -599,8 +604,8 @@ const PDFViewer = () => {
       }
       
       const summaryPrompt = language === 'ar' 
-        ? 'قم بتلخيص هذا المستند بطريقة شاملة وموجزة'
-        : 'Provide a comprehensive summary of this document';
+        ? 'قم بتلخيص هذا المستند بطريقة شاملة وموجزة. اكتب الرد باللغة العربية.'
+        : 'Provide a comprehensive summary of this document in English.';
         
       setAnalysisProgress({
         stage: 'generating',
@@ -702,8 +707,8 @@ const PDFViewer = () => {
       }
       
       const translatePrompt = language === 'ar' 
-        ? `ترجم هذا المستند إلى اللغة ${targetLanguage}` 
-        : `Translate this document to ${targetLanguage}`;
+        ? `ترجم هذا المستند إلى اللغة ${targetLanguage}. اكتب الرد باللغة العربية.` 
+        : `Translate this document to ${targetLanguage}. Respond in English.`;
         
       setAnalysisProgress({
         stage: 'generating',
@@ -818,10 +823,8 @@ const PDFViewer = () => {
             }
           }
         } else if (user) {
-          // Clear UI immediately to improve perceived performance
           setChatMessages([]);
           
-          // Then perform the database operation
           const success = await deleteAllChatMessagesForPDF(id);
           
           toast.dismiss(loadingToastId);
@@ -829,7 +832,6 @@ const PDFViewer = () => {
           if (!success) {
             console.error('Failed to delete messages from database');
             
-            // Reload messages to restore state if deletion failed
             setIsLoadingMessages(true);
             const messages = await getChatMessagesForPDF(id);
             setIsLoadingMessages(false);
@@ -1175,8 +1177,18 @@ const PDFViewer = () => {
                     )}
                     
                     {isLoadingMessages ? (
-                      <div className="flex justify-center items-center h-full">
-                        <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                      <div className="flex flex-col space-y-4">
+                        <ChatMessageSkeleton />
+                        <ChatMessageSkeleton />
+                        <div className={cn(
+                          "flex flex-col p-3 rounded-lg max-w-[80%]",
+                          "ml-auto bg-primary text-primary-foreground"
+                        )}>
+                          <Skeleton className="h-4 w-[120px] bg-primary-foreground/20" />
+                          <div className="flex justify-between items-center mt-2">
+                            <Skeleton className="h-3 w-[40px] bg-primary-foreground/20" />
+                          </div>
+                        </div>
                       </div>
                     ) : chatMessages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center p-4">
@@ -1207,8 +1219,9 @@ const PDFViewer = () => {
                               "flex flex-col p-3 rounded-lg max-w-[80%]",
                               message.isUser 
                                 ? "ml-auto bg-primary text-primary-foreground" 
-                                : "mr-auto bg-muted"
+                                : direction === 'rtl' ? "ml-auto bg-muted" : "mr-auto bg-muted"
                             )}
+                            dir={!message.isUser && /[\u0600-\u06FF]/.test(message.content) ? 'rtl' : direction}
                           >
                             <div className="whitespace-pre-wrap break-words">
                               {message.content}

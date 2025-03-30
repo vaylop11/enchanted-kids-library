@@ -1,5 +1,6 @@
 
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 function Skeleton({
   className,
@@ -14,8 +15,13 @@ function Skeleton({
 }
 
 function ChatMessageSkeleton() {
+  const { direction } = useLanguage();
+  
   return (
-    <div className="flex flex-col space-y-3 mr-auto max-w-[80%] bg-muted p-3 rounded-lg">
+    <div className={cn(
+      "flex flex-col space-y-3 max-w-[80%] bg-muted p-3 rounded-lg",
+      direction === 'rtl' ? 'ml-auto' : 'mr-auto'
+    )}>
       <Skeleton className="h-4 w-[250px]" />
       <Skeleton className="h-4 w-[200px]" />
       <Skeleton className="h-4 w-[150px]" />
