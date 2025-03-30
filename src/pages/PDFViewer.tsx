@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
+import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -64,6 +65,7 @@ const PDFViewer = () => {
     progress: 0,
     message: 'Preparing to analyze PDF...'
   });
+  const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -383,6 +385,7 @@ const PDFViewer = () => {
       }
 
       setIsAnalyzing(true);
+      setIsWaitingForResponse(true);
       
       try {
         let textContent = pdfTextContent;
@@ -407,11 +410,7 @@ const PDFViewer = () => {
           ? 'إنشاء إجابة دقيقة...'
           : 'Generating accurate answer...');
         
-        const aiContent = await analyzePDFWithGemini(textContent, userMessageContent);
-        
-        updateAnalysisProgress('complete', 100, language === 'ar'
-          ? 'تم إنشاء الإجابة بنجاح'
-          : 'Answer successfully generated');
+        const aiContent = await analyzePDFWithGemini(textContent, userMessageContent, updateAnalysisProgress);
         
         let savedAiMessage: ChatMessage | null = null;
         
@@ -517,10 +516,12 @@ const PDFViewer = () => {
         }
       } finally {
         setIsAnalyzing(false);
+        setIsWaitingForResponse(false);
       }
     } catch (error) {
       console.error('Error adding user message:', error);
       setIsAnalyzing(false);
+      setIsWaitingForResponse(false);
       toast.error(language === 'ar' 
         ? 'حدث خطأ أثناء إضافة رسالتك' 
         : 'Error adding your message');
@@ -708,7 +709,7 @@ const PDFViewer = () => {
                     </h2>
                     <p className="text-muted-foreground text-center max-w-md mb-6">
                       {language === 'ar' 
-                        ? 'لم يتم تخزين بيانات PDF بسبب قي��د التخزين. حاول حذف بعض الملفات القديمة وتحميل هذا الملف مرة أخرى.'
+                        ? 'لم يتم تخزين بيانات PDF بسبب قيود التخزين. حاول حذف بعض الملفات القديمة وتحميل هذا الملف مرة أخرى.'
                         : 'PDF data was not stored due to storage limitations. Try deleting some older PDFs and upload this file again.'}
                     </p>
                     <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
@@ -817,68 +818,12 @@ const PDFViewer = () => {
                         )}
                       </div>
                     ) : (
-                      chatMessages.map(message => (
-                        <div 
-                          key={message.id}
-                          className={cn(
-                            "flex flex-col p-3 rounded-lg max-w-[80%]",
-                            message.isUser 
-                              ? "ml-auto bg-primary text-primary-foreground" 
-                              : "mr-auto bg-muted"
-                          )}
-                        >
-                          <p className="text-sm">{message.content}</p>
-                          <span className="text-xs opacity-70 mt-1 self-end">
-                            {message.timestamp instanceof Date 
-                              ? message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                              : new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                            }
-                          </span>
-                        </div>
-                      ))
-                    )}
-                    <div ref={chatEndRef} />
-                  </div>
-                  
-                  <form onSubmit={handleChatSubmit} className="p-4 border-t mt-auto">
-                    <div className="relative">
-                      <Textarea
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        placeholder={language === 'ar' ? 'اكتب سؤالك هنا...' : 'Type your question here...'}
-                        className="pr-12 resize-none"
-                        rows={3}
-                        disabled={pdfError !== null || !pdf.dataUrl || isLoadingMessages || isAnalyzing}
-                      />
-                      <Button 
-                        type="submit" 
-                        size="icon" 
-                        className="absolute bottom-2 right-2"
-                        disabled={!chatInput.trim() || pdfError !== null || !pdf.dataUrl || isLoadingMessages || isAnalyzing}
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </form>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </main>
-      
-      <footer className="mt-auto py-6 bg-muted/30 border-t border-border">
-        <div className="container mx-auto px-4 md:px-6 text-center text-muted-foreground">
-          <p className="text-sm">
-            {language === 'ar' 
-              ? `© ${new Date().getFullYear()} أداة دردشة PDF. جميع الحقوق محفوظة.`
-              : `© ${new Date().getFullYear()} PDF Chat Tool. All rights reserved.`
-            }
-          </p>
-        </div>
-      </footer>
-    </div>
-  );
-};
-
-export default PDFViewer;
+                      <>
+                        {chatMessages.map(message => (
+                          <div 
+                            key={message.id}
+                            className={cn(
+                              "flex flex-col p-3 rounded-lg max-w-[80%]",
+                              message.isUser 
+                                ? "ml-auto bg-primary text-primary-foreground" 
+                                : "

@@ -1,5 +1,5 @@
 
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -20,9 +20,9 @@ const NotFound = () => {
       <div className={cn("text-center", direction === 'rtl' ? 'rtl' : 'ltr')}>
         <h1 className="text-4xl font-bold mb-4">{t('notFound')}</h1>
         <p className="text-xl text-gray-600 mb-4">{t('pageNotFound')}</p>
-        <a href="/" className="text-blue-500 hover:text-blue-700 underline">
+        <Link to="/" className="text-blue-500 hover:text-blue-700 underline">
           {t('returnToHome')}
-        </a>
+        </Link>
       </div>
     </div>
   );
