@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
 };
 
 serve(async (req) => {
@@ -18,15 +18,14 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    // Parse request body
+    const requestData = await req.json();
+    const { pdfId } = requestData;
 
-    // Extract the PDF ID from the request
-    const { pdfId } = await req.json();
+    console.log("Edge function received request to delete chats for PDF:", pdfId);
 
     if (!pdfId) {
+      console.error("Missing pdfId in request");
       return new Response(
         JSON.stringify({ success: false, error: "Missing PDF ID" }),
         {
@@ -36,12 +35,18 @@ serve(async (req) => {
       );
     }
 
+    // Create Supabase client with service role for bypassing RLS
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
     console.log("Attempting to delete all chat messages for PDF:", pdfId);
 
-    // Execute a direct delete operation using the service role key
-    const { error } = await supabaseClient
+    // Execute the delete operation with service role
+    const { error, count } = await supabaseClient
       .from("pdf_chats")
-      .delete()
+      .delete({ count: 'exact' })
       .eq("pdf_id", pdfId);
 
     if (error) {
@@ -55,8 +60,13 @@ serve(async (req) => {
       );
     }
 
+    console.log(`Successfully deleted ${count || 'all'} messages for PDF: ${pdfId}`);
+
     return new Response(
-      JSON.stringify({ success: true, message: "All messages deleted successfully" }),
+      JSON.stringify({ 
+        success: true, 
+        message: `All messages deleted successfully (count: ${count || 'unknown'})` 
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
