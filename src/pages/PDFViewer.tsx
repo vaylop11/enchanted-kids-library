@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Brain, Languages } from 'lucide-react';
+import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Brain, Languages, ZoomIn, ZoomOut, MonitorSmartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -67,6 +68,24 @@ const PDFViewer = () => {
   });
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
   const [fitToWidth, setFitToWidth] = useState(true);
+  
+  const [inputPageNumber, setInputPageNumber] = useState('1');
+  const [pdfContainerWidth, setPdfContainerWidth] = useState(0);
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
+
+  // Measure PDF container width for proper fit-to-width calculations
+  useEffect(() => {
+    const updateWidth = () => {
+      if (pdfContainerRef.current) {
+        const width = pdfContainerRef.current.clientWidth;
+        setPdfContainerWidth(width > 40 ? width - 40 : width); // Add some padding
+      }
+    };
+
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
 
   useEffect(() => {
     if (!id) {
@@ -278,18 +297,44 @@ const PDFViewer = () => {
   };
 
   const handlePrevPage = () => {
-    setPageNumber(prevPage => Math.max(prevPage - 1, 1));
+    const newPage = Math.max(pageNumber - 1, 1);
+    setPageNumber(newPage);
+    setInputPageNumber(newPage.toString());
   };
 
   const handleNextPage = () => {
     if (numPages) {
-      setPageNumber(prevPage => Math.min(prevPage + 1, numPages));
+      const newPage = Math.min(pageNumber + 1, numPages);
+      setPageNumber(newPage);
+      setInputPageNumber(newPage.toString());
+    }
+  };
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Allow only numbers
+    const value = e.target.value.replace(/[^0-9]/g, '');
+    setInputPageNumber(value);
+  };
+
+  const handlePageInputSubmit = (e: React.KeyboardEvent<HTMLInputElement> | React.FocusEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (numPages && inputPageNumber) {
+      const pageNum = parseInt(inputPageNumber);
+      if (pageNum > 0 && pageNum <= numPages) {
+        setPageNumber(pageNum);
+      } else {
+        // Reset to current page if invalid
+        setInputPageNumber(pageNumber.toString());
+        toast.error(language === 'ar' 
+          ? `الرجاء إدخال رقم صفحة صالح بين 1 و ${numPages}` 
+          : `Please enter a valid page number between 1 and ${numPages}`);
+      }
     }
   };
 
   const handleZoomIn = () => {
     setFitToWidth(false);
-    setPdfScale(prev => Math.min(prev + 0.2, 2.0));
+    setPdfScale(prev => Math.min(prev + 0.2, 2.5));
   };
 
   const handleZoomOut = () => {
@@ -299,6 +344,10 @@ const PDFViewer = () => {
 
   const toggleFitToWidth = () => {
     setFitToWidth(!fitToWidth);
+    if (!fitToWidth) {
+      // Calculate optimal scale for the container if switching to fit-to-width
+      setPdfScale(1.0); // Reset to default scale, actual fit handled by width prop
+    }
   };
 
   const handleRetryLoading = () => {
@@ -858,344 +907,4 @@ const PDFViewer = () => {
                     {isTempPdf && (
                       <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/30">
                         {language === 'ar' ? 'مؤقت' : 'Temporary'}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setShowPdfControls(!showPdfControls)}
-                  className="p-1 rounded-md hover:bg-muted transition-colors"
-                >
-                  {showPdfControls ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                </button>
-              </div>
-              
-              {showPdfControls && (
-                <div className="flex flex-wrap justify-between items-center p-4 bg-muted/20 border-b">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handlePrevPage}
-                        disabled={pageNumber <= 1 || pdfError !== null || !pdf.dataUrl}
-                      >
-                        {language === 'ar' ? 'السابق' : 'Prev'}
-                      </Button>
-                      <span className="text-sm">
-                        {language === 'ar' 
-                          ? `${pageNumber} من ${numPages || '?'}`
-                          : `${pageNumber} of ${numPages || '?'}`
-                        }
-                      </span>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleNextPage}
-                        disabled={!numPages || pageNumber >= numPages || pdfError !== null || !pdf.dataUrl}
-                      >
-                        {language === 'ar' ? 'التالي' : 'Next'}
-                      </Button>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleZoomOut}
-                        disabled={pdfError !== null || !pdf.dataUrl}
-                      >-</Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={toggleFitToWidth}
-                        className={fitToWidth ? "bg-muted" : ""}
-                        disabled={pdfError !== null || !pdf.dataUrl}
-                      >
-                        {language === 'ar' ? 'ملء العرض' : 'Fit'}
-                      </Button>
-                      <span className="text-sm">{Math.round(pdfScale * 100)}%</span>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleZoomIn}
-                        disabled={pdfError !== null || !pdf.dataUrl}
-                      >+</Button>
-                    </div>
-                  </div>
-                  
-                  <div className="text-sm text-muted-foreground">
-                    {language === 'ar' ? 'تم التحميل' : 'Uploaded'}: {pdf.uploadDate}
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex-1 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
-                <ScrollArea className="h-full w-full">
-                  {isLoadingPdf ? (
-                    <div className="flex flex-col items-center justify-center h-full w-full">
-                      <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
-                      <p className="text-lg font-medium mb-2">
-                        {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {language === 'ar' ? 'يرجى الانتظار' : 'Please wait'}
-                      </p>
-                    </div>
-                  ) : pdfError ? (
-                    <div className="flex flex-col items-center justify-center h-full w-full">
-                      <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" />
-                      <h2 className="text-xl font-medium mb-2 text-center">
-                        {language === 'ar' ? 'تعذر تحميل الملف' : 'Failed to load PDF'}
-                      </h2>
-                      <p className="text-muted-foreground text-center max-w-md mb-6">
-                        {pdfError}
-                      </p>
-                      <div className="flex gap-3">
-                        <Button variant="outline" onClick={handleRetryLoading}>
-                          {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
-                        </Button>
-                        <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
-                          {language === 'ar'
-                            ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
-                            : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : !pdf.dataUrl ? (
-                    <div className="flex flex-col items-center justify-center h-full w-full">
-                      <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                      <h2 className="text-xl font-medium mb-2 text-center">
-                        {language === 'ar' ? 'لا توجد بيانات PDF' : 'No PDF Data Available'}
-                      </h2>
-                      <p className="text-muted-foreground text-center max-w-md mb-6">
-                        {language === 'ar' 
-                          ? 'لم يتم تخزين بيانات PDF بسبب قيود التخزين. حاول حذف بعض الملفات القديمة وتحميل هذا الملف مرة أخرى.'
-                          : 'PDF data was not stored due to storage limitations. Try deleting some older PDFs and upload this file again.'}
-                      </p>
-                      <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
-                        {language === 'ar'
-                          ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
-                          : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex justify-center w-full py-4">
-                      <Document
-                        file={pdf.dataUrl}
-                        onLoadSuccess={handleDocumentLoadSuccess}
-                        onLoadError={handleDocumentLoadError}
-                        loading={
-                          <div className="flex items-center justify-center h-full w-full">
-                            <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
-                          </div>
-                        }
-                        error={
-                          <div className="flex flex-col items-center justify-center h-full w-full">
-                            <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                            <p className="text-muted-foreground text-center mb-2">
-                              {language === 'ar' ? 'فشل تحميل الملف' : 'Failed to load PDF'}
-                            </p>
-                            <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
-                              {language === 'ar' 
-                                ? 'قد تكون هناك مشكلة في تنسيق الملف أو أن الملف قد يكون كبيرًا جدًا للعرض.' 
-                                : 'There might be an issue with the file format or the file may be too large to display.'}
-                            </p>
-                            <Button variant="outline" onClick={handleRetryLoading}>
-                              {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
-                            </Button>
-                          </div>
-                        }
-                      >
-                        <Page 
-                          pageNumber={pageNumber} 
-                          scale={fitToWidth ? undefined : pdfScale}
-                          width={fitToWidth ? window.innerWidth * 0.5 : undefined}
-                          renderTextLayer={false}
-                          renderAnnotationLayer={false}
-                          className="shadow-md"
-                          error={
-                            <div className="flex flex-col items-center justify-center p-6">
-                              <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
-                              <p className="text-sm text-center">
-                                {language === 'ar' ? 'خطأ في عرض الصفحة' : 'Error rendering page'}
-                              </p>
-                            </div>
-                          }
-                        />
-                      </Document>
-                    </div>
-                  )}
-                </ScrollArea>
-              </div>
-            </div>
-            
-            <div className="lg:w-1/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm flex flex-col">
-              <div className="flex justify-between items-center p-4 border-b">
-                <div className="flex items-center gap-2">
-                  <h2 className="font-display text-lg font-medium">
-                    {language === 'ar' ? 'دردشة مع هذا الملف' : 'Chat with this PDF'}
-                  </h2>
-                  <Badge 
-                    variant="outline" 
-                    className="bg-primary/10 text-primary text-xs"
-                  >
-                    <Brain className="h-3 w-3 mr-1" />
-                    Gemini AI
-                  </Badge>
-                </div>
-                <button 
-                  onClick={() => setShowChat(!showChat)}
-                  className="p-1 rounded-md hover:bg-muted transition-colors"
-                >
-                  {showChat ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                </button>
-              </div>
-              
-              {showChat && (
-                <>
-                  <div className="p-3 border-b bg-muted/10">
-                    <ScrollArea className="whitespace-nowrap w-full">
-                      <div className="flex space-x-2 px-1">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => setChatMessages([])}
-                          disabled={chatMessages.length === 0}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-1" />
-                          {language === 'ar' ? 'مسح المحادثة' : 'Clear Chat'}
-                        </Button>
-                        
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 px-2 text-xs"
-                          onClick={handleDownload}
-                          disabled={!pdf?.dataUrl}
-                        >
-                          <DownloadCloud className="h-3.5 w-3.5 mr-1" />
-                          {language === 'ar' ? 'تنزيل' : 'Download'}
-                        </Button>
-                        
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 px-2 text-xs"
-                          onClick={generateSummary}
-                          disabled={isAnalyzing || isWaitingForResponse}
-                        >
-                          <FileText className="h-3.5 w-3.5 mr-1" />
-                          {language === 'ar' ? 'تلخيص' : 'Summarize'}
-                        </Button>
-                        
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 px-2 text-xs"
-                          onClick={translatePDF}
-                          disabled={isAnalyzing || isWaitingForResponse}
-                        >
-                          <Languages className="h-3.5 w-3.5 mr-1" />
-                          {language === 'ar' ? 'ترجمة' : 'Translate'}
-                        </Button>
-                      </div>
-                      <ScrollBar orientation="horizontal" />
-                    </ScrollArea>
-                  </div>
-                  
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: '60vh' }}>
-                    {isAnalyzing && (
-                      <PDFAnalysisProgress analysis={analysisProgress} />
-                    )}
-                    
-                    {isLoadingMessages ? (
-                      <div className="flex justify-center items-center h-full">
-                        <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
-                      </div>
-                    ) : chatMessages.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                        <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                        <p className="font-medium mb-2">
-                          {language === 'ar' ? 'اطرح سؤالاً حول هذا الملف' : 'Ask a question about this PDF'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {language === 'ar' 
-                            ? 'يمكنك طرح أسئلة حول محتوى الملف والحصول على إجابات دقيقة باستخدام الذكاء الاصطناعي من Gemini'
-                            : 'Ask questions about the PDF content and get accurate AI-powered answers from Gemini'
-                          }
-                        </p>
-                        {isTempPdf && (
-                          <p className="text-xs text-amber-600 mt-4">
-                            {language === 'ar'
-                              ? 'ملاحظة: هذا ملف مؤقت. سيتم فقدان المحادثة عند إغلاق المتصفح.'
-                              : 'Note: This is a temporary file. Chat will be lost when you close the browser.'}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        {chatMessages.map(message => (
-                          <div 
-                            key={message.id}
-                            className={cn(
-                              "flex flex-col p-3 rounded-lg max-w-[80%]",
-                              message.isUser 
-                                ? "ml-auto bg-primary text-primary-foreground" 
-                                : "mr-auto bg-muted"
-                            )}
-                          >
-                            <div className="whitespace-pre-wrap break-words">
-                              {message.content}
-                            </div>
-                            <div className="flex justify-between items-center mt-2">
-                              <span className="text-xs opacity-70">
-                                {message.isUser 
-                                  ? language === 'ar' ? 'أنت' : 'You' 
-                                  : 'Gemini AI'}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                        {isWaitingForResponse && (
-                          <ChatMessageSkeleton />
-                        )}
-                        <div ref={chatEndRef} />
-                      </>
-                    )}
-                  </div>
-                  
-                  <form 
-                    onSubmit={handleChatSubmit}
-                    className="p-4 border-t flex gap-2 items-end bg-card mt-auto"
-                  >
-                    <Textarea
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      placeholder={language === 'ar' 
-                        ? 'اطرح سؤالاً حول هذا الملف...' 
-                        : 'Ask a question about this PDF...'}
-                      className="min-h-10 resize-none border rounded-md flex-1"
-                      disabled={isAnalyzing}
-                    />
-                    <Button 
-                      type="submit" 
-                      size="icon" 
-                      disabled={!chatInput.trim() || isAnalyzing}
-                      className="h-10 w-10 rounded-full flex-shrink-0"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </form>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default PDFViewer;
+                      </
