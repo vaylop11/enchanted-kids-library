@@ -119,7 +119,11 @@ export default {
 				'slide-out': 'slide-out 0.3s ease-out',
 				'enter': 'fade-in 0.5s ease-out, scale-in 0.3s ease-out',
 				'exit': 'fade-out 0.5s ease-out, scale-out 0.3s ease-out'
-			}
+			},
+			backgroundImage: {
+				'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+				'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+			},
 		}
 	},
 	plugins: [require("tailwindcss-animate")],

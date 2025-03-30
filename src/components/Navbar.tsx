@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { BookOpen, Menu, X, Languages } from 'lucide-react'; // Replace Translate with Languages icon
+import { BookOpen, Menu, X, Languages } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -54,7 +55,7 @@ const Navbar = () => {
             className="flex items-center transition-opacity hover:opacity-80"
             style={{ gap: '0.5rem' }}
           >
-            <BookOpen className="h-6 w-6" />
+            <BookOpen className="h-6 w-6 text-primary" />
             <span className="font-display text-lg font-medium">
               {language === 'ar' ? 'ترانسليت PDF' : 'TranslatePDF'}
             </span>
@@ -136,7 +137,7 @@ const Navbar = () => {
                       className="flex items-center justify-center transition-opacity hover:opacity-80"
                       onClick={() => setIsDrawerOpen(false)}
                     >
-                      <BookOpen className="h-8 w-8 mb-4" />
+                      <BookOpen className="h-8 w-8 mb-4 text-primary" />
                       <span className="font-display text-xl font-medium ml-2 mb-4">
                         {language === 'ar' ? 'ترانسليت PDF' : 'TranslatePDF'}
                       </span>
