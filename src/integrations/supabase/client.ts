@@ -16,7 +16,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   },
   global: {
-    fetch: (...args) => fetch(...args),
+    fetch: fetch,
   },
 });
 
@@ -27,6 +27,6 @@ export const supabaseUntyped = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_K
     autoRefreshToken: true,
   },
   global: {
-    fetch: (...args) => fetch(...args),
+    fetch: fetch,
   },
 });
