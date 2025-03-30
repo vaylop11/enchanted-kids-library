@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -479,44 +478,39 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
     
     console.log(`Found ${existingMessages.length} messages to delete for PDF ID:`, pdfId);
     
-    // Use a more explicit delete operation with proper error handling
-    try {
-      const { error: deleteError } = await supabase
-        .from('pdf_chats')
-        .delete()
-        .eq('pdf_id', pdfId);
-        
-      if (deleteError) {
-        console.error('Error deleting chat messages:', deleteError);
-        toast.error('Failed to delete chat messages');
-        return false;
-      }
+    // For thorough deletion, we'll try using a specific approach
+    const { error: deleteError } = await supabase
+      .from('pdf_chats')
+      .delete()
+      .eq('pdf_id', pdfId);
       
-      // Verify that messages were actually deleted
-      const { data: remainingMessages, error: verifyError } = await supabase
-        .from('pdf_chats')
-        .select('id')
-        .eq('pdf_id', pdfId);
-        
-      if (verifyError) {
-        console.error('Error verifying message deletion:', verifyError);
-        // Still continue as success since the delete operation didn't error
-      }
-      
-      if (remainingMessages && remainingMessages.length > 0) {
-        console.error(`Failed to delete all messages. ${remainingMessages.length} messages still remain.`);
-        toast.error('Some messages could not be deleted');
-        return false;
-      }
-      
-      console.log('Successfully deleted all chat messages for PDF ID:', pdfId);
-      toast.success('Chat history cleared successfully');
-      return true;
-    } catch (deleteError) {
-      console.error('Exception during message deletion:', deleteError);
-      toast.error('Failed to delete chat messages');
+    if (deleteError) {
+      console.error('Error deleting chat messages:', deleteError);
+      toast.error(`Failed to delete chat messages: ${deleteError.message}`);
       return false;
     }
+    
+    // Verify deletion more carefully
+    const { count, error: countError } = await supabase
+      .from('pdf_chats')
+      .select('*', { count: 'exact', head: true })
+      .eq('pdf_id', pdfId);
+      
+    if (countError) {
+      console.error('Error verifying message deletion:', countError);
+      toast.error('Could not verify message deletion');
+      return false;
+    }
+    
+    if (count && count > 0) {
+      console.error(`Delete operation failed silently. ${count} messages still remain.`);
+      toast.error('Some messages could not be deleted');
+      return false;
+    }
+    
+    console.log('Successfully deleted all chat messages for PDF ID:', pdfId);
+    toast.success('Chat history cleared successfully');
+    return true;
   } catch (error) {
     console.error('Error in deleteAllChatMessagesForPDF:', error);
     toast.error('Failed to delete chat messages');

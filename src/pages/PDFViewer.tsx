@@ -818,8 +818,10 @@ const PDFViewer = () => {
             }
           }
         } else if (user) {
+          // Clear UI immediately to improve perceived performance
           setChatMessages([]);
           
+          // Then perform the database operation
           const success = await deleteAllChatMessagesForPDF(id);
           
           toast.dismiss(loadingToastId);
@@ -827,7 +829,11 @@ const PDFViewer = () => {
           if (!success) {
             console.error('Failed to delete messages from database');
             
+            // Reload messages to restore state if deletion failed
+            setIsLoadingMessages(true);
             const messages = await getChatMessagesForPDF(id);
+            setIsLoadingMessages(false);
+            
             if (messages && messages.length > 0) {
               const convertedMessages: ChatMessage[] = messages.map(msg => ({
                 id: msg.id,
