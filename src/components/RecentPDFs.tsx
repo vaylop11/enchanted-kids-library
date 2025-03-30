@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { getSavedPDFs } from '@/services/pdfStorage';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -7,17 +6,28 @@ import { File, Clock, FileText, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const RecentPDFs = () => {
-  const [recentPDFs, setRecentPDFs] = useState(getSavedPDFs().slice(0, 3));
+interface RecentPDFsProps {
+  currentPdfId?: string;
+}
+
+const RecentPDFs = ({ currentPdfId }: RecentPDFsProps) => {
+  const [recentPDFs, setRecentPDFs] = useState(
+    getSavedPDFs()
+      .filter(pdf => pdf.id !== currentPdfId)
+      .slice(0, 3)
+  );
   const { language } = useLanguage();
 
   useEffect(() => {
-    // Update PDFs when component mounts or language changes
-    setRecentPDFs(getSavedPDFs().slice(0, 3));
-  }, [language]);
+    setRecentPDFs(
+      getSavedPDFs()
+        .filter(pdf => pdf.id !== currentPdfId)
+        .slice(0, 3)
+    );
+  }, [language, currentPdfId]);
 
   if (recentPDFs.length === 0) {
-    return null; // Don't render anything if no PDFs
+    return null;
   }
 
   return (

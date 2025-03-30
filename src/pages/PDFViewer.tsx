@@ -1,32 +1,21 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader2, ArrowLeft, Languages } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import PDFPreview from '@/components/PDFPreview';
 import RecentPDFs from '@/components/RecentPDFs';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { extractTextFromPDF, analyzePDFWithGemini } from '@/services/pdfAnalysisService';
-import { getPDF } from '@/services/pdfManagementService';
-import { getFriendlyPDFTitle } from '@/services/pdfStorage';
-import { PDF } from '@/services/pdfTypes';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { SupportedLanguage, supportedLanguages } from '@/components/LanguageSelector';
+import { getPDFById } from '@/services/pdfManagementService';
+import { SupabasePDF } from '@/services/pdfTypes';
 
 function PDFViewer() {
   const { id } = useParams<{ id: string }>();
-  const [pdf, setPdf] = useState<PDF | null>(null);
+  const [pdf, setPdf] = useState<SupabasePDF | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { language, direction } = useLanguage();
@@ -41,7 +30,7 @@ function PDFViewer() {
       if (!id) return;
       
       try {
-        const pdfData = await getPDF(id);
+        const pdfData = await getPDFById(id);
         setPdf(pdfData);
       } catch (err) {
         console.error('Error loading PDF:', err);
@@ -53,11 +42,6 @@ function PDFViewer() {
     
     loadPDF();
   }, [id, language]);
-
-  // Filter languages to exclude current app language
-  const filteredLanguages = supportedLanguages.filter(lang => 
-    lang.code !== (language === 'ar' ? 'ar' : 'en')
-  );
 
   // Handler to track current page
   const handlePageChange = (pageNumber: number) => {
@@ -94,13 +78,13 @@ function PDFViewer() {
               </Button>
             </div>
             
-            <h1 className="text-2xl font-bold">{getFriendlyPDFTitle(pdf)}</h1>
+            <h1 className="text-2xl font-bold">{pdf.title}</h1>
           </div>
           
           <div className="bg-card rounded-lg shadow p-4 sm:p-6">
-            {pdf.url ? (
+            {pdf.fileUrl ? (
               <PDFPreview 
-                pdfUrl={pdf.url} 
+                pdfUrl={pdf.fileUrl} 
                 maxHeight={700}
                 onPageChange={handlePageChange} 
               />
@@ -116,7 +100,7 @@ function PDFViewer() {
               <h2 className="text-xl font-semibold mb-4">
                 {language === 'ar' ? 'الملفات المفتوحة مؤخراً' : 'Recently Opened PDFs'}
               </h2>
-              <RecentPDFs excludeId={id} />
+              <RecentPDFs currentPdfId={id} />
             </div>
           )}
         </div>
