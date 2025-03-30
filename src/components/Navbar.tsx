@@ -1,16 +1,21 @@
 
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { BookOpen, Menu, X } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import UserProfileMenu from './UserProfileMenu';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { direction, language, t } = useLanguage();
+  const { user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -49,12 +54,26 @@ const Navbar = () => {
           {/* Desktop Menu */}
           <nav className={`hidden md:flex items-center ${direction === 'rtl' ? 'space-x-reverse' : ''} space-x-8`}>
             <NavLinks />
-            <LanguageSwitcher />
+            <div className="flex items-center space-x-4">
+              <LanguageSwitcher />
+              {user ? (
+                <UserProfileMenu />
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/signin')}
+                  className="rounded-full"
+                >
+                  {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
+                </Button>
+              )}
+            </div>
           </nav>
 
           {/* Mobile Menu Toggle */}
           <div className="md:hidden flex items-center space-x-4">
             <LanguageSwitcher />
+            {user && <UserProfileMenu />}
             <button 
               className="flex items-center justify-center w-10 h-10 text-foreground rounded-full hover:bg-muted transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -79,6 +98,14 @@ const Navbar = () => {
       >
         <nav className="flex flex-col items-center justify-center h-full space-y-8 text-lg">
           <NavLinks />
+          {!user && (
+            <Button 
+              onClick={() => navigate('/signin')}
+              className="mt-4"
+            >
+              {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
+            </Button>
+          )}
         </nav>
       </div>
     </header>
