@@ -201,23 +201,30 @@ export const getPDFById = async (pdfId: string): Promise<SupabasePDF | null> => 
 // Update PDF metadata
 export const updatePDFMetadata = async (pdfId: string, updates: Partial<SupabasePDF>): Promise<boolean> => {
   try {
+    console.log('Updating PDF metadata for ID:', pdfId, 'with updates:', updates);
+    
+    const updateData: Record<string, any> = {};
+    
+    // Map SupabasePDF fields to database column names
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.summary !== undefined) updateData.summary = updates.summary;
+    if (updates.pageCount !== undefined) updateData.page_count = updates.pageCount;
+    
+    // Add updated_at timestamp
+    updateData.updated_at = new Date().toISOString();
+    
     const { error } = await supabase
       .from('pdfs')
-      .update({
-        title: updates.title,
-        summary: updates.summary,
-        page_count: updates.pageCount,
-        // Use database column naming convention
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', pdfId);
       
     if (error) {
-      console.error('Error updating PDF:', error);
+      console.error('Error updating PDF metadata:', error);
       toast.error('Failed to update PDF metadata');
       return false;
     }
     
+    console.log('PDF metadata updated successfully');
     return true;
   } catch (error) {
     console.error('Error in updatePDFMetadata:', error);

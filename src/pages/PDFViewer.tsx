@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -23,6 +22,7 @@ import {
   getPDFById as getSupabasePDFById,
   getChatMessagesForPDF,
   addChatMessageToPDF as addSupabaseChatMessage,
+  updatePDFMetadata,
   deletePDF as deleteSupabasePDF
 } from '@/services/pdfSupabaseService';
 
@@ -58,7 +58,6 @@ const PDFViewer = () => {
     }
 
     const loadPdf = async () => {
-      // Check if this is a temporary PDF
       if (id.startsWith('temp-') || window.location.pathname.includes('/pdf/temp/')) {
         setIsTempPdf(true);
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
@@ -66,7 +65,6 @@ const PDFViewer = () => {
           try {
             const parsedData = JSON.parse(tempPdfData);
             if (parsedData.fileData && parsedData.fileData.id === id) {
-              // Load the temporary PDF
               setPdf(parsedData.fileData);
               setChatMessages(parsedData.fileData.chatMessages || []);
               setIsLoadingPdf(false);
@@ -77,13 +75,11 @@ const PDFViewer = () => {
             console.error('Error parsing temporary PDF:', error);
           }
         }
-        // If we reach here, the temporary PDF wasn't found
         toast.error(language === 'ar' ? 'لم يتم العثور على الملف المؤقت' : 'Temporary PDF not found');
         navigate('/');
         return;
       }
 
-      // Not a temporary PDF, first try to load from local storage
       const loadedPdf = getPDFById(id);
       if (loadedPdf) {
         setPdf(loadedPdf);
@@ -91,9 +87,7 @@ const PDFViewer = () => {
           setChatMessages(loadedPdf.chatMessages);
         }
         
-        // Check if PDF data is missing
         if (!loadedPdf.dataUrl) {
-          // Try to load from Supabase if we have a user
           if (user) {
             tryLoadFromSupabase(id);
           } else {
@@ -109,7 +103,6 @@ const PDFViewer = () => {
           setIsLoadingPdf(false);
         }
       } else {
-        // Try loading from Supabase
         tryLoadFromSupabase(id);
       }
     };
@@ -142,11 +135,9 @@ const PDFViewer = () => {
           setPdf(newPdf);
           setIsLoadingPdf(false);
           
-          // Load chat messages
           setIsLoadingMessages(true);
           const messages = await getChatMessagesForPDF(pdfId);
           if (messages && messages.length > 0) {
-            // Convert to the format expected by the component
             const convertedMessages: ChatMessage[] = messages.map(msg => ({
               id: msg.id,
               content: msg.content,
@@ -173,7 +164,6 @@ const PDFViewer = () => {
 
     loadPdf();
     
-    // Simulate loading to ensure animations trigger correctly
     const timer = setTimeout(() => {
       setIsLoaded(true);
     }, 100);
@@ -188,22 +178,17 @@ const PDFViewer = () => {
     setIsLoadingPdf(false);
     setPdfError(null);
     
-    // Update page count if needed
     if (pdf && pdf.pageCount !== numPages) {
       const updatedPdf = { ...pdf, pageCount: numPages };
       setPdf(updatedPdf);
       
-      // Only save to persistent storage if it's not a temporary PDF
       if (!isTempPdf) {
         if (user) {
-          // Update in Supabase
           updatePDFMetadata(updatedPdf.id, { pageCount: numPages });
         } else {
-          // Update in local storage
           savePDF(updatedPdf);
         }
       } else if (updatedPdf.id.startsWith('temp-')) {
-        // Update session storage for temp PDF
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
         if (tempPdfData) {
           try {
@@ -234,21 +219,18 @@ const PDFViewer = () => {
       : 'Are you sure you want to delete this PDF?')) {
       
       if (isTempPdf) {
-        // Delete from session storage
         sessionStorage.removeItem('tempPdfFile');
         navigate('/');
         return;
       }
       
       if (user) {
-        // Delete from Supabase
         deleteSupabasePDF(id).then(success => {
           if (success) {
             navigate('/pdfs');
           }
         });
       } else {
-        // Delete from local storage
         if (deletePDFById(id)) {
           navigate('/pdfs');
         }
@@ -273,7 +255,6 @@ const PDFViewer = () => {
       })
       .catch((error) => console.log('Error sharing', error));
     } else {
-      // Fallback - copy URL to clipboard
       navigator.clipboard.writeText(window.location.href);
       toast(language === 'ar' ? 'تم نسخ الرابط إلى الحافظة' : 'Link copied to clipboard');
     }
@@ -307,7 +288,6 @@ const PDFViewer = () => {
     e.preventDefault();
     if (!chatInput.trim() || !id || !pdf) return;
 
-    // Add user message to chat
     const userMessageContent = chatInput.trim();
     setChatInput('');
     
@@ -315,7 +295,6 @@ const PDFViewer = () => {
       let savedUserMessage: ChatMessage | null = null;
       
       if (isTempPdf) {
-        // For temporary PDFs, manage chat messages in session storage
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
         if (tempPdfData) {
           try {
@@ -324,7 +303,6 @@ const PDFViewer = () => {
               parsedData.fileData.chatMessages = [];
             }
             
-            // Create a message with ID
             savedUserMessage = {
               id: `temp-msg-${Date.now()}`,
               content: userMessageContent,
@@ -332,17 +310,14 @@ const PDFViewer = () => {
               timestamp: new Date()
             };
             
-            // Add to the chat messages array
             parsedData.fileData.chatMessages.push(savedUserMessage);
             
-            // Update session storage
             sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
           } catch (error) {
             console.error('Error adding user message to temporary PDF:', error);
           }
         }
       } else if (user) {
-        // For logged-in users using Supabase
         const result = await addSupabaseChatMessage(id, userMessageContent, true);
         if (result) {
           savedUserMessage = {
@@ -353,7 +328,6 @@ const PDFViewer = () => {
           };
         }
       } else {
-        // For local storage
         savedUserMessage = addChatMessageToPDF(id, {
           content: userMessageContent,
           isUser: true,
@@ -362,11 +336,9 @@ const PDFViewer = () => {
       }
       
       if (savedUserMessage) {
-        // Update local state
         setChatMessages(prev => [...prev, savedUserMessage!]);
       }
 
-      // Simulate AI response after a short delay
       setTimeout(async () => {
         try {
           const aiContent = "This is a simulated response. In a real application, this would be generated by an AI based on the content of the PDF.";
@@ -374,7 +346,6 @@ const PDFViewer = () => {
           let savedAiMessage: ChatMessage | null = null;
           
           if (isTempPdf) {
-            // For temporary PDFs, manage chat messages in session storage
             const tempPdfData = sessionStorage.getItem('tempPdfFile');
             if (tempPdfData) {
               try {
@@ -383,7 +354,6 @@ const PDFViewer = () => {
                   parsedData.fileData.chatMessages = [];
                 }
                 
-                // Create a message with ID
                 savedAiMessage = {
                   id: `temp-msg-${Date.now()}`,
                   content: aiContent,
@@ -391,17 +361,14 @@ const PDFViewer = () => {
                   timestamp: new Date()
                 };
                 
-                // Add to the chat messages array
                 parsedData.fileData.chatMessages.push(savedAiMessage);
                 
-                // Update session storage
                 sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
               } catch (error) {
                 console.error('Error adding AI message to temporary PDF:', error);
               }
             }
           } else if (user) {
-            // For logged-in users using Supabase
             const result = await addSupabaseChatMessage(id, aiContent, false);
             if (result) {
               savedAiMessage = {
@@ -412,7 +379,6 @@ const PDFViewer = () => {
               };
             }
           } else {
-            // For local storage
             savedAiMessage = addChatMessageToPDF(id, {
               content: aiContent,
               isUser: false,
@@ -437,7 +403,7 @@ const PDFViewer = () => {
         : 'Error adding your message');
     }
   };
-  
+
   if (!pdf) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -454,7 +420,7 @@ const PDFViewer = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -501,7 +467,6 @@ const PDFViewer = () => {
           </div>
           
           <div className="flex flex-col lg:flex-row gap-6">
-            {/* PDF Viewer */}
             <div className="lg:w-2/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm">
               <div className="flex justify-between items-center p-4 border-b">
                 <div>
@@ -675,7 +640,6 @@ const PDFViewer = () => {
               </div>
             </div>
             
-            {/* Chat Interface */}
             <div className="lg:w-1/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm flex flex-col">
               <div className="flex justify-between items-center p-4 border-b">
                 <h2 className="font-display text-lg font-medium">
@@ -767,7 +731,6 @@ const PDFViewer = () => {
         </div>
       </main>
       
-      {/* Footer */}
       <footer className="mt-auto py-6 bg-muted/30 border-t border-border">
         <div className="container mx-auto px-4 md:px-6 text-center text-muted-foreground">
           <p className="text-sm">
