@@ -1,8 +1,11 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { formatFileSize } from './pdfStorage';
+import * as pdfjs from 'pdfjs-dist';
+
+// Initialize PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 export interface SupabasePDF {
   id: string;
@@ -22,6 +25,87 @@ export interface SupabaseChatMessage {
   isUser: boolean;
   timestamp: Date;
 }
+
+// Generate thumbnail from PDF
+const generatePDFThumbnail = async (pdfUrl: string): Promise<string | null> => {
+  try {
+    console.log('Generating thumbnail for PDF:', pdfUrl);
+    
+    // Load the PDF document
+    const loadingTask = pdfjs.getDocument(pdfUrl);
+    const pdf = await loadingTask.promise;
+    
+    // Get the first page
+    const page = await pdf.getPage(1);
+    
+    // Set the scale for the thumbnail (adjust as needed)
+    const viewport = page.getViewport({ scale: 1.0 });
+    
+    // Prepare canvas for rendering
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    if (!context) {
+      console.error('Canvas context could not be created');
+      return null;
+    }
+    
+    // Set canvas dimensions to match the viewport
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    // Render the page to the canvas
+    await page.render({
+      canvasContext: context,
+      viewport: viewport,
+    }).promise;
+    
+    // Convert canvas to data URL (JPEG with medium quality for better storage)
+    const thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.5);
+    
+    console.log('Thumbnail generated successfully');
+    
+    return thumbnailDataUrl;
+  } catch (error) {
+    console.error('Error generating PDF thumbnail:', error);
+    return null;
+  }
+};
+
+// Upload a thumbnail to Supabase Storage
+const uploadThumbnail = async (thumbnailDataUrl: string, userId: string, pdfId: string): Promise<string | null> => {
+  try {
+    // Convert data URL to blob
+    const response = await fetch(thumbnailDataUrl);
+    const blob = await response.blob();
+    
+    // Create a unique file path for the thumbnail
+    const filePath = `${userId}/${pdfId}/thumbnail.jpg`;
+    
+    // Upload the thumbnail to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('pdfs')
+      .upload(filePath, blob, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
+      
+    if (uploadError) {
+      console.error('Error uploading thumbnail:', uploadError);
+      return null;
+    }
+    
+    // Get the public URL for the uploaded thumbnail
+    const { data: publicURLData } = supabase.storage
+      .from('pdfs')
+      .getPublicUrl(filePath);
+      
+    return publicURLData.publicUrl;
+  } catch (error) {
+    console.error('Error in uploadThumbnail:', error);
+    return null;
+  }
+};
 
 // Upload a PDF file to Supabase Storage
 export const uploadPDFToSupabase = async (file: File, userId: string): Promise<SupabasePDF | null> => {
@@ -55,14 +139,17 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
       
     const publicURL = publicURLData.publicUrl;
     
+    // Generate a thumbnail for the PDF
+    console.log('Generating thumbnail from PDF');
+    const thumbnailDataUrl = await generatePDFThumbnail(publicURL);
+    let thumbnailUrl = null;
+    
     // Create the formatted date
     const now = new Date();
     const formattedDate = now.toISOString().split('T')[0];
     
-    console.log('Creating PDF record in database');
-    
-    // Prepare the PDF data for database insertion
-    const pdfData = {
+    // Create PDF record data
+    const pdfData: any = {
       user_id: userId,
       title: file.name,
       summary: `Uploaded on ${formattedDate}`,
@@ -72,9 +159,8 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
       page_count: 0 // Will be updated when loaded in the viewer
     };
     
-    console.log('Inserting PDF data:', pdfData);
-    
-    // Create a record in the pdfs table
+    // Insert PDF record to get the ID
+    console.log('Creating PDF record in database');
     const { data: newPdfRecord, error: pdfError } = await supabase
       .from('pdfs')
       .insert(pdfData)
@@ -106,6 +192,20 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
     
     console.log('PDF record created with ID:', newPdfRecord.id);
     
+    // If we have a thumbnail, upload it
+    if (thumbnailDataUrl) {
+      thumbnailUrl = await uploadThumbnail(thumbnailDataUrl, userId, newPdfRecord.id);
+      
+      if (thumbnailUrl) {
+        console.log('Updating PDF record with thumbnail URL');
+        // Update the PDF record with the thumbnail URL
+        await supabase
+          .from('pdfs')
+          .update({ thumbnail: thumbnailUrl })
+          .eq('id', newPdfRecord.id);
+      }
+    }
+    
     // Return the PDF data
     const newPDF: SupabasePDF = {
       id: newPdfRecord.id,
@@ -115,7 +215,8 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
       pageCount: 0, // Will be updated when loaded in the viewer
       fileSize: formatFileSize(file.size),
       filePath: filePath,
-      fileUrl: publicURL
+      fileUrl: publicURL,
+      thumbnail: thumbnailUrl || undefined
     };
     
     return newPDF;
