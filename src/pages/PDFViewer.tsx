@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import LanguageSelector, { SupportedLanguage } from '@/components/LanguageSelector';
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -26,13 +27,14 @@ import {
   getChatMessagesForPDF,
   addChatMessageToPDF as addSupabaseChatMessage,
   updatePDFMetadata,
-  deletePDF as deleteSupabasePDF
+  deletePDF as deleteSupabasePDF,
+  deleteAllChatMessagesForPDF,
+  AnalysisStage
 } from '@/services/pdfSupabaseService';
 import {
   extractTextFromPDF,
   analyzePDFWithGemini,
-  AnalysisProgress,
-  AnalysisStage
+  AnalysisProgress
 } from '@/services/pdfAnalysisService';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -91,7 +93,7 @@ const PDFViewer = () => {
             console.error('Error parsing temporary PDF:', error);
           }
         }
-        toast.error(language === 'ar' ? 'لم يتم العثور على الملف المؤقت' : 'Temporary PDF not found');
+        toast.error(language === 'ar' ? 'لم يتم ال��ثور على الملف المؤقت' : 'Temporary PDF not found');
         navigate('/');
         return;
       }
@@ -434,7 +436,12 @@ const PDFViewer = () => {
             : 'Generating accurate answer...'
         });
         
-        const aiContent = await analyzePDFWithGemini(textContent, userMessageContent, updateAnalysisProgress);
+        const userLanguage = language === 'ar' ? 'Arabic' : 'English';
+        const aiResponse = await analyzePDFWithGemini(
+          textContent, 
+          userMessageContent + `\n\nPlease respond in ${userLanguage}.`, 
+          updateAnalysisProgress
+        );
         
         let savedAiMessage: ChatMessage | null = null;
         
@@ -449,7 +456,7 @@ const PDFViewer = () => {
               
               savedAiMessage = {
                 id: `temp-msg-${Date.now()}`,
-                content: aiContent,
+                content: aiResponse.response,
                 isUser: false,
                 timestamp: new Date()
               };
@@ -462,7 +469,7 @@ const PDFViewer = () => {
             }
           }
         } else if (user) {
-          const result = await addSupabaseChatMessage(id, aiContent, false);
+          const result = await addSupabaseChatMessage(id, aiResponse.response, false);
           if (result) {
             savedAiMessage = {
               id: result.id,
@@ -473,7 +480,7 @@ const PDFViewer = () => {
           }
         } else {
           savedAiMessage = addChatMessageToPDF(id, {
-            content: aiContent,
+            content: aiResponse.response,
             isUser: false,
             timestamp: new Date()
           });
@@ -598,8 +605,8 @@ const PDFViewer = () => {
       }
       
       const summaryPrompt = language === 'ar' 
-        ? 'قم بتلخيص هذا المستند بطريقة شاملة وموجزة'
-        : 'Provide a comprehensive summary of this document';
+        ? 'قم بتلخيص هذا المستند بطريقة شاملة وموجزة. اكتب الرد باللغة العربية.'
+        : 'Provide a comprehensive summary of this document in English.';
         
       setAnalysisProgress({
         stage: 'generating',
@@ -616,11 +623,11 @@ const PDFViewer = () => {
       
       setChatMessages(prev => [...prev, userMessage]);
       
-      const summary = await analyzePDFWithGemini(textContent, summaryPrompt, updateAnalysisProgress);
+      const summaryResult = await analyzePDFWithGemini(textContent, summaryPrompt, updateAnalysisProgress);
       
       const aiMessage: ChatMessage = {
         id: `temp-${Date.now() + 1}`,
-        content: summary,
+        content: summaryResult.response,
         isUser: false,
         timestamp: new Date()
       };
@@ -677,13 +684,16 @@ const PDFViewer = () => {
     }
   };
 
-  const translatePDF = async () => {
+  const translatePDF = async (targetLang?: SupportedLanguage) => {
     if (!pdfTextContent && !pdf?.dataUrl) {
       toast.error(language === 'ar' ? 'محتوى الملف غير متوفر' : 'PDF content not available');
       return;
     }
     
-    const targetLanguage = language === 'ar' ? 'English' : 'Arabic';
+    const defaultTarget = language === 'ar' ? 'en' : 'ar';
+    const targetLanguage = targetLang?.name || (language === 'ar' ? 'English' : 'Arabic');
+    const targetCode = targetLang?.code || defaultTarget;
+    
     toast.info(language === 'ar' 
       ? `جاري ترجمة المستند إلى ${targetLanguage}...` 
       : `Translating document to ${targetLanguage}...`);
@@ -700,9 +710,9 @@ const PDFViewer = () => {
         throw new Error('Failed to extract PDF content');
       }
       
-      const translatePrompt = language === 'ar' 
-        ? `ترجم هذا المستند إلى اللغة ${targetLanguage}` 
-        : `Translate this document to ${targetLanguage}`;
+      const translatePrompt = `Translate the following document to ${targetLanguage} (${targetCode}). 
+Provide a complete and accurate translation. Maintain the original document structure and formatting.
+Preserve any technical terms, names, and references. Respond only with the translated content.`;
         
       setAnalysisProgress({
         stage: 'generating',
@@ -714,18 +724,26 @@ const PDFViewer = () => {
       
       const userMessage: ChatMessage = {
         id: `temp-${Date.now()}`,
-        content: translatePrompt,
+        content: language === 'ar' 
+          ? `ترجمة المستند إلى ${targetLanguage}` 
+          : `Translate document to ${targetLanguage}`,
         isUser: true,
         timestamp: new Date()
       };
       
       setChatMessages(prev => [...prev, userMessage]);
       
-      const translation = await analyzePDFWithGemini(textContent, translatePrompt, updateAnalysisProgress);
+      const translationResult = await analyzePDFWithGemini(textContent, translatePrompt, updateAnalysisProgress);
+      
+      if (!translationResult.response || translationResult.response.trim() === "") {
+        throw new Error(language === 'ar' 
+          ? 'فشلت ترجمة المستند. الرجاء المحاولة مرة أخرى.' 
+          : 'Document translation failed. Please try again.');
+      }
       
       const aiMessage: ChatMessage = {
         id: `temp-${Date.now() + 1}`,
-        content: translation,
+        content: translationResult.response,
         isUser: false,
         timestamp: new Date()
       };
@@ -765,24 +783,34 @@ const PDFViewer = () => {
       setAnalysisProgress({
         stage: 'complete',
         progress: 100,
-        message: language === 'ar' ? 'تمت الترجمة بنجاح' : 'Translation completed successfully'
+        message: language === 'ar' 
+          ? `تمت الترجمة إلى ${targetLanguage} بنجاح` 
+          : `Translation to ${targetLanguage} completed successfully`
       });
+      
+      toast.success(language === 'ar' 
+        ? `تمت الترجمة إلى ${targetLanguage} بنجاح` 
+        : `Translation to ${targetLanguage} completed successfully`);
       
     } catch (error) {
       console.error('Error translating PDF:', error);
       setAnalysisProgress({
         stage: 'error',
         progress: 0,
-        message: language === 'ar' ? 'فشل في ترجمة المستند' : 'Failed to translate document'
+        message: language === 'ar' 
+          ? 'فشل في ترجمة المستند' 
+          : 'Failed to translate document'
       });
       
-      toast.error(language === 'ar' ? 'فشل في ترجمة المستند' : 'Failed to translate document');
+      toast.error(language === 'ar' 
+        ? 'فشل في ��رجمة المستند. الرجاء المحاولة مرة أخرى.' 
+        : 'Failed to translate document. Please try again.');
     } finally {
       setIsWaitingForResponse(false);
     }
   };
 
-  const clearChatMessages = () => {
+  const clearChatMessages = async () => {
     if (!id || !pdf) return;
     
     if (window.confirm(language === 'ar' 
@@ -790,6 +818,10 @@ const PDFViewer = () => {
       : 'Are you sure you want to delete all messages?')) {
       
       try {
+        const loadingToastId = toast.loading(language === 'ar' 
+          ? 'جاري حذف الرسائل...' 
+          : 'Deleting messages...');
+          
         if (isTempPdf) {
           const tempPdfData = sessionStorage.getItem('tempPdfFile');
           if (tempPdfData) {
@@ -798,40 +830,55 @@ const PDFViewer = () => {
               parsedData.fileData.chatMessages = [];
               sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
               setChatMessages([]);
+              
+              toast.dismiss(loadingToastId);
+              toast.success(language === 'ar' 
+                ? 'تم حذف ��ميع الرسائل بنجاح' 
+                : 'All messages deleted successfully');
             } catch (error) {
               console.error('Error clearing temporary PDF chat messages:', error);
+              
+              toast.dismiss(loadingToastId);
               toast.error(language === 'ar' 
                 ? 'فشل في حذف الرسائل' 
                 : 'Failed to delete messages');
             }
           }
         } else if (user) {
-          const deleteAllMessages = async () => {
-            try {
-              const success = await deleteAllChatMessagesForPDF(id);
-              if (success) {
-                setChatMessages([]);
-                toast.success(language === 'ar' 
-                  ? 'تم حذف جميع الرسائل بنجاح' 
-                  : 'All messages deleted successfully');
-              } else {
-                toast.error(language === 'ar' 
-                  ? 'فشل في حذف الرسائل' 
-                  : 'Failed to delete messages');
-              }
-            } catch (error) {
-              console.error('Error deleting chat messages:', error);
-              toast.error(language === 'ar' 
-                ? 'فشل في حذف الرسائل' 
-                : 'Failed to delete messages');
-            }
-          };
+          setChatMessages([]);
           
-          deleteAllMessages();
+          const success = await deleteAllChatMessagesForPDF(id);
+          
+          toast.dismiss(loadingToastId);
+          
+          if (!success) {
+            console.error('Failed to delete messages from database');
+            
+            setIsLoadingMessages(true);
+            const messages = await getChatMessagesForPDF(id);
+            setIsLoadingMessages(false);
+            
+            if (messages && messages.length > 0) {
+              const convertedMessages: ChatMessage[] = messages.map(msg => ({
+                id: msg.id,
+                content: msg.content,
+                isUser: msg.isUser,
+                timestamp: msg.timestamp
+              }));
+              
+              setChatMessages(convertedMessages);
+              
+              toast.error(language === 'ar' 
+                ? 'فشل في حذف الرسائل من قاعدة البيانات' 
+                : 'Failed to delete messages from database');
+            }
+          }
         } else {
           const updatedPdf = { ...pdf, chatMessages: [] };
           savePDF(updatedPdf);
           setChatMessages([]);
+          
+          toast.dismiss(loadingToastId);
           toast.success(language === 'ar' 
             ? 'تم حذف جميع الرسائل بنجاح' 
             : 'All messages deleted successfully');
@@ -1131,16 +1178,13 @@ const PDFViewer = () => {
                           {language === 'ar' ? 'تلخيص' : 'Summarize'}
                         </Button>
                         
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <LanguageSelector 
+                          onSelectLanguage={translatePDF}
+                          buttonSize="sm"
+                          buttonVariant="outline"
                           className="h-8 px-2 text-xs"
-                          onClick={translatePDF}
-                          disabled={isAnalyzing || isWaitingForResponse}
-                        >
-                          <Languages className="h-3.5 w-3.5 mr-1" />
-                          {language === 'ar' ? 'ترجمة' : 'Translate'}
-                        </Button>
+                          excludeCurrentLanguage={true}
+                        />
                       </div>
                       <ScrollBar orientation="horizontal" />
                     </ScrollArea>
@@ -1152,8 +1196,18 @@ const PDFViewer = () => {
                     )}
                     
                     {isLoadingMessages ? (
-                      <div className="flex justify-center items-center h-full">
-                        <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                      <div className="flex flex-col space-y-4">
+                        <ChatMessageSkeleton />
+                        <ChatMessageSkeleton />
+                        <div className={cn(
+                          "flex flex-col p-3 rounded-lg max-w-[80%]",
+                          "ml-auto bg-primary text-primary-foreground"
+                        )}>
+                          <Skeleton className="h-4 w-[120px] bg-primary-foreground/20" />
+                          <div className="flex justify-between items-center mt-2">
+                            <Skeleton className="h-3 w-[40px] bg-primary-foreground/20" />
+                          </div>
+                        </div>
                       </div>
                     ) : chatMessages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center p-4">
@@ -1184,8 +1238,9 @@ const PDFViewer = () => {
                               "flex flex-col p-3 rounded-lg max-w-[80%]",
                               message.isUser 
                                 ? "ml-auto bg-primary text-primary-foreground" 
-                                : "mr-auto bg-muted"
+                                : direction === 'rtl' ? "ml-auto bg-muted" : "mr-auto bg-muted"
                             )}
+                            dir={!message.isUser && /[\u0600-\u06FF]/.test(message.content) ? 'rtl' : direction}
                           >
                             <div className="whitespace-pre-wrap break-words">
                               {message.content}

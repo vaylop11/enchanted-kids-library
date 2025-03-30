@@ -11,7 +11,7 @@ interface PDFAnalysisProgressProps {
 }
 
 const PDFAnalysisProgress = ({ analysis }: PDFAnalysisProgressProps) => {
-  const { language } = useLanguage();
+  const { language, direction } = useLanguage();
 
   const getStageIcon = () => {
     switch (analysis.stage) {
@@ -53,7 +53,7 @@ const PDFAnalysisProgress = ({ analysis }: PDFAnalysisProgressProps) => {
   };
 
   return (
-    <div className="bg-muted/30 rounded-lg p-3 mb-4">
+    <div className="bg-muted/30 rounded-lg p-3 mb-4" dir={direction}>
       <div className="flex items-center justify-between mb-2">
         <Badge
           variant="outline"
