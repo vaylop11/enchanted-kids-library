@@ -6,6 +6,20 @@ import { toast } from "sonner";
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
+// Analysis stages for the progress indicator
+export type AnalysisStage = 
+  | 'extracting' 
+  | 'analyzing' 
+  | 'generating' 
+  | 'complete' 
+  | 'error';
+
+export interface AnalysisProgress {
+  stage: AnalysisStage;
+  progress: number; // 0-100
+  message: string;
+}
+
 /**
  * Extracts text content from a PDF file
  */
@@ -118,17 +132,3 @@ export const analyzePDFWithGemini = async (
     throw new Error('Failed to analyze PDF content');
   }
 };
-
-// Analysis stages for the progress indicator
-export type AnalysisStage = 
-  | 'extracting' 
-  | 'analyzing' 
-  | 'generating' 
-  | 'complete' 
-  | 'error';
-
-export interface AnalysisProgress {
-  stage: AnalysisStage;
-  progress: number; // 0-100
-  message: string;
-}

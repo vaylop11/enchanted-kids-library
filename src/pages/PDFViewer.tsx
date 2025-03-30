@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -35,7 +34,6 @@ import {
   AnalysisStage
 } from '@/services/pdfAnalysisService';
 
-// Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 const PDFViewer = () => {
@@ -301,31 +299,43 @@ const PDFViewer = () => {
     setRetryCount(prev => prev + 1);
   };
 
-  const updateAnalysisProgress = (stage: AnalysisStage, progress: number, message: string) => {
-    setAnalysisProgress({ stage, progress, message });
+  const updateAnalysisProgress = (progress: AnalysisProgress) => {
+    setAnalysisProgress(progress);
   };
 
   const extractPDFContent = async () => {
     if (!pdf?.dataUrl || pdfTextContent) return;
     
     try {
-      updateAnalysisProgress('extracting', 10, language === 'ar' 
-        ? 'بدء استخراج النص من ملف PDF...' 
-        : 'Starting text extraction from PDF...');
+      setAnalysisProgress({
+        stage: 'extracting',
+        progress: 10,
+        message: language === 'ar' 
+          ? 'بدء استخراج النص من ملف PDF...' 
+          : 'Starting text extraction from PDF...'
+      });
       
-      const text = await extractTextFromPDF(pdf.dataUrl);
+      const text = await extractTextFromPDF(pdf.dataUrl, updateAnalysisProgress);
       setPdfTextContent(text);
       
-      updateAnalysisProgress('extracting', 100, language === 'ar'
-        ? 'تم استخراج النص بنجاح من الملف'
-        : 'Text successfully extracted from PDF');
+      setAnalysisProgress({
+        stage: 'extracting',
+        progress: 100,
+        message: language === 'ar'
+          ? 'تم استخراج النص بنجاح من الملف'
+          : 'Text successfully extracted from PDF'
+      });
       
       return text;
     } catch (error) {
       console.error('Error extracting PDF text:', error);
-      updateAnalysisProgress('error', 0, language === 'ar'
-        ? 'فشل في استخراج النص من الملف'
-        : 'Failed to extract text from PDF');
+      setAnalysisProgress({
+        stage: 'error',
+        progress: 0,
+        message: language === 'ar'
+          ? 'فشل في استخراج النص من الملف'
+          : 'Failed to extract text from PDF'
+      });
       return null;
     }
   };
@@ -391,9 +401,13 @@ const PDFViewer = () => {
       try {
         let textContent = pdfTextContent;
         if (!textContent) {
-          updateAnalysisProgress('extracting', 25, language === 'ar'
-            ? 'استخراج النص من ملف PDF...'
-            : 'Extracting text from PDF...');
+          setAnalysisProgress({
+            stage: 'extracting',
+            progress: 25,
+            message: language === 'ar'
+              ? 'استخراج النص من ملف PDF...'
+              : 'Extracting text from PDF...'
+          });
           textContent = await extractPDFContent();
           
           if (!textContent) {
@@ -403,13 +417,21 @@ const PDFViewer = () => {
           }
         }
         
-        updateAnalysisProgress('analyzing', 50, language === 'ar'
-          ? 'تحليل محتوى الملف...'
-          : 'Analyzing PDF content...');
+        setAnalysisProgress({
+          stage: 'analyzing',
+          progress: 50,
+          message: language === 'ar'
+            ? 'تحليل محتوى الملف...'
+            : 'Analyzing PDF content...'
+        });
         
-        updateAnalysisProgress('generating', 75, language === 'ar'
-          ? 'إنشاء إجابة دقيقة...'
-          : 'Generating accurate answer...');
+        setAnalysisProgress({
+          stage: 'generating',
+          progress: 75,
+          message: language === 'ar'
+            ? 'إنشاء إجابة دقيقة...'
+            : 'Generating accurate answer...'
+        });
         
         const aiContent = await analyzePDFWithGemini(textContent, userMessageContent, updateAnalysisProgress);
         
@@ -461,9 +483,13 @@ const PDFViewer = () => {
         }
       } catch (error) {
         console.error('Error in AI analysis:', error);
-        updateAnalysisProgress('error', 0, language === 'ar'
-          ? 'حدث خطأ أثناء تحليل الملف'
-          : 'Error during PDF analysis');
+        setAnalysisProgress({
+          stage: 'error',
+          progress: 0,
+          message: language === 'ar'
+            ? 'حدث خطأ أثناء تحليل الملف'
+            : 'Error during PDF analysis'
+        });
           
         const fallbackResponse = language === 'ar'
           ? "عذرًا، حدث خطأ أثناء تحليل الملف. يرجى المحاولة مرة أخرى لاحقًا."
