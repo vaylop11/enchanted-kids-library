@@ -63,7 +63,8 @@ const LanguageSelector = ({
           {language === 'ar' ? 'ترجمة إلى' : 'Translate to'}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align={direction === 'rtl' ? 'end' : 'start'} dir={direction}>
+      {/* تمت إزالة خاصية dir من DropdownMenuContent لأنها غير مدعومة */}
+      <DropdownMenuContent align={direction === 'rtl' ? 'end' : 'start'} className={direction === 'rtl' ? 'rtl' : 'ltr'}>
         <DropdownMenuLabel>{menuTitle}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {filteredLanguages.map((lang) => (
