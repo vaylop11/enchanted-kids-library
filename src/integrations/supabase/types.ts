@@ -9,6 +9,80 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      pdf_chats: {
+        Row: {
+          content: string
+          id: string
+          is_user: boolean | null
+          pdf_id: string
+          timestamp: string | null
+        }
+        Insert: {
+          content: string
+          id?: string
+          is_user?: boolean | null
+          pdf_id: string
+          timestamp?: string | null
+        }
+        Update: {
+          content?: string
+          id?: string
+          is_user?: boolean | null
+          pdf_id?: string
+          timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_chats_pdf_id_fkey"
+            columns: ["pdf_id"]
+            isOneToOne: false
+            referencedRelation: "pdfs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdfs: {
+        Row: {
+          created_at: string | null
+          file_path: string
+          file_size: string | null
+          id: string
+          page_count: number | null
+          summary: string | null
+          thumbnail: string | null
+          title: string
+          updated_at: string | null
+          upload_date: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_path: string
+          file_size?: string | null
+          id?: string
+          page_count?: number | null
+          summary?: string | null
+          thumbnail?: string | null
+          title: string
+          updated_at?: string | null
+          upload_date?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_path?: string
+          file_size?: string | null
+          id?: string
+          page_count?: number | null
+          summary?: string | null
+          thumbnail?: string | null
+          title?: string
+          updated_at?: string | null
+          upload_date?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
