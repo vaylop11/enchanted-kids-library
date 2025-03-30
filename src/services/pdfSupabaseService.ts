@@ -2,7 +2,7 @@
 // This file re-exports from separate service files for backward compatibility
 import { generatePDFThumbnail, uploadThumbnail } from './pdfThumbnailService';
 import { uploadPDFToSupabase } from './pdfUploadService';
-import { getUserPDFs, getPDFById, updatePDFMetadata, deletePDF } from './pdfManagementService';
+import { getUserPDFs, getPDFById, updatePDFMetadata, deletePDF, getPDF } from './pdfManagementService';
 import { 
   addChatMessageToPDF, 
   getChatMessagesForPDF, 
@@ -19,6 +19,7 @@ export {
   uploadPDFToSupabase,
   getUserPDFs,
   getPDFById,
+  getPDF,
   updatePDFMetadata,
   deletePDF,
   addChatMessageToPDF,

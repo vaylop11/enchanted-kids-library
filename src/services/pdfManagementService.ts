@@ -75,6 +75,9 @@ export const getPDFById = async (pdfId: string): Promise<SupabasePDF | null> => 
   }
 };
 
+// Get PDF function - renamed for consistency and to avoid confusion
+export const getPDF = getPDFById;
+
 // Update PDF metadata
 export const updatePDFMetadata = async (pdfId: string, updates: Partial<SupabasePDF>): Promise<boolean> => {
   try {
