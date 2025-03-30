@@ -10,8 +10,6 @@ import Index from "./pages/Index";
 import PDFs from "./pages/PDFs";
 import PDFViewer from "./pages/PDFViewer";
 import NotFound from "./pages/NotFound";
-import BlogPage from "./pages/BlogPage";
-import BlogPost from "./pages/BlogPost";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import SignIn from "./components/auth/SignIn";
@@ -33,8 +31,6 @@ const App = () => (
               <Route path="/pdfs" element={<PDFs />} />
               <Route path="/pdf/:id" element={<PDFViewer />} />
               <Route path="/pdf/temp/:id" element={<PDFViewer />} />
-              <Route path="/blog" element={<BlogPage />} />
-              <Route path="/blog/:id" element={<BlogPost />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-of-service" element={<TermsOfService />} />
               <Route path="/signin" element={<AuthPage><SignIn /></AuthPage>} />
