@@ -106,19 +106,34 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
     
     console.log(`Found ${existingMessages.length} messages to delete for PDF ID:`, pdfId);
     
-    // For thorough deletion, we'll try using a specific approach
-    const { error: deleteError } = await supabase
-      .from('pdf_chats')
-      .delete()
-      .eq('pdf_id', pdfId);
+    // Delete the messages one batch at a time to avoid RLS issues
+    // We'll delete in batches to ensure all messages are properly removed
+    const batchSize = 50;
+    const totalMessages = existingMessages.length;
+    let deletedCount = 0;
+    
+    // Get all message IDs to delete
+    const messageIds = existingMessages.map((msg: any) => msg.id);
+    
+    // Delete in batches
+    for (let i = 0; i < totalMessages; i += batchSize) {
+      const batchIds = messageIds.slice(i, i + batchSize);
       
-    if (deleteError) {
-      console.error('Error deleting chat messages:', deleteError);
-      toast.error(`Failed to delete chat messages: ${deleteError.message}`);
-      return false;
+      const { error: deleteError } = await supabase
+        .from('pdf_chats')
+        .delete()
+        .in('id', batchIds);
+        
+      if (deleteError) {
+        console.error(`Error deleting batch of messages (${i} to ${i + batchSize}):`, deleteError);
+        toast.error(`Failed to delete some messages: ${deleteError.message}`);
+        // Continue with other batches even if this one failed
+      } else {
+        deletedCount += batchIds.length;
+      }
     }
     
-    // Verify deletion more carefully
+    // Final verification to check if all messages were deleted
     const { count, error: countError } = await supabase
       .from('pdf_chats')
       .select('*', { count: 'exact', head: true })
@@ -126,13 +141,13 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
       
     if (countError) {
       console.error('Error verifying message deletion:', countError);
-      toast.error('Could not verify message deletion');
-      return false;
+      toast.error('Could not verify complete message deletion');
+      return deletedCount > 0; // Return true if we deleted at least some messages
     }
     
     if (count && count > 0) {
-      console.error(`Delete operation failed silently. ${count} messages still remain.`);
-      toast.error('Some messages could not be deleted');
+      console.error(`Delete operation partially successful. ${count} messages still remain.`);
+      toast.warning(`Deleted ${deletedCount} messages, but ${count} messages remain`);
       return false;
     }
     
