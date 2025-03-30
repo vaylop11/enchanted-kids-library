@@ -783,7 +783,7 @@ const PDFViewer = () => {
     }
   };
 
-  const clearChatMessages = () => {
+  const clearChatMessages = async () => {
     if (!id || !pdf) return;
     
     if (window.confirm(language === 'ar' 
@@ -799,6 +799,9 @@ const PDFViewer = () => {
               parsedData.fileData.chatMessages = [];
               sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
               setChatMessages([]);
+              toast.success(language === 'ar' 
+                ? 'تم حذف جميع الرسائل بنجاح' 
+                : 'All messages deleted successfully');
             } catch (error) {
               console.error('Error clearing temporary PDF chat messages:', error);
               toast.error(language === 'ar' 
@@ -807,29 +810,18 @@ const PDFViewer = () => {
             }
           }
         } else if (user) {
-          const deleteAllMessages = async () => {
-            try {
-              const success = await deleteAllChatMessagesForPDF(id);
-              if (success) {
-                // Important: Set chat messages to empty array to update UI immediately
-                setChatMessages([]);
-                toast.success(language === 'ar' 
-                  ? 'تم حذف جميع الرسائل بنجاح' 
-                  : 'All messages deleted successfully');
-              } else {
-                toast.error(language === 'ar' 
-                  ? 'فشل في حذف الرسائل' 
-                  : 'Failed to delete messages');
-              }
-            } catch (error) {
-              console.error('Error deleting chat messages:', error);
-              toast.error(language === 'ar' 
-                ? 'فشل في حذف الرسائل' 
-                : 'Failed to delete messages');
-            }
-          };
+          console.log('Attempting to delete all messages for PDF ID:', id);
+          const success = await deleteAllChatMessagesForPDF(id);
           
-          deleteAllMessages();
+          if (success) {
+            console.log('Successfully deleted messages, updating UI');
+            setChatMessages([]);
+          } else {
+            console.error('Failed to delete messages from database');
+            toast.error(language === 'ar' 
+              ? 'فشل في حذف الرسائل من قاعدة البيانات' 
+              : 'Failed to delete messages from database');
+          }
         } else {
           const updatedPdf = { ...pdf, chatMessages: [] };
           savePDF(updatedPdf);

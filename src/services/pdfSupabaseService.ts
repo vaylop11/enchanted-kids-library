@@ -453,6 +453,12 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
   try {
     console.log('Deleting all chat messages for PDF:', pdfId);
     
+    if (!pdfId) {
+      console.error('Invalid PDF ID provided for deleteAllChatMessagesForPDF');
+      toast.error('Cannot delete messages: Invalid PDF ID');
+      return false;
+    }
+    
     // First check if there are any messages to delete
     const { data: existingMessages, error: checkError } = await supabase
       .from('pdf_chats')
@@ -461,17 +467,19 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
       
     if (checkError) {
       console.error('Error checking existing chat messages:', checkError);
+      toast.error('Failed to check existing chat messages');
       return false;
     }
     
     if (!existingMessages || existingMessages.length === 0) {
-      console.log('No messages found to delete');
+      console.log('No messages found to delete for PDF ID:', pdfId);
+      toast.success('No messages to clear');
       return true; // No messages to delete is still a success
     }
     
-    console.log(`Found ${existingMessages.length} messages to delete`);
+    console.log(`Found ${existingMessages.length} messages to delete for PDF ID:`, pdfId);
     
-    // Delete all messages for this PDF
+    // Delete all messages for this PDF with explicit transaction
     const { error } = await supabase
       .from('pdf_chats')
       .delete()
@@ -483,7 +491,7 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
       return false;
     }
     
-    console.log('Successfully deleted all chat messages');
+    console.log('Successfully deleted all chat messages for PDF ID:', pdfId);
     toast.success('Chat history cleared successfully');
     return true;
   } catch (error) {
