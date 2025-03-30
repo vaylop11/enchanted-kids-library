@@ -93,7 +93,7 @@ const PDFViewer = () => {
             console.error('Error parsing temporary PDF:', error);
           }
         }
-        toast.error(language === 'ar' ? 'لم يتم العثور على الملف المؤقت' : 'Temporary PDF not found');
+        toast.error(language === 'ar' ? 'لم يتم ال��ثور على الملف المؤقت' : 'Temporary PDF not found');
         navigate('/');
         return;
       }
@@ -803,7 +803,7 @@ Preserve any technical terms, names, and references. Respond only with the trans
       });
       
       toast.error(language === 'ar' 
-        ? 'فشل في ترجمة المستند. الرجاء المحاولة مرة أخرى.' 
+        ? 'فشل في ��رجمة المستند. الرجاء المحاولة مرة أخرى.' 
         : 'Failed to translate document. Please try again.');
     } finally {
       setIsWaitingForResponse(false);
