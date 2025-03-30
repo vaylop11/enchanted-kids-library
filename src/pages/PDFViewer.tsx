@@ -66,6 +66,7 @@ const PDFViewer = () => {
     message: 'Preparing to analyze PDF...'
   });
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
+  const [fitToWidth, setFitToWidth] = useState(true);
 
   useEffect(() => {
     if (!id) {
@@ -287,11 +288,17 @@ const PDFViewer = () => {
   };
 
   const handleZoomIn = () => {
+    setFitToWidth(false);
     setPdfScale(prev => Math.min(prev + 0.2, 2.0));
   };
 
   const handleZoomOut = () => {
+    setFitToWidth(false);
     setPdfScale(prev => Math.max(prev - 0.2, 0.5));
+  };
+
+  const toggleFitToWidth = () => {
+    setFitToWidth(!fitToWidth);
   };
 
   const handleRetryLoading = () => {
@@ -835,7 +842,7 @@ const PDFViewer = () => {
           </div>
           
           <div className="flex flex-col lg:flex-row gap-6">
-            <div className="lg:w-2/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+            <div className="lg:w-2/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm flex flex-col">
               <div className="flex justify-between items-center p-4 border-b">
                 <div>
                   <h1 className="font-display text-xl font-medium truncate">
@@ -898,6 +905,15 @@ const PDFViewer = () => {
                         onClick={handleZoomOut}
                         disabled={pdfError !== null || !pdf.dataUrl}
                       >-</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={toggleFitToWidth}
+                        className={fitToWidth ? "bg-muted" : ""}
+                        disabled={pdfError !== null || !pdf.dataUrl}
+                      >
+                        {language === 'ar' ? 'ملء العرض' : 'Fit'}
+                      </Button>
                       <span className="text-sm">{Math.round(pdfScale * 100)}%</span>
                       <Button 
                         variant="outline" 
@@ -914,97 +930,103 @@ const PDFViewer = () => {
                 </div>
               )}
               
-              <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
-                {isLoadingPdf ? (
-                  <div className="flex flex-col items-center justify-center h-full w-full">
-                    <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
-                    <p className="text-lg font-medium mb-2">
-                      {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {language === 'ar' ? 'يرجى الانتظار' : 'Please wait'}
-                    </p>
-                  </div>
-                ) : pdfError ? (
-                  <div className="flex flex-col items-center justify-center h-full w-full">
-                    <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" />
-                    <h2 className="text-xl font-medium mb-2 text-center">
-                      {language === 'ar' ? 'تعذر تحميل الملف' : 'Failed to load PDF'}
-                    </h2>
-                    <p className="text-muted-foreground text-center max-w-md mb-6">
-                      {pdfError}
-                    </p>
-                    <div className="flex gap-3">
-                      <Button variant="outline" onClick={handleRetryLoading}>
-                        {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
-                      </Button>
+              <div className="flex-1 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
+                <ScrollArea className="h-full w-full">
+                  {isLoadingPdf ? (
+                    <div className="flex flex-col items-center justify-center h-full w-full">
+                      <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
+                      <p className="text-lg font-medium mb-2">
+                        {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {language === 'ar' ? 'يرجى الانتظار' : 'Please wait'}
+                      </p>
+                    </div>
+                  ) : pdfError ? (
+                    <div className="flex flex-col items-center justify-center h-full w-full">
+                      <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" />
+                      <h2 className="text-xl font-medium mb-2 text-center">
+                        {language === 'ar' ? 'تعذر تحميل الملف' : 'Failed to load PDF'}
+                      </h2>
+                      <p className="text-muted-foreground text-center max-w-md mb-6">
+                        {pdfError}
+                      </p>
+                      <div className="flex gap-3">
+                        <Button variant="outline" onClick={handleRetryLoading}>
+                          {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                        </Button>
+                        <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
+                          {language === 'ar'
+                            ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
+                            : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : !pdf.dataUrl ? (
+                    <div className="flex flex-col items-center justify-center h-full w-full">
+                      <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                      <h2 className="text-xl font-medium mb-2 text-center">
+                        {language === 'ar' ? 'لا توجد بيانات PDF' : 'No PDF Data Available'}
+                      </h2>
+                      <p className="text-muted-foreground text-center max-w-md mb-6">
+                        {language === 'ar' 
+                          ? 'لم يتم تخزين بيانات PDF بسبب قيود التخزين. حاول حذف بعض الملفات القديمة وتحميل هذا الملف مرة أخرى.'
+                          : 'PDF data was not stored due to storage limitations. Try deleting some older PDFs and upload this file again.'}
+                      </p>
                       <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
                         {language === 'ar'
                           ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
                           : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
                       </Button>
                     </div>
-                  </div>
-                ) : !pdf.dataUrl ? (
-                  <div className="flex flex-col items-center justify-center h-full w-full">
-                    <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                    <h2 className="text-xl font-medium mb-2 text-center">
-                      {language === 'ar' ? 'لا توجد بيانات PDF' : 'No PDF Data Available'}
-                    </h2>
-                    <p className="text-muted-foreground text-center max-w-md mb-6">
-                      {language === 'ar' 
-                        ? 'لم يتم تخزين بيانات PDF بسبب قيود التخزين. حاول حذف بعض الملفات القديمة وتحميل هذا الملف مرة أخرى.'
-                        : 'PDF data was not stored due to storage limitations. Try deleting some older PDFs and upload this file again.'}
-                    </p>
-                    <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
-                      {language === 'ar'
-                        ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
-                        : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
-                    </Button>
-                  </div>
-                ) : (
-                  <Document
-                    file={pdf.dataUrl}
-                    onLoadSuccess={handleDocumentLoadSuccess}
-                    onLoadError={handleDocumentLoadError}
-                    loading={
-                      <div className="flex items-center justify-center h-full w-full">
-                        <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
-                      </div>
-                    }
-                    error={
-                      <div className="flex flex-col items-center justify-center h-full w-full">
-                        <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground text-center mb-2">
-                          {language === 'ar' ? 'فشل تحميل الملف' : 'Failed to load PDF'}
-                        </p>
-                        <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
-                          {language === 'ar' 
-                            ? 'قد تكون هناك مشكلة في تنسيق الملف أو أن الملف قد يكون كبيرًا جدًا للعرض.' 
-                            : 'There might be an issue with the file format or the file may be too large to display.'}
-                        </p>
-                        <Button variant="outline" onClick={handleRetryLoading}>
-                          {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
-                        </Button>
-                      </div>
-                    }
-                  >
-                    <Page 
-                      pageNumber={pageNumber} 
-                      scale={pdfScale}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
-                      error={
-                        <div className="flex flex-col items-center justify-center p-6">
-                          <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
-                          <p className="text-sm text-center">
-                            {language === 'ar' ? 'خطأ في عرض الصفحة' : 'Error rendering page'}
-                          </p>
-                        </div>
-                      }
-                    />
-                  </Document>
-                )}
+                  ) : (
+                    <div className="flex justify-center w-full py-4">
+                      <Document
+                        file={pdf.dataUrl}
+                        onLoadSuccess={handleDocumentLoadSuccess}
+                        onLoadError={handleDocumentLoadError}
+                        loading={
+                          <div className="flex items-center justify-center h-full w-full">
+                            <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                          </div>
+                        }
+                        error={
+                          <div className="flex flex-col items-center justify-center h-full w-full">
+                            <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                            <p className="text-muted-foreground text-center mb-2">
+                              {language === 'ar' ? 'فشل تحميل الملف' : 'Failed to load PDF'}
+                            </p>
+                            <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
+                              {language === 'ar' 
+                                ? 'قد تكون هناك مشكلة في تنسيق الملف أو أن الملف قد يكون كبيرًا جدًا للعرض.' 
+                                : 'There might be an issue with the file format or the file may be too large to display.'}
+                            </p>
+                            <Button variant="outline" onClick={handleRetryLoading}>
+                              {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                            </Button>
+                          </div>
+                        }
+                      >
+                        <Page 
+                          pageNumber={pageNumber} 
+                          scale={fitToWidth ? undefined : pdfScale}
+                          width={fitToWidth ? window.innerWidth * 0.5 : undefined}
+                          renderTextLayer={false}
+                          renderAnnotationLayer={false}
+                          className="shadow-md"
+                          error={
+                            <div className="flex flex-col items-center justify-center p-6">
+                              <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
+                              <p className="text-sm text-center">
+                                {language === 'ar' ? 'خطأ في عرض الصفحة' : 'Error rendering page'}
+                              </p>
+                            </div>
+                          }
+                        />
+                      </Document>
+                    </div>
+                  )}
+                </ScrollArea>
               </div>
             </div>
             
