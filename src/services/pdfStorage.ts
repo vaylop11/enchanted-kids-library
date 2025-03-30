@@ -1,19 +1,7 @@
-
 import { PDF } from '@/components/PDFCard';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-
-export interface UploadedPDF extends PDF {
-  dataUrl: string;
-  chatMessages?: ChatMessage[];
-}
-
-export interface ChatMessage {
-  id: string;
-  content: string;
-  isUser: boolean;
-  timestamp: Date;
-}
+import { UploadedPDF, ChatMessage } from './pdfTypes';
 
 const PDF_STORAGE_KEY = 'pdf_storage';
 const MAX_PDF_COUNT = 50; // Maximum number of PDFs to store
@@ -26,12 +14,11 @@ export const getSavedPDFs = (): UploadedPDF[] => {
   try {
     const pdfs = JSON.parse(storedData) as UploadedPDF[];
     
-    // Convert timestamp strings back to Date objects
+    // Convert timestamp strings back to Date objects if needed
     return pdfs.map(pdf => ({
       ...pdf,
       chatMessages: pdf.chatMessages?.map(msg => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp)
+        ...msg
       }))
     }));
   } catch (error) {

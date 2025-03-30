@@ -3,28 +3,10 @@ import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { formatFileSize } from './pdfStorage';
 import * as pdfjs from 'pdfjs-dist';
+import { SupabasePDF, ChatMessage } from './pdfTypes';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-
-export interface SupabasePDF {
-  id: string;
-  title: string;
-  summary: string;
-  uploadDate: string;
-  pageCount: number;
-  fileSize: string;
-  thumbnail?: string;
-  filePath: string;
-  fileUrl?: string;
-}
-
-export interface SupabaseChatMessage {
-  id: string;
-  content: string;
-  isUser: boolean;
-  timestamp: Date;
-}
 
 // Generate thumbnail from PDF
 const generatePDFThumbnail = async (pdfUrl: string): Promise<string | null> => {
@@ -290,7 +272,9 @@ export const getPDFById = async (pdfId: string): Promise<SupabasePDF | null> => 
       fileSize: data.file_size || '0 B',
       filePath: data.file_path,
       thumbnail: data.thumbnail,
-      fileUrl: publicURLData.publicUrl
+      fileUrl: publicURLData.publicUrl,
+      text: data.text || '',
+      analyzed: !!data.text
     };
   } catch (error) {
     console.error('Error in getPDFById:', error);
@@ -310,6 +294,7 @@ export const updatePDFMetadata = async (pdfId: string, updates: Partial<Supabase
     if (updates.title !== undefined) updateData.title = updates.title;
     if (updates.summary !== undefined) updateData.summary = updates.summary;
     if (updates.pageCount !== undefined) updateData.page_count = updates.pageCount;
+    if (updates.text !== undefined) updateData.text = updates.text;
     
     // Add updated_at timestamp
     updateData.updated_at = new Date().toISOString();
@@ -378,7 +363,7 @@ export const addChatMessageToPDF = async (
   pdfId: string, 
   content: string, 
   isUser: boolean
-): Promise<SupabaseChatMessage | null> => {
+): Promise<ChatMessage | null> => {
   try {
     const messageData = {
       pdf_id: pdfId,
@@ -402,7 +387,8 @@ export const addChatMessageToPDF = async (
       id: data.id,
       content: data.content,
       isUser: data.is_user,
-      timestamp: new Date(data.timestamp)
+      timestamp: new Date(data.timestamp).toISOString(),
+      userId: isUser ? 'user' : 'ai'
     };
   } catch (error) {
     console.error('Error in addChatMessageToPDF:', error);
@@ -412,7 +398,7 @@ export const addChatMessageToPDF = async (
 };
 
 // Get chat messages for a PDF
-export const getChatMessagesForPDF = async (pdfId: string): Promise<SupabaseChatMessage[]> => {
+export const getChatMessagesForPDF = async (pdfId: string): Promise<ChatMessage[]> => {
   try {
     const { data, error } = await supabase
       .from('pdf_chats')
@@ -430,7 +416,8 @@ export const getChatMessagesForPDF = async (pdfId: string): Promise<SupabaseChat
       id: message.id,
       content: message.content,
       isUser: message.is_user,
-      timestamp: new Date(message.timestamp)
+      timestamp: new Date(message.timestamp).toISOString(),
+      userId: message.is_user ? 'user' : 'ai'
     }));
   } catch (error) {
     console.error('Error in getChatMessagesForPDF:', error);

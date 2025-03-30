@@ -15,12 +15,10 @@ import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  getPDFById,
-  addChatMessageToPDF,
-  savePDF,
-  deletePDFById,
-  ChatMessage,
-  UploadedPDF
+  getPDFById as getLocalPDFById,
+  addChatMessageToPDF as addLocalChatMessage,
+  savePDF as saveLocalPDF,
+  deletePDFById as deleteLocalPDFById
 } from '@/services/pdfStorage';
 import {
   getPDFById as getSupabasePDFById,
@@ -36,6 +34,7 @@ import {
   AnalysisProgress,
   AnalysisStage
 } from '@/services/pdfAnalysisService';
+import { UploadedPDF, SupabasePDF, ChatMessage, BasePDF } from '@/services/pdfTypes';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
@@ -44,7 +43,7 @@ const PDFViewer = () => {
   const { user } = useAuth();
   const { language, t } = useLanguage();
   const navigate = useNavigate();
-  const [pdf, setPdf] = useState<UploadedPDF | null>(null);
+  const [pdf, setPdf] = useState<UploadedPDF | SupabasePDF | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
@@ -61,34 +60,46 @@ const PDFViewer = () => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isPdfLoaded, setIsPdfLoaded] = useState<boolean>(false);
+  const [isSupabasePDF, setIsSupabasePDF] = useState<boolean>(false);
 
   useEffect(() => {
     if (id) {
       const fetchPDF = async () => {
         try {
-          const pdfData = await getPDFById(id);
-          if (pdfData) {
-            setPdf(pdfData);
-            setNumPages(pdfData.numPages || 0);
-            setIsPdfLoaded(true);
-            
-            // Fetch chat messages
-            if (user) {
+          // Try to fetch from Supabase first if user is logged in
+          if (user) {
+            const pdfData = await getSupabasePDFById(id);
+            if (pdfData) {
+              setPdf(pdfData);
+              setNumPages(pdfData.pageCount || 0);
+              setIsPdfLoaded(true);
+              setIsSupabasePDF(true);
+              
+              // Fetch chat messages
               const messages = await getChatMessagesForPDF(id);
               setChatMessages(messages);
+              return;
+            }
+          }
+          
+          // If not found in Supabase or user not logged in, try local storage
+          const localPdfData = await getLocalPDFById(id);
+          if (localPdfData) {
+            setPdf(localPdfData);
+            setNumPages(localPdfData.pageCount || localPdfData.numPages || 0);
+            setIsPdfLoaded(true);
+            setIsSupabasePDF(false);
+            
+            // Get messages from local storage
+            if (id.startsWith('temp_')) {
+              const storedMessages = sessionStorage.getItem(`chat_${id}`);
+              if (storedMessages) {
+                setChatMessages(JSON.parse(storedMessages));
+              }
             } else {
-              // For temporary PDFs, use sessionStorage
-              if (id.startsWith('temp_')) {
-                const storedMessages = sessionStorage.getItem(`chat_${id}`);
-                if (storedMessages) {
-                  setChatMessages(JSON.parse(storedMessages));
-                }
-              } else {
-                // For local storage PDFs
-                const storedMessages = localStorage.getItem(`chat_${id}`);
-                if (storedMessages) {
-                  setChatMessages(JSON.parse(storedMessages));
-                }
+              const storedMessages = localStorage.getItem(`chat_${id}`);
+              if (storedMessages) {
+                setChatMessages(JSON.parse(storedMessages));
               }
             }
           } else {
@@ -122,8 +133,8 @@ const PDFViewer = () => {
     setMessage('');
     
     // Save the messages
-    if (user && id) {
-      await addSupabaseChatMessage(id, userMessage);
+    if (user && id && isSupabasePDF) {
+      await addSupabaseChatMessage(id, userMessage.content, userMessage.isUser);
     } else if (id) {
       if (id.startsWith('temp_')) {
         sessionStorage.setItem(`chat_${id}`, JSON.stringify(updatedMessages));
@@ -147,19 +158,28 @@ const PDFViewer = () => {
       
       // Extract text from PDF if not already analyzed
       let pdfText = pdf.text || "";
+      let pdfUrl = isSupabasePDF 
+        ? (pdf as SupabasePDF).fileUrl 
+        : (pdf as UploadedPDF).fileUrl || (pdf as UploadedPDF).dataUrl;
       
-      if (!pdfText && pdf.fileUrl) {
+      if (!pdfText && pdfUrl) {
         pdfText = await extractTextFromPDF(
-          pdf.fileUrl,
+          pdfUrl,
           (progress) => setAnalysisProgress(progress)
         );
         
         // Save the extracted text
-        if (user && id) {
-          await updatePDFMetadata(id, { text: pdfText, analyzed: true });
-        } else if (pdf) {
-          const updatedPdf = { ...pdf, text: pdfText, analyzed: true };
-          await savePDF(updatedPdf);
+        if (user && id && isSupabasePDF) {
+          await updatePDFMetadata(id, { 
+            summary: `${pdf.summary} (Analyzed)` 
+          });
+        } else if (pdf && !isSupabasePDF) {
+          const updatedPdf = { 
+            ...pdf as UploadedPDF, 
+            text: pdfText, 
+            analyzed: true 
+          };
+          await saveLocalPDF(updatedPdf);
           setPdf(updatedPdf);
         }
       }
@@ -184,8 +204,8 @@ const PDFViewer = () => {
       setChatMessages(finalMessages);
       
       // Save the messages
-      if (user && id) {
-        await addSupabaseChatMessage(id, aiMessage);
+      if (user && id && isSupabasePDF) {
+        await addSupabaseChatMessage(id, aiMessage.content, aiMessage.isUser);
       } else if (id) {
         if (id.startsWith('temp_')) {
           sessionStorage.setItem(`chat_${id}`, JSON.stringify(finalMessages));
@@ -217,8 +237,8 @@ const PDFViewer = () => {
       setChatMessages(finalMessages);
       
       // Save the messages
-      if (user && id) {
-        await addSupabaseChatMessage(id, errorMessage);
+      if (user && id && isSupabasePDF) {
+        await addSupabaseChatMessage(id, errorMessage.content, errorMessage.isUser);
       } else if (id) {
         if (id.startsWith('temp_')) {
           sessionStorage.setItem(`chat_${id}`, JSON.stringify(finalMessages));
@@ -245,7 +265,7 @@ const PDFViewer = () => {
     if (!id) return;
     
     try {
-      if (user) {
+      if (user && isSupabasePDF) {
         // Delete from Supabase if user is logged in
         await deleteAllChatMessagesForPDF(id);
       } else {
@@ -272,19 +292,29 @@ const PDFViewer = () => {
     try {
       setIsAnalyzing(true);
       
-      // Extract text from PDF
-      if (pdf.fileUrl) {
+      // Get the PDF URL
+      let pdfUrl = isSupabasePDF 
+        ? (pdf as SupabasePDF).fileUrl 
+        : (pdf as UploadedPDF).fileUrl || (pdf as UploadedPDF).dataUrl;
+      
+      if (pdfUrl) {
         const pdfText = await extractTextFromPDF(
-          pdf.fileUrl,
+          pdfUrl,
           (progress) => setAnalysisProgress(progress)
         );
         
         // Save the extracted text
-        if (user && id) {
-          await updatePDFMetadata(id, { text: pdfText, analyzed: true });
-        } else if (pdf) {
-          const updatedPdf = { ...pdf, text: pdfText, analyzed: true };
-          await savePDF(updatedPdf);
+        if (user && id && isSupabasePDF) {
+          await updatePDFMetadata(id, { 
+            summary: `${pdf.summary} (Analyzed)` 
+          });
+        } else if (pdf && !isSupabasePDF) {
+          const updatedPdf = { 
+            ...pdf as UploadedPDF, 
+            text: pdfText, 
+            analyzed: true 
+          };
+          await saveLocalPDF(updatedPdf);
           setPdf(updatedPdf);
         }
         
@@ -341,6 +371,24 @@ const PDFViewer = () => {
     // Also fit on window resize
     window.addEventListener('resize', fitToWidth);
     return () => window.removeEventListener('resize', fitToWidth);
+  };
+
+  // Get the appropriate file URL for the PDF
+  const getPdfUrl = () => {
+    if (!pdf) return null;
+    
+    if (isSupabasePDF) {
+      return (pdf as SupabasePDF).fileUrl;
+    } else {
+      return (pdf as UploadedPDF).fileUrl || (pdf as UploadedPDF).dataUrl;
+    }
+  };
+
+  // Check if the PDF has been analyzed
+  const isPdfAnalyzed = () => {
+    if (!pdf) return false;
+    
+    return !!pdf.text || !!pdf.analyzed;
   };
 
   return (
@@ -407,7 +455,7 @@ const PDFViewer = () => {
                   showAllPages ? "gap-4" : ""
                 )}>
                   <Document
-                    file={pdf.fileUrl}
+                    file={getPdfUrl()}
                     onLoadSuccess={onDocumentLoadSuccess}
                     loading={<Skeleton className="h-[500px] w-full rounded-md" />}
                     error={
@@ -586,7 +634,7 @@ const PDFViewer = () => {
                 </Button>
               </form>
               
-              {pdf && !pdf?.analyzed && !isAnalyzing && (
+              {pdf && !isPdfAnalyzed() && !isAnalyzing && (
                 <Button 
                   variant="outline" 
                   className="w-full mt-2 text-sm" 
