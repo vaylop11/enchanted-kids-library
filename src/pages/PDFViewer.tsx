@@ -892,6 +892,10 @@ Preserve any technical terms, names, and references. Respond only with the trans
     }
   };
 
+  const detectTextDirection = (text: string): 'rtl' | 'ltr' => {
+    return /[\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]/.test(text) ? 'rtl' : 'ltr';
+  };
+
   if (!pdf) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -1050,7 +1054,7 @@ Preserve any technical terms, names, and references. Respond only with the trans
                       </Button>
                       <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
                         {language === 'ar'
-                          ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
+                          ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة المل��ات' 
                           : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
                       </Button>
                     </div>
@@ -1231,29 +1235,38 @@ Preserve any technical terms, names, and references. Respond only with the trans
                       </div>
                     ) : (
                       <>
-                        {chatMessages.map(message => (
-                          <div 
-                            key={message.id}
-                            className={cn(
-                              "flex flex-col p-3 rounded-lg max-w-[80%]",
-                              message.isUser 
-                                ? "ml-auto bg-primary text-primary-foreground" 
-                                : direction === 'rtl' ? "ml-auto bg-muted" : "mr-auto bg-muted"
-                            )}
-                            dir={!message.isUser && /[\u0600-\u06FF]/.test(message.content) ? 'rtl' : direction}
-                          >
-                            <div className="whitespace-pre-wrap break-words">
-                              {message.content}
+                        {chatMessages.map(message => {
+                          const messageDir = detectTextDirection(message.content);
+                          
+                          return (
+                            <div 
+                              key={message.id}
+                              className={cn(
+                                "flex flex-col p-3 rounded-lg max-w-[80%]",
+                                message.isUser 
+                                  ? "ml-auto bg-primary text-primary-foreground" 
+                                  : messageDir === 'rtl' 
+                                    ? "mr-auto bg-muted text-right" 
+                                    : "mr-auto bg-muted"
+                              )}
+                              dir={messageDir}
+                            >
+                              <div className="whitespace-pre-wrap break-words">
+                                {message.content}
+                              </div>
+                              <div className={cn(
+                                "flex items-center mt-2",
+                                messageDir === 'rtl' ? "justify-start" : "justify-end"
+                              )}>
+                                <span className="text-xs opacity-70">
+                                  {message.isUser 
+                                    ? language === 'ar' ? 'أنت' : 'You' 
+                                    : 'Gemini AI'}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex justify-between items-center mt-2">
-                              <span className="text-xs opacity-70">
-                                {message.isUser 
-                                  ? language === 'ar' ? 'أنت' : 'You' 
-                                  : 'Gemini AI'}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                         {isWaitingForResponse && (
                           <ChatMessageSkeleton />
                         )}
@@ -1265,15 +1278,17 @@ Preserve any technical terms, names, and references. Respond only with the trans
                   <form 
                     onSubmit={handleChatSubmit}
                     className="p-4 border-t flex gap-2 items-end bg-card mt-auto"
+                    dir={direction}
                   >
                     <Textarea
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
                       placeholder={language === 'ar' 
-                        ? 'اطرح سؤالاً ��ول هذا الملف...' 
+                        ? 'اطرح سؤالاً حول هذا الملف...' 
                         : 'Ask a question about this PDF...'}
                       className="min-h-10 resize-none border rounded-md flex-1"
                       disabled={isAnalyzing}
+                      dir={direction}
                     />
                     <Button 
                       type="submit" 
