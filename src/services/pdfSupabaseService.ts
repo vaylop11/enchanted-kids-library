@@ -26,10 +26,14 @@ export interface SupabaseChatMessage {
 // Upload a PDF file to Supabase Storage
 export const uploadPDFToSupabase = async (file: File, userId: string): Promise<SupabasePDF | null> => {
   try {
+    console.log('Starting PDF upload for user:', userId);
+    
     // Create a unique file path
     const fileExt = file.name.split('.').pop();
     const fileName = `${uuidv4()}.${fileExt}`;
     const filePath = `${userId}/${fileName}`;
+    
+    console.log('Uploading file to path:', filePath);
     
     // Upload file to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -42,6 +46,8 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
       return null;
     }
     
+    console.log('File uploaded successfully, getting public URL');
+    
     // Get the public URL
     const { data: publicURLData } = supabase.storage
       .from('pdfs')
@@ -52,6 +58,8 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
     // Create the formatted date
     const now = new Date();
     const formattedDate = now.toISOString().split('T')[0];
+    
+    console.log('Creating PDF record in database');
     
     // Create a record in the pdfs table
     const { data: pdfData, error: pdfError } = await supabaseUntyped
@@ -72,6 +80,8 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
       toast.error('Failed to save PDF metadata');
       return null;
     }
+    
+    console.log('PDF record created with ID:', pdfData.id);
     
     // Return the PDF data
     const newPDF: SupabasePDF = {

@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, File } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/authService';
 import { Button } from '@/components/ui/button';
@@ -59,7 +59,7 @@ const UserProfileMenu = () => {
             navigate('/pdfs');
           }}
         >
-          <User className="mr-2 h-4 w-4" />
+          <File className="mr-2 h-4 w-4" />
           {language === 'ar' ? 'ملفات PDF الخاصة بي' : 'My PDFs'}
         </DropdownMenuItem>
         <DropdownMenuSeparator />

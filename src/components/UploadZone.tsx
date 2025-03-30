@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { File, Upload, AlertTriangle } from 'lucide-react';
@@ -202,7 +201,6 @@ const UploadZone = () => {
     navigate('/signin');
   };
 
-  // Modified rendering to allow non-logged in users to upload
   return (
     <div className="w-full max-w-3xl mx-auto">
       {uploadError ? (

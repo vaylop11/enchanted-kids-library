@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, getCurrentUser } from '@/services/authService';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
@@ -23,9 +24,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkUser = async () => {
     setLoading(true);
-    const currentUser = await getCurrentUser();
-    setUser(currentUser);
-    setLoading(false);
+    try {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+      console.log('Current user:', currentUser);
+    } catch (error) {
+      console.error('Error checking user:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -33,13 +40,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id);
+      
       if (event === 'SIGNED_IN' && session?.user) {
         setUser({
           id: session.user.id,
           email: session.user.email || undefined
         });
+        toast.success('Signed in successfully');
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        toast.success('Signed out successfully');
       }
     });
 
