@@ -690,8 +690,9 @@ const PDFViewer = () => {
       return;
     }
     
+    const defaultTarget = language === 'ar' ? 'en' : 'ar';
     const targetLanguage = targetLang?.name || (language === 'ar' ? 'English' : 'Arabic');
-    const targetCode = targetLang?.code || (language === 'ar' ? 'en' : 'ar');
+    const targetCode = targetLang?.code || defaultTarget;
     
     toast.info(language === 'ar' 
       ? `جاري ترجمة المستند إلى ${targetLanguage}...` 
@@ -709,9 +710,9 @@ const PDFViewer = () => {
         throw new Error('Failed to extract PDF content');
       }
       
-      const translatePrompt = language === 'ar' 
-        ? `ترجم هذا المستند إلى اللغة ${targetLanguage} (${targetCode}). قم بالترجمة بشكل كامل ودقيق.` 
-        : `Translate this document to ${targetLanguage} (${targetCode}). Provide a complete and accurate translation.`;
+      const translatePrompt = `Translate the following document to ${targetLanguage} (${targetCode}). 
+Provide a complete and accurate translation. Maintain the original document structure and formatting.
+Preserve any technical terms, names, and references. Respond only with the translated content.`;
         
       setAnalysisProgress({
         stage: 'generating',
@@ -733,6 +734,12 @@ const PDFViewer = () => {
       setChatMessages(prev => [...prev, userMessage]);
       
       const translation = await analyzePDFWithGemini(textContent, translatePrompt, updateAnalysisProgress);
+      
+      if (!translation || translation.trim() === "") {
+        throw new Error(language === 'ar' 
+          ? 'فشلت ترجمة المستند. الرجاء المحاولة مرة أخرى.' 
+          : 'Document translation failed. Please try again.');
+      }
       
       const aiMessage: ChatMessage = {
         id: `temp-${Date.now() + 1}`,
@@ -776,18 +783,28 @@ const PDFViewer = () => {
       setAnalysisProgress({
         stage: 'complete',
         progress: 100,
-        message: language === 'ar' ? 'تمت الترجمة بنجاح' : 'Translation completed successfully'
+        message: language === 'ar' 
+          ? `تمت الترجمة إلى ${targetLanguage} بنجاح` 
+          : `Translation to ${targetLanguage} completed successfully`
       });
+      
+      toast.success(language === 'ar' 
+        ? `تمت الترجمة إلى ${targetLanguage} بنجاح` 
+        : `Translation to ${targetLanguage} completed successfully`);
       
     } catch (error) {
       console.error('Error translating PDF:', error);
       setAnalysisProgress({
         stage: 'error',
         progress: 0,
-        message: language === 'ar' ? 'فشل في ترجمة المستند' : 'Failed to translate document'
+        message: language === 'ar' 
+          ? 'فشل في ترجمة المستند' 
+          : 'Failed to translate document'
       });
       
-      toast.error(language === 'ar' ? 'فشل في ترجمة المستند' : 'Failed to translate document');
+      toast.error(language === 'ar' 
+        ? 'فشل في ترجمة المستند. الرجاء المحاولة مرة أخرى.' 
+        : 'Failed to translate document. Please try again.');
     } finally {
       setIsWaitingForResponse(false);
     }
