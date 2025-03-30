@@ -438,3 +438,25 @@ export const getChatMessagesForPDF = async (pdfId: string): Promise<SupabaseChat
     return [];
   }
 };
+
+// Delete all chat messages for a PDF
+export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('pdf_chats')
+      .delete()
+      .eq('pdf_id', pdfId);
+      
+    if (error) {
+      console.error('Error deleting chat messages:', error);
+      toast.error('Failed to delete chat messages');
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in deleteAllChatMessagesForPDF:', error);
+    toast.error('Failed to delete chat messages');
+    return false;
+  }
+};

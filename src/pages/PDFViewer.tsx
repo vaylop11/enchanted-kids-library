@@ -782,6 +782,69 @@ const PDFViewer = () => {
     }
   };
 
+  const clearChatMessages = () => {
+    if (!id || !pdf) return;
+    
+    if (window.confirm(language === 'ar' 
+      ? 'هل أنت متأكد من أنك تريد حذف جميع الرسائل؟' 
+      : 'Are you sure you want to delete all messages?')) {
+      
+      try {
+        if (isTempPdf) {
+          const tempPdfData = sessionStorage.getItem('tempPdfFile');
+          if (tempPdfData) {
+            try {
+              const parsedData = JSON.parse(tempPdfData);
+              parsedData.fileData.chatMessages = [];
+              sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+              setChatMessages([]);
+            } catch (error) {
+              console.error('Error clearing temporary PDF chat messages:', error);
+              toast.error(language === 'ar' 
+                ? 'فشل في حذف الرسائل' 
+                : 'Failed to delete messages');
+            }
+          }
+        } else if (user) {
+          const deleteAllMessages = async () => {
+            try {
+              const success = await deleteAllChatMessagesForPDF(id);
+              if (success) {
+                setChatMessages([]);
+                toast.success(language === 'ar' 
+                  ? 'تم حذف جميع الرسائل بنجاح' 
+                  : 'All messages deleted successfully');
+              } else {
+                toast.error(language === 'ar' 
+                  ? 'فشل في حذف الرسائل' 
+                  : 'Failed to delete messages');
+              }
+            } catch (error) {
+              console.error('Error deleting chat messages:', error);
+              toast.error(language === 'ar' 
+                ? 'فشل في حذف الرسائل' 
+                : 'Failed to delete messages');
+            }
+          };
+          
+          deleteAllMessages();
+        } else {
+          const updatedPdf = { ...pdf, chatMessages: [] };
+          savePDF(updatedPdf);
+          setChatMessages([]);
+          toast.success(language === 'ar' 
+            ? 'تم حذف جميع الرسائل بنجاح' 
+            : 'All messages deleted successfully');
+        }
+      } catch (error) {
+        console.error('Error clearing chat messages:', error);
+        toast.error(language === 'ar' 
+          ? 'فشل في حذف الرسائل' 
+          : 'Failed to delete messages');
+      }
+    }
+  };
+
   if (!pdf) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -1039,7 +1102,7 @@ const PDFViewer = () => {
                           variant="outline" 
                           size="sm" 
                           className="h-8 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => setChatMessages([])}
+                          onClick={clearChatMessages}
                           disabled={chatMessages.length === 0}
                         >
                           <Trash2 className="h-3.5 w-3.5 mr-1" />
@@ -1152,7 +1215,7 @@ const PDFViewer = () => {
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
                       placeholder={language === 'ar' 
-                        ? 'اطرح سؤالاً حول هذا الملف...' 
+                        ? 'اطرح سؤالاً ��ول هذا الملف...' 
                         : 'Ask a question about this PDF...'}
                       className="min-h-10 resize-none border rounded-md flex-1"
                       disabled={isAnalyzing}
