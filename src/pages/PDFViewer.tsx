@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import LanguageSelector, { SupportedLanguage } from '@/components/LanguageSelector';
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -683,13 +684,15 @@ const PDFViewer = () => {
     }
   };
 
-  const translatePDF = async () => {
+  const translatePDF = async (targetLang?: SupportedLanguage) => {
     if (!pdfTextContent && !pdf?.dataUrl) {
       toast.error(language === 'ar' ? 'محتوى الملف غير متوفر' : 'PDF content not available');
       return;
     }
     
-    const targetLanguage = language === 'ar' ? 'English' : 'Arabic';
+    const targetLanguage = targetLang?.name || (language === 'ar' ? 'English' : 'Arabic');
+    const targetCode = targetLang?.code || (language === 'ar' ? 'en' : 'ar');
+    
     toast.info(language === 'ar' 
       ? `جاري ترجمة المستند إلى ${targetLanguage}...` 
       : `Translating document to ${targetLanguage}...`);
@@ -707,8 +710,8 @@ const PDFViewer = () => {
       }
       
       const translatePrompt = language === 'ar' 
-        ? `ترجم هذا المستند إلى اللغة ${targetLanguage}. اكتب الرد باللغة العربية.` 
-        : `Translate this document to ${targetLanguage}. Respond in English.`;
+        ? `ترجم هذا المستند إلى اللغة ${targetLanguage} (${targetCode}). قم بالترجمة بشكل كامل ودقيق.` 
+        : `Translate this document to ${targetLanguage} (${targetCode}). Provide a complete and accurate translation.`;
         
       setAnalysisProgress({
         stage: 'generating',
@@ -720,7 +723,9 @@ const PDFViewer = () => {
       
       const userMessage: ChatMessage = {
         id: `temp-${Date.now()}`,
-        content: translatePrompt,
+        content: language === 'ar' 
+          ? `ترجمة المستند إلى ${targetLanguage}` 
+          : `Translate document to ${targetLanguage}`,
         isUser: true,
         timestamp: new Date()
       };
@@ -811,7 +816,7 @@ const PDFViewer = () => {
               
               toast.dismiss(loadingToastId);
               toast.success(language === 'ar' 
-                ? 'تم حذف جميع الرسائل بنجاح' 
+                ? 'تم حذف ��ميع الرسائل بنجاح' 
                 : 'All messages deleted successfully');
             } catch (error) {
               console.error('Error clearing temporary PDF chat messages:', error);
@@ -1156,16 +1161,13 @@ const PDFViewer = () => {
                           {language === 'ar' ? 'تلخيص' : 'Summarize'}
                         </Button>
                         
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <LanguageSelector 
+                          onSelectLanguage={translatePDF}
+                          buttonSize="sm"
+                          buttonVariant="outline"
                           className="h-8 px-2 text-xs"
-                          onClick={translatePDF}
-                          disabled={isAnalyzing || isWaitingForResponse}
-                        >
-                          <Languages className="h-3.5 w-3.5 mr-1" />
-                          {language === 'ar' ? 'ترجمة' : 'Translate'}
-                        </Button>
+                          excludeCurrentLanguage={true}
+                        />
                       </div>
                       <ScrollBar orientation="horizontal" />
                     </ScrollArea>
