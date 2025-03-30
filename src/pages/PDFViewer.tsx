@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -69,12 +68,12 @@ const PDFViewer = () => {
   });
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
   const [fitToWidth, setFitToWidth] = useState(true);
+  const [renderAllPages, setRenderAllPages] = useState(true);
   
   const [inputPageNumber, setInputPageNumber] = useState('1');
   const [pdfContainerWidth, setPdfContainerWidth] = useState(0);
   const pdfContainerRef = useRef<HTMLDivElement>(null);
 
-  // Measure PDF container width for proper fit-to-width calculations
   useEffect(() => {
     const updateWidth = () => {
       if (pdfContainerRef.current) {
@@ -312,7 +311,6 @@ const PDFViewer = () => {
   };
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Allow only numbers
     const value = e.target.value.replace(/[^0-9]/g, '');
     setInputPageNumber(value);
   };
@@ -324,7 +322,6 @@ const PDFViewer = () => {
       if (pageNum > 0 && pageNum <= numPages) {
         setPageNumber(pageNum);
       } else {
-        // Reset to current page if invalid
         setInputPageNumber(pageNumber.toString());
         toast.error(language === 'ar' 
           ? `الرجاء إدخال رقم صفحة صالح بين 1 و ${numPages}` 
@@ -346,8 +343,7 @@ const PDFViewer = () => {
   const toggleFitToWidth = () => {
     setFitToWidth(!fitToWidth);
     if (!fitToWidth) {
-      // Calculate optimal scale for the container if switching to fit-to-width
-      setPdfScale(1.0); // Reset to default scale, actual fit handled by width prop
+      setPdfScale(1.0);
     }
   };
 
@@ -839,6 +835,40 @@ const PDFViewer = () => {
     }
   };
 
+  const handleClearChat = () => {
+    if (window.confirm(language === 'ar' 
+      ? 'هل أنت متأكد من أنك تريد حذف جميع المحادثات؟' 
+      : 'Are you sure you want to delete all chat messages?')) {
+      
+      if (isTempPdf) {
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          try {
+            const parsedData = JSON.parse(tempPdfData);
+            parsedData.fileData.chatMessages = [];
+            sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+            setChatMessages([]);
+            toast.success(language === 'ar' ? 'تم حذف المحادثات' : 'Chat messages deleted');
+          } catch (error) {
+            console.error('Error clearing chat messages:', error);
+            toast.error(language === 'ar' ? 'فشل في حذف المحادثات' : 'Failed to delete chat messages');
+          }
+        }
+      } else if (user) {
+        setChatMessages([]);
+        toast.success(language === 'ar' ? 'تم حذف المحادثات' : 'Chat messages deleted');
+      } else {
+        if (id && pdf) {
+          const updatedPdf = { ...pdf, chatMessages: [] };
+          setPdf(updatedPdf);
+          savePDF(updatedPdf);
+          setChatMessages([]);
+          toast.success(language === 'ar' ? 'تم حذف المحادثات' : 'Chat messages deleted');
+        }
+      }
+    }
+  };
+
   if (!pdf) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -932,7 +962,7 @@ const PDFViewer = () => {
                     size="icon" 
                     className="text-muted-foreground h-8 w-8"
                     onClick={handlePrevPage}
-                    disabled={pageNumber <= 1}
+                    disabled={pageNumber <= 1 || renderAllPages}
                   >
                     <ChevronUp className="h-4 w-4" />
                   </Button>
@@ -945,6 +975,7 @@ const PDFViewer = () => {
                       onKeyDown={(e) => e.key === 'Enter' && handlePageInputSubmit(e)}
                       className="w-12 h-8 text-center p-0 border-0 text-sm"
                       aria-label="Page number"
+                      disabled={renderAllPages}
                     />
                     <span className="text-muted-foreground text-sm mx-1">/</span>
                     <span className="text-sm">{numPages || '?'}</span>
@@ -955,7 +986,7 @@ const PDFViewer = () => {
                     size="icon" 
                     className="text-muted-foreground h-8 w-8"
                     onClick={handleNextPage}
-                    disabled={!numPages || pageNumber >= numPages}
+                    disabled={!numPages || pageNumber >= numPages || renderAllPages}
                   >
                     <ChevronDown className="h-4 w-4" />
                   </Button>
@@ -993,6 +1024,20 @@ const PDFViewer = () => {
                     disabled={!fitToWidth && pdfScale >= 2.5}
                   >
                     <ZoomIn className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "text-xs h-8 px-2 ml-2",
+                      renderAllPages && "bg-accent text-accent-foreground"
+                    )}
+                    onClick={() => setRenderAllPages(!renderAllPages)}
+                  >
+                    {renderAllPages 
+                      ? (language === 'ar' ? 'عرض صفحة واحدة' : 'Single Page') 
+                      : (language === 'ar' ? 'عرض كل الصفحات' : 'All Pages')}
                   </Button>
                 </div>
               </div>
@@ -1042,14 +1087,28 @@ const PDFViewer = () => {
                           </div>
                         }
                       >
-                        <Page
-                          pageNumber={pageNumber}
-                          scale={fitToWidth ? (pdfContainerWidth / 580) : pdfScale}
-                          width={fitToWidth ? pdfContainerWidth : undefined}
-                          className="shadow-md"
-                          renderAnnotationLayer={false}
-                          renderTextLayer={false}
-                        />
+                        {renderAllPages ? (
+                          Array.from(new Array(numPages || 0), (el, index) => (
+                            <Page
+                              key={`page_${index + 1}`}
+                              pageNumber={index + 1}
+                              scale={fitToWidth ? (pdfContainerWidth / 580) : pdfScale}
+                              width={fitToWidth ? pdfContainerWidth : undefined}
+                              className="shadow-md mb-6"
+                              renderAnnotationLayer={false}
+                              renderTextLayer={false}
+                            />
+                          ))
+                        ) : (
+                          <Page
+                            pageNumber={pageNumber}
+                            scale={fitToWidth ? (pdfContainerWidth / 580) : pdfScale}
+                            width={fitToWidth ? pdfContainerWidth : undefined}
+                            className="shadow-md"
+                            renderAnnotationLayer={false}
+                            renderTextLayer={false}
+                          />
+                        )}
                       </Document>
                     </div>
                     <ScrollBar orientation="vertical" />
@@ -1066,16 +1125,29 @@ const PDFViewer = () => {
                   <h2 className="font-display text-lg font-medium">
                     {language === 'ar' ? 'استكشاف المستند' : 'Explore Document'}
                   </h2>
-                  <button
-                    onClick={() => setShowChat(!showChat)}
-                    className="p-1 rounded-full hover:bg-muted transition-colors"
-                  >
-                    {showChat ? (
-                      <ChevronUp className="h-5 w-5" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5" />
+                  <div className="flex items-center gap-1">
+                    {chatMessages.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        onClick={handleClearChat}
+                        title={language === 'ar' ? 'حذف المحادثات' : 'Delete chat messages'}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     )}
-                  </button>
+                    <button
+                      onClick={() => setShowChat(!showChat)}
+                      className="p-1 rounded-full hover:bg-muted transition-colors"
+                    >
+                      {showChat ? (
+                        <ChevronUp className="h-5 w-5" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 
                 {showChat && (
