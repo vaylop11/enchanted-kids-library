@@ -8,10 +8,20 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import UserProfileMenu from './UserProfileMenu';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from '@/components/ui/navigation-menu';
+import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { direction, language, t } = useLanguage();
@@ -26,9 +36,9 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close mobile menu when route changes
+  // Close drawer when route changes
   useEffect(() => {
-    setIsMobileMenuOpen(false);
+    setIsDrawerOpen(false);
   }, [location.pathname]);
 
   return (
@@ -51,9 +61,52 @@ const Navbar = () => {
             </span>
           </Link>
 
-          {/* Desktop Menu */}
-          <nav className={`hidden md:flex items-center ${direction === 'rtl' ? 'space-x-reverse' : ''} space-x-8`}>
-            <NavLinks />
+          {/* Desktop Menu - Apple-inspired NavigationMenu */}
+          <div className="hidden md:flex items-center space-x-6">
+            <NavigationMenu className="z-[49]">
+              <NavigationMenuList className={`${direction === 'rtl' ? 'space-x-reverse' : ''} space-x-2`}>
+                <NavigationMenuItem>
+                  <Link to="/">
+                    <NavigationMenuLink 
+                      className={cn(
+                        navigationMenuTriggerStyle(),
+                        location.pathname === '/' && "bg-accent text-accent-foreground",
+                        "px-3 py-2 text-sm font-medium rounded-full"
+                      )}
+                    >
+                      {t('home')}
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/pdfs">
+                    <NavigationMenuLink 
+                      className={cn(
+                        navigationMenuTriggerStyle(),
+                        location.pathname === '/pdfs' && "bg-accent text-accent-foreground",
+                        "px-3 py-2 text-sm font-medium rounded-full"
+                      )}
+                    >
+                      {t('pdfs')}
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/blog">
+                    <NavigationMenuLink 
+                      className={cn(
+                        navigationMenuTriggerStyle(),
+                        location.pathname === '/blog' && "bg-accent text-accent-foreground",
+                        "px-3 py-2 text-sm font-medium rounded-full"
+                      )}
+                    >
+                      {t('blog')}
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+            
             <div className="flex items-center space-x-4">
               <LanguageSwitcher />
               {user ? (
@@ -68,86 +121,99 @@ const Navbar = () => {
                 </Button>
               )}
             </div>
-          </nav>
+          </div>
 
-          {/* Mobile Menu Toggle */}
+          {/* Mobile Menu Toggle - Updated to use Drawer component */}
           <div className="md:hidden flex items-center space-x-4">
             <LanguageSwitcher />
             {user && <UserProfileMenu />}
-            <button 
-              className="flex items-center justify-center w-10 h-10 text-foreground rounded-full hover:bg-muted transition-colors"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-            >
-              {isMobileMenuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
-            </button>
+            <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+              <DrawerTrigger asChild>
+                <Button 
+                  variant="ghost"
+                  size="icon"
+                  className="text-foreground rounded-full hover:bg-muted transition-colors"
+                  aria-label={isDrawerOpen ? "Close menu" : "Open menu"}
+                >
+                  {isDrawerOpen ? (
+                    <X className="h-5 w-5" />
+                  ) : (
+                    <Menu className="h-5 w-5" />
+                  )}
+                </Button>
+              </DrawerTrigger>
+              <DrawerContent className="h-[85vh] rounded-t-xl pt-6">
+                <div className="px-4">
+                  <div className="flex flex-col items-center justify-center space-y-6 text-center">
+                    <Link 
+                      to="/" 
+                      className="flex items-center justify-center transition-opacity hover:opacity-80"
+                      onClick={() => setIsDrawerOpen(false)}
+                    >
+                      <BookOpen className="h-8 w-8 mb-4" />
+                      <span className="font-display text-xl font-medium ml-2 mb-4">
+                        {language === 'ar' ? 'تشات PDF' : 'ChatPDF'}
+                      </span>
+                    </Link>
+                    
+                    <nav className="flex flex-col items-center space-y-6 w-full">
+                      <Link 
+                        to="/"
+                        onClick={() => setIsDrawerOpen(false)}
+                        className={cn(
+                          "w-full px-4 py-3 text-lg font-medium rounded-lg transition-colors",
+                          location.pathname === '/' 
+                            ? "bg-accent text-accent-foreground" 
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        {t('home')}
+                      </Link>
+                      <Link 
+                        to="/pdfs"
+                        onClick={() => setIsDrawerOpen(false)}
+                        className={cn(
+                          "w-full px-4 py-3 text-lg font-medium rounded-lg transition-colors",
+                          location.pathname === '/pdfs' 
+                            ? "bg-accent text-accent-foreground" 
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        {t('pdfs')}
+                      </Link>
+                      <Link 
+                        to="/blog"
+                        onClick={() => setIsDrawerOpen(false)}
+                        className={cn(
+                          "w-full px-4 py-3 text-lg font-medium rounded-lg transition-colors",
+                          location.pathname === '/blog' 
+                            ? "bg-accent text-accent-foreground" 
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        {t('blog')}
+                      </Link>
+                    </nav>
+                    
+                    {!user && (
+                      <Button 
+                        onClick={() => {
+                          navigate('/signin');
+                          setIsDrawerOpen(false);
+                        }}
+                        className="mt-6 w-full"
+                      >
+                        {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </DrawerContent>
+            </Drawer>
           </div>
         </div>
       </div>
-
-      {/* Mobile Menu */}
-      <div
-        className={cn(
-          'md:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-lg pt-16 px-4 transition-transform duration-300 ease-in-out transform',
-          isMobileMenuOpen ? 'translate-x-0' : direction === 'rtl' ? '-translate-x-full' : 'translate-x-full'
-        )}
-      >
-        <nav className="flex flex-col items-center justify-center h-full space-y-8 text-lg">
-          <NavLinks />
-          {!user && (
-            <Button 
-              onClick={() => navigate('/signin')}
-              className="mt-4"
-            >
-              {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
-            </Button>
-          )}
-        </nav>
-      </div>
     </header>
-  );
-};
-
-const NavLinks = () => {
-  const location = useLocation();
-  const { t } = useLanguage();
-  
-  const links = [
-    { 
-      href: '/', 
-      label: t('home')
-    },
-    { 
-      href: '/pdfs', 
-      label: t('pdfs')
-    },
-    { 
-      href: '/blog', 
-      label: t('blog')
-    },
-  ];
-  
-  return (
-    <>
-      {links.map((link) => (
-        <Link
-          key={link.href}
-          to={link.href}
-          className={cn(
-            'relative font-medium transition-colors hover:text-foreground/80',
-            location.pathname === link.href 
-              ? 'text-foreground after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-foreground/70 after:-mb-1' 
-              : 'text-foreground/60'
-          )}
-        >
-          {link.label}
-        </Link>
-      ))}
-    </>
   );
 };
 
