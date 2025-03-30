@@ -67,28 +67,33 @@ const PDFViewer = () => {
       const fetchPDF = async () => {
         try {
           const pdfData = await getPDFById(id);
-          setPdf(pdfData);
-          setNumPages(pdfData.pages || 0);
-          setIsPdfLoaded(true);
-          
-          // Fetch chat messages
-          if (user) {
-            const messages = await getChatMessagesForPDF(id);
-            setChatMessages(messages);
-          } else {
-            // For temporary PDFs, use sessionStorage
-            if (id.startsWith('temp_')) {
-              const storedMessages = sessionStorage.getItem(`chat_${id}`);
-              if (storedMessages) {
-                setChatMessages(JSON.parse(storedMessages));
-              }
+          if (pdfData) {
+            setPdf(pdfData);
+            setNumPages(pdfData.numPages || 0);
+            setIsPdfLoaded(true);
+            
+            // Fetch chat messages
+            if (user) {
+              const messages = await getChatMessagesForPDF(id);
+              setChatMessages(messages);
             } else {
-              // For local storage PDFs
-              const storedMessages = localStorage.getItem(`chat_${id}`);
-              if (storedMessages) {
-                setChatMessages(JSON.parse(storedMessages));
+              // For temporary PDFs, use sessionStorage
+              if (id.startsWith('temp_')) {
+                const storedMessages = sessionStorage.getItem(`chat_${id}`);
+                if (storedMessages) {
+                  setChatMessages(JSON.parse(storedMessages));
+                }
+              } else {
+                // For local storage PDFs
+                const storedMessages = localStorage.getItem(`chat_${id}`);
+                if (storedMessages) {
+                  setChatMessages(JSON.parse(storedMessages));
+                }
               }
             }
+          } else {
+            console.error("PDF not found");
+            toast.error("PDF not found");
           }
         } catch (error) {
           console.error("Error fetching PDF:", error);
@@ -108,6 +113,7 @@ const PDFViewer = () => {
       content: message.trim(),
       isUser: true,
       timestamp: new Date().toISOString(),
+      userId: user?.id
     };
     
     // Add user message to the chat
@@ -116,10 +122,10 @@ const PDFViewer = () => {
     setMessage('');
     
     // Save the messages
-    if (user) {
-      await addSupabaseChatMessage(id!, userMessage);
-    } else {
-      if (id!.startsWith('temp_')) {
+    if (user && id) {
+      await addSupabaseChatMessage(id, userMessage);
+    } else if (id) {
+      if (id.startsWith('temp_')) {
         sessionStorage.setItem(`chat_${id}`, JSON.stringify(updatedMessages));
       } else {
         localStorage.setItem(`chat_${id}`, JSON.stringify(updatedMessages));
@@ -140,19 +146,19 @@ const PDFViewer = () => {
       setIsAnalyzing(true);
       
       // Extract text from PDF if not already analyzed
-      let pdfText = pdf.extractedText;
+      let pdfText = pdf.text || "";
       
-      if (!pdfText) {
+      if (!pdfText && pdf.fileUrl) {
         pdfText = await extractTextFromPDF(
-          pdf.url,
+          pdf.fileUrl,
           (progress) => setAnalysisProgress(progress)
         );
         
         // Save the extracted text
-        if (user) {
-          await updatePDFMetadata(id!, { extractedText: pdfText, analyzed: true });
-        } else {
-          const updatedPdf = { ...pdf, extractedText: pdfText, analyzed: true };
+        if (user && id) {
+          await updatePDFMetadata(id, { text: pdfText, analyzed: true });
+        } else if (pdf) {
+          const updatedPdf = { ...pdf, text: pdfText, analyzed: true };
           await savePDF(updatedPdf);
           setPdf(updatedPdf);
         }
@@ -171,16 +177,17 @@ const PDFViewer = () => {
         content: response,
         isUser: false,
         timestamp: new Date().toISOString(),
+        userId: "ai"
       };
       
       const finalMessages = [...updatedMessages, aiMessage];
       setChatMessages(finalMessages);
       
       // Save the messages
-      if (user) {
-        await addSupabaseChatMessage(id!, aiMessage);
-      } else {
-        if (id!.startsWith('temp_')) {
+      if (user && id) {
+        await addSupabaseChatMessage(id, aiMessage);
+      } else if (id) {
+        if (id.startsWith('temp_')) {
           sessionStorage.setItem(`chat_${id}`, JSON.stringify(finalMessages));
         } else {
           localStorage.setItem(`chat_${id}`, JSON.stringify(finalMessages));
@@ -203,16 +210,17 @@ const PDFViewer = () => {
         content: "Sorry, I couldn't analyze the document. Please try again.",
         isUser: false,
         timestamp: new Date().toISOString(),
+        userId: "ai"
       };
       
       const finalMessages = [...updatedMessages, errorMessage];
       setChatMessages(finalMessages);
       
       // Save the messages
-      if (user) {
-        await addSupabaseChatMessage(id!, errorMessage);
-      } else {
-        if (id!.startsWith('temp_')) {
+      if (user && id) {
+        await addSupabaseChatMessage(id, errorMessage);
+      } else if (id) {
+        if (id.startsWith('temp_')) {
           sessionStorage.setItem(`chat_${id}`, JSON.stringify(finalMessages));
         } else {
           localStorage.setItem(`chat_${id}`, JSON.stringify(finalMessages));
@@ -265,28 +273,32 @@ const PDFViewer = () => {
       setIsAnalyzing(true);
       
       // Extract text from PDF
-      const pdfText = await extractTextFromPDF(
-        pdf.url,
-        (progress) => setAnalysisProgress(progress)
-      );
-      
-      // Save the extracted text
-      if (user) {
-        await updatePDFMetadata(id!, { extractedText: pdfText, analyzed: true });
+      if (pdf.fileUrl) {
+        const pdfText = await extractTextFromPDF(
+          pdf.fileUrl,
+          (progress) => setAnalysisProgress(progress)
+        );
+        
+        // Save the extracted text
+        if (user && id) {
+          await updatePDFMetadata(id, { text: pdfText, analyzed: true });
+        } else if (pdf) {
+          const updatedPdf = { ...pdf, text: pdfText, analyzed: true };
+          await savePDF(updatedPdf);
+          setPdf(updatedPdf);
+        }
+        
+        // Complete analysis
+        setAnalysisProgress({
+          stage: AnalysisStage.Complete,
+          progress: 100,
+          message: 'PDF analysis complete. You can now ask questions about the document.'
+        });
+        
+        toast.success("PDF analyzed successfully");
       } else {
-        const updatedPdf = { ...pdf, extractedText: pdfText, analyzed: true };
-        await savePDF(updatedPdf);
-        setPdf(updatedPdf);
+        throw new Error("PDF file URL not available");
       }
-      
-      // Complete analysis
-      setAnalysisProgress({
-        stage: AnalysisStage.Complete,
-        progress: 100,
-        message: 'PDF analysis complete. You can now ask questions about the document.'
-      });
-      
-      toast.success("PDF analyzed successfully");
     } catch (error) {
       console.error("Error analyzing PDF:", error);
       toast.error("Failed to analyze PDF");
@@ -348,7 +360,7 @@ const PDFViewer = () => {
             </Button>
             <div className="flex flex-col">
               <h1 className="text-2xl font-bold truncate max-w-[200px] sm:max-w-[300px]">
-                {pdf?.name || 'Loading PDF...'}
+                {pdf?.title || 'Loading PDF...'}
               </h1>
               <div className="flex items-center text-sm text-gray-500">
                 <FileText className="h-4 w-4 mr-1" />
@@ -395,7 +407,7 @@ const PDFViewer = () => {
                   showAllPages ? "gap-4" : ""
                 )}>
                   <Document
-                    file={pdf.url}
+                    file={pdf.fileUrl}
                     onLoadSuccess={onDocumentLoadSuccess}
                     loading={<Skeleton className="h-[500px] w-full rounded-md" />}
                     error={
@@ -574,7 +586,7 @@ const PDFViewer = () => {
                 </Button>
               </form>
               
-              {pdf && !pdf.analyzed && !isAnalyzing && (
+              {pdf && !pdf?.analyzed && !isAnalyzing && (
                 <Button 
                   variant="outline" 
                   className="w-full mt-2 text-sm" 
