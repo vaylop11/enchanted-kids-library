@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -1031,50 +1032,54 @@ const PDFViewer = () => {
               
               {showChat && (
                 <>
-                  <div className="flex items-center justify-between gap-2 p-3 border-b bg-muted/10">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-8 px-2 text-xs"
-                      onClick={handleDownload}
-                      disabled={!pdf?.dataUrl}
-                    >
-                      <DownloadCloud className="h-3.5 w-3.5 mr-1" />
-                      {language === 'ar' ? 'تنزيل' : 'Download'}
-                    </Button>
-                    
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-8 px-2 text-xs"
-                      onClick={generateSummary}
-                      disabled={isAnalyzing || isWaitingForResponse}
-                    >
-                      <FileText className="h-3.5 w-3.5 mr-1" />
-                      {language === 'ar' ? 'تلخيص' : 'Summarize'}
-                    </Button>
-                    
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-8 px-2 text-xs"
-                      onClick={translatePDF}
-                      disabled={isAnalyzing || isWaitingForResponse}
-                    >
-                      <Languages className="h-3.5 w-3.5 mr-1" />
-                      {language === 'ar' ? 'ترجمة' : 'Translate'}
-                    </Button>
-                    
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-8 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setChatMessages([])}
-                      disabled={chatMessages.length === 0}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" />
-                      {language === 'ar' ? 'مسح المحادثة' : 'Clear Chat'}
-                    </Button>
+                  <div className="p-3 border-b bg-muted/10">
+                    <ScrollArea className="whitespace-nowrap w-full" orientation="horizontal">
+                      <div className="flex space-x-2 px-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setChatMessages([])}
+                          disabled={chatMessages.length === 0}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-1" />
+                          {language === 'ar' ? 'مسح المحادثة' : 'Clear Chat'}
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 px-2 text-xs"
+                          onClick={handleDownload}
+                          disabled={!pdf?.dataUrl}
+                        >
+                          <DownloadCloud className="h-3.5 w-3.5 mr-1" />
+                          {language === 'ar' ? 'تنزيل' : 'Download'}
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 px-2 text-xs"
+                          onClick={generateSummary}
+                          disabled={isAnalyzing || isWaitingForResponse}
+                        >
+                          <FileText className="h-3.5 w-3.5 mr-1" />
+                          {language === 'ar' ? 'تلخيص' : 'Summarize'}
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 px-2 text-xs"
+                          onClick={translatePDF}
+                          disabled={isAnalyzing || isWaitingForResponse}
+                        >
+                          <Languages className="h-3.5 w-3.5 mr-1" />
+                          {language === 'ar' ? 'ترجمة' : 'Translate'}
+                        </Button>
+                      </div>
+                    </ScrollArea>
                   </div>
                   
                   <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: '60vh' }}>
