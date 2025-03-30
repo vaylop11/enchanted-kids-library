@@ -26,6 +26,14 @@ export interface SupabaseChatMessage {
   timestamp: Date;
 }
 
+export enum AnalysisStage {
+  EXTRACTING = 'extracting',
+  ANALYZING = 'analyzing',
+  GENERATING = 'generating',
+  COMPLETE = 'complete',
+  ERROR = 'error'
+}
+
 // Generate thumbnail from PDF
 const generatePDFThumbnail = async (pdfUrl: string): Promise<string | null> => {
   try {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -26,13 +27,14 @@ import {
   getChatMessagesForPDF,
   addChatMessageToPDF as addSupabaseChatMessage,
   updatePDFMetadata,
-  deletePDF as deleteSupabasePDF
+  deletePDF as deleteSupabasePDF,
+  deleteAllChatMessagesForPDF,
+  AnalysisStage
 } from '@/services/pdfSupabaseService';
 import {
   extractTextFromPDF,
   analyzePDFWithGemini,
-  AnalysisProgress,
-  AnalysisStage
+  AnalysisProgress
 } from '@/services/pdfAnalysisService';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
