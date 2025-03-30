@@ -31,7 +31,10 @@ serve(async (req) => {
         ? "عذراً، لم يتم توفير محتوى PDF كافي للتحليل. يرجى التأكد من أن الملف تم تحميله بشكل صحيح."
         : "Sorry, insufficient PDF content was provided for analysis. Please ensure the file was uploaded correctly.";
       
-      return new Response(JSON.stringify({ response: errorMessage }), {
+      return new Response(JSON.stringify({ 
+        response: errorMessage,
+        isRTL: containsArabic 
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -108,6 +111,7 @@ ${pdfText}`;
       
       return new Response(JSON.stringify({ 
         response: errorMessage,
+        isRTL: containsArabic,
         error: data.error || "API error" 
       }), {
         status: 500,
@@ -124,7 +128,10 @@ ${pdfText}`;
         ? "عذراً، لم أتمكن من تحليل محتوى ملف PDF بشكل صحيح. يرجى التأكد من أن الملف يحتوي على نص قابل للقراءة وحاول مرة أخرى."
         : "Sorry, I couldn't properly analyze the PDF content. Please ensure the file contains readable text and try again.";
       
-      return new Response(JSON.stringify({ response: fallbackMessage }), {
+      return new Response(JSON.stringify({ 
+        response: fallbackMessage,
+        isRTL: containsArabic 
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -161,6 +168,7 @@ ${pdfText}`;
     
     return new Response(JSON.stringify({ 
       response: errorMessage,
+      isRTL: containsArabic,
       error: error.message 
     }), {
       status: 500,
