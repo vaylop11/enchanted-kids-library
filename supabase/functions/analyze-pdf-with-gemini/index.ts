@@ -40,18 +40,12 @@ serve(async (req) => {
     const containsArabic = /[\u0600-\u06FF]/.test(userQuestion);
     let responseLanguage = containsArabic ? 'Arabic' : 'English';
     
-    // Define RTL languages
-    const rtlLanguages = ['Arabic', 'Hebrew', 'Persian', 'Urdu'];
-    
     // Check if the request is a translation request and extract target language
     const translationMatch = userQuestion.match(/Translate.*to\s+(\w+)\s+\((\w+)\)/i);
     if (translationMatch) {
       responseLanguage = translationMatch[1]; // Use the target language from the prompt
       console.log(`Translation request detected. Target language: ${responseLanguage}`);
     }
-    
-    // Determine if target language is RTL
-    const isTargetRTL = rtlLanguages.includes(responseLanguage);
     
     console.log(`Processing request in ${responseLanguage}. PDF content length: ${pdfText.length} characters`);
 
@@ -62,15 +56,6 @@ serve(async (req) => {
     // Adjust max tokens based on task - translations need more space
     const maxOutputTokens = isTranslation ? 8192 : 2048;
 
-    // Build an enhanced prompt for better RTL handling
-    let enhancedPrompt = userQuestion;
-    
-    if (isTranslation) {
-      enhancedPrompt = `${userQuestion}\n\n` +
-        `Important: If translating to ${responseLanguage} ${isTargetRTL ? '(which is a right-to-left language)' : ''}, ` +
-        `please ensure proper text direction, punctuation, and formatting consistent with the target language conventions.`;
-    }
-
     // Call Gemini API with improved parameters
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
@@ -79,7 +64,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         contents: [{
-          parts: [{ text: enhancedPrompt + "\n\n" + pdfText }]
+          parts: [{ text: userQuestion + "\n\n" + pdfText }]
         }],
         generationConfig: {
           temperature: temperature,
@@ -128,13 +113,7 @@ serve(async (req) => {
     const generatedText = data.candidates[0].content.parts[0].text;
     console.log(`Generated response of length: ${generatedText.length} characters`);
 
-    // Prepare the response object
-    const responseObject = { 
-      response: generatedText,
-      isRTL: isTargetRTL || /[\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]/.test(generatedText)
-    };
-
-    return new Response(JSON.stringify(responseObject), {
+    return new Response(JSON.stringify({ response: generatedText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
