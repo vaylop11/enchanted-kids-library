@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -11,8 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
-import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -41,7 +42,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { currentLanguage, translations } = useLanguage();
+  const { language, t } = useLanguage();
   const navigate = useNavigate();
   const [pdf, setPdf] = useState<UploadedPDF | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
@@ -53,7 +54,7 @@ const PDFViewer = () => {
   const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>({
     stage: AnalysisStage.NotStarted,
     progress: 0,
-    error: null,
+    message: 'Ready to analyze'
   });
   const [showAllPages, setShowAllPages] = useState<boolean>(true);
   const [chatExpanded, setChatExpanded] = useState<boolean>(true);
@@ -63,18 +64,174 @@ const PDFViewer = () => {
 
   useEffect(() => {
     if (id) {
-      getPDFById(id)
-        .then((pdf) => {
-          setPdf(pdf);
-          setNumPages(pdf.pages);
+      const fetchPDF = async () => {
+        try {
+          const pdfData = await getPDFById(id);
+          setPdf(pdfData);
+          setNumPages(pdfData.pages || 0);
           setIsPdfLoaded(true);
-        })
-        .catch((error) => {
+          
+          // Fetch chat messages
+          if (user) {
+            const messages = await getChatMessagesForPDF(id);
+            setChatMessages(messages);
+          } else {
+            // For temporary PDFs, use sessionStorage
+            if (id.startsWith('temp_')) {
+              const storedMessages = sessionStorage.getItem(`chat_${id}`);
+              if (storedMessages) {
+                setChatMessages(JSON.parse(storedMessages));
+              }
+            } else {
+              // For local storage PDFs
+              const storedMessages = localStorage.getItem(`chat_${id}`);
+              if (storedMessages) {
+                setChatMessages(JSON.parse(storedMessages));
+              }
+            }
+          }
+        } catch (error) {
           console.error("Error fetching PDF:", error);
           toast.error("Failed to load PDF");
-        });
+        }
+      };
+
+      fetchPDF();
     }
-  }, [id]);
+  }, [id, user]);
+
+  const handleSendMessage = async () => {
+    if (!message.trim() || !pdf || isAnalyzing) return;
+    
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: message.trim(),
+      isUser: true,
+      timestamp: new Date().toISOString(),
+    };
+    
+    // Add user message to the chat
+    const updatedMessages = [...chatMessages, userMessage];
+    setChatMessages(updatedMessages);
+    setMessage('');
+    
+    // Save the messages
+    if (user) {
+      await addSupabaseChatMessage(id!, userMessage);
+    } else {
+      if (id!.startsWith('temp_')) {
+        sessionStorage.setItem(`chat_${id}`, JSON.stringify(updatedMessages));
+      } else {
+        localStorage.setItem(`chat_${id}`, JSON.stringify(updatedMessages));
+      }
+    }
+    
+    // Scroll to bottom of chat
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
+    
+    try {
+      setIsAnalyzing(true);
+      
+      // Extract text from PDF if not already analyzed
+      let pdfText = pdf.extractedText;
+      
+      if (!pdfText) {
+        pdfText = await extractTextFromPDF(
+          pdf.url,
+          (progress) => setAnalysisProgress(progress)
+        );
+        
+        // Save the extracted text
+        if (user) {
+          await updatePDFMetadata(id!, { extractedText: pdfText, analyzed: true });
+        } else {
+          const updatedPdf = { ...pdf, extractedText: pdfText, analyzed: true };
+          await savePDF(updatedPdf);
+          setPdf(updatedPdf);
+        }
+      }
+      
+      // Analyze the PDF with the user's question
+      const response = await analyzePDFWithGemini(
+        pdfText,
+        userMessage.content,
+        (progress) => setAnalysisProgress(progress)
+      );
+      
+      // Add AI response to chat
+      const aiMessage: ChatMessage = {
+        id: Date.now().toString(),
+        content: response,
+        isUser: false,
+        timestamp: new Date().toISOString(),
+      };
+      
+      const finalMessages = [...updatedMessages, aiMessage];
+      setChatMessages(finalMessages);
+      
+      // Save the messages
+      if (user) {
+        await addSupabaseChatMessage(id!, aiMessage);
+      } else {
+        if (id!.startsWith('temp_')) {
+          sessionStorage.setItem(`chat_${id}`, JSON.stringify(finalMessages));
+        } else {
+          localStorage.setItem(`chat_${id}`, JSON.stringify(finalMessages));
+        }
+      }
+      
+      // Reset analysis state
+      setAnalysisProgress({
+        stage: AnalysisStage.NotStarted,
+        progress: 0,
+        message: 'Ready for next question'
+      });
+    } catch (error) {
+      console.error("Error analyzing PDF:", error);
+      toast.error("Failed to analyze PDF");
+      
+      // Add error message to chat
+      const errorMessage: ChatMessage = {
+        id: Date.now().toString(),
+        content: "Sorry, I couldn't analyze the document. Please try again.",
+        isUser: false,
+        timestamp: new Date().toISOString(),
+      };
+      
+      const finalMessages = [...updatedMessages, errorMessage];
+      setChatMessages(finalMessages);
+      
+      // Save the messages
+      if (user) {
+        await addSupabaseChatMessage(id!, errorMessage);
+      } else {
+        if (id!.startsWith('temp_')) {
+          sessionStorage.setItem(`chat_${id}`, JSON.stringify(finalMessages));
+        } else {
+          localStorage.setItem(`chat_${id}`, JSON.stringify(finalMessages));
+        }
+      }
+    } finally {
+      setIsAnalyzing(false);
+      
+      // Scroll to bottom of chat
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
+    }
+  };
 
   const handleDeleteChat = async () => {
     if (!id) return;
@@ -98,6 +255,51 @@ const PDFViewer = () => {
     } catch (error) {
       console.error("Error deleting chat history:", error);
       toast.error("Failed to delete chat history");
+    }
+  };
+
+  const handleAnalyzePDF = async () => {
+    if (!pdf || isAnalyzing) return;
+    
+    try {
+      setIsAnalyzing(true);
+      
+      // Extract text from PDF
+      const pdfText = await extractTextFromPDF(
+        pdf.url,
+        (progress) => setAnalysisProgress(progress)
+      );
+      
+      // Save the extracted text
+      if (user) {
+        await updatePDFMetadata(id!, { extractedText: pdfText, analyzed: true });
+      } else {
+        const updatedPdf = { ...pdf, extractedText: pdfText, analyzed: true };
+        await savePDF(updatedPdf);
+        setPdf(updatedPdf);
+      }
+      
+      // Complete analysis
+      setAnalysisProgress({
+        stage: AnalysisStage.Complete,
+        progress: 100,
+        message: 'PDF analysis complete. You can now ask questions about the document.'
+      });
+      
+      toast.success("PDF analyzed successfully");
+    } catch (error) {
+      console.error("Error analyzing PDF:", error);
+      toast.error("Failed to analyze PDF");
+      
+      setAnalysisProgress({
+        stage: AnalysisStage.Error,
+        progress: 0,
+        message: 'Failed to analyze PDF. Please try again.'
+      });
+    } finally {
+      setTimeout(() => {
+        setIsAnalyzing(false);
+      }, 1500);
     }
   };
 
@@ -152,8 +354,8 @@ const PDFViewer = () => {
                 <FileText className="h-4 w-4 mr-1" />
                 <span>
                   {numPages 
-                    ? `${numPages} ${translations.pages[currentLanguage]}` 
-                    : translations.loading[currentLanguage]}
+                    ? `${numPages} ${language === 'ar' ? 'صفحة' : 'pages'}` 
+                    : (language === 'ar' ? 'جاري التحميل...' : 'Loading...')}
                 </span>
               </div>
             </div>
@@ -162,19 +364,19 @@ const PDFViewer = () => {
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button variant="outline" size="sm" onClick={() => setShowAllPages(!showAllPages)}>
               {showAllPages 
-                ? translations.singlePage[currentLanguage] 
-                : translations.allPages[currentLanguage]}
+                ? (language === 'ar' ? 'عرض صفحة واحدة' : 'Single Page') 
+                : (language === 'ar' ? 'عرض كل الصفحات' : 'All Pages')}
             </Button>
             
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <DownloadCloud className="h-4 w-4 mr-1" />
-              {translations.download[currentLanguage]}
+              {language === 'ar' ? 'تحميل' : 'Download'}
             </Button>
             
             {user && (
               <Button variant="outline" size="sm" onClick={() => {/* Share functionality */}}>
                 <Share className="h-4 w-4 mr-1" />
-                {translations.share[currentLanguage]}
+                {language === 'ar' ? 'مشاركة' : 'Share'}
               </Button>
             )}
           </div>
@@ -200,10 +402,10 @@ const PDFViewer = () => {
                       <div className="flex flex-col items-center justify-center p-8 text-center">
                         <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
                         <h3 className="text-xl font-semibold">
-                          {translations.errorLoadingPDF[currentLanguage]}
+                          {language === 'ar' ? 'خطأ في تحميل ملف PDF' : 'Error loading PDF'}
                         </h3>
                         <p className="text-gray-500 mt-2">
-                          {translations.tryAgain[currentLanguage]}
+                          {language === 'ar' ? 'يرجى المحاولة مرة أخرى' : 'Please try again'}
                         </p>
                       </div>
                     }
@@ -237,7 +439,7 @@ const PDFViewer = () => {
                               onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))}
                               disabled={currentPage <= 1}
                             >
-                              {translations.previous[currentLanguage]}
+                              {language === 'ar' ? 'السابق' : 'Previous'}
                             </Button>
                             
                             <span className="mx-4">
@@ -247,10 +449,10 @@ const PDFViewer = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setCurrentPage(Math.min(currentPage + 1, numPages))}
-                              disabled={currentPage >= numPages}
+                              onClick={() => setCurrentPage(Math.min(currentPage + 1, numPages || 1))}
+                              disabled={currentPage >= (numPages || 1)}
                             >
-                              {translations.next[currentLanguage]}
+                              {language === 'ar' ? 'التالي' : 'Next'}
                             </Button>
                           </div>
                         )}
@@ -266,7 +468,7 @@ const PDFViewer = () => {
             <div className="flex justify-between items-center p-4 border-b">
               <div className="flex items-center gap-2">
                 <h2 className="font-semibold text-lg">
-                  {translations.exploreDocument[currentLanguage]}
+                  {language === 'ar' ? 'استكشف المستند' : 'Explore Document'}
                 </h2>
                 <Badge variant="outline" className="gap-1">
                   <Brain className="h-3 w-3" />
@@ -280,7 +482,7 @@ const PDFViewer = () => {
                   size="icon"
                   onClick={handleDeleteChat}
                   className="h-8 w-8 rounded-full text-gray-500 hover:text-red-500"
-                  title={translations.deleteChat[currentLanguage]}
+                  title={language === 'ar' ? 'حذف المحادثة' : 'Delete Chat'}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -307,7 +509,7 @@ const PDFViewer = () => {
               )}
             >
               {isAnalyzing ? (
-                <PDFAnalysisProgress progress={analysisProgress} />
+                <PDFAnalysisProgress analysis={analysisProgress} />
               ) : (
                 <ScrollArea 
                   className="h-[calc(100vh-360px)]" 
@@ -317,7 +519,7 @@ const PDFViewer = () => {
                     {chatMessages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-center text-gray-500">
                         <FileText className="h-12 w-12 mb-4 opacity-20" />
-                        <p>{translations.askAboutDocument[currentLanguage]}</p>
+                        <p>{language === 'ar' ? 'اسأل عن المستند' : 'Ask about the document'}</p>
                       </div>
                     ) : (
                       chatMessages.map((msg, index) => (
@@ -354,7 +556,7 @@ const PDFViewer = () => {
                   ref={textareaRef}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder={translations.askQuestion[currentLanguage]}
+                  placeholder={language === 'ar' ? 'اسأل سؤالاً...' : 'Ask a question...'}
                   className="min-h-[60px] resize-none"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -379,7 +581,7 @@ const PDFViewer = () => {
                   onClick={handleAnalyzePDF}
                 >
                   <Brain className="h-4 w-4 mr-2" />
-                  {translations.analyzePDF[currentLanguage]}
+                  {language === 'ar' ? 'تحليل المستند' : 'Analyze PDF'}
                 </Button>
               )}
             </div>
