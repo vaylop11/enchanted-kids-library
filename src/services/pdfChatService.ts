@@ -86,69 +86,113 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
       return false;
     }
     
-    // First check if there are any messages to delete
-    const { data: existingMessages, error: checkError } = await supabase
-      .from('pdf_chats')
-      .select('id')
-      .eq('pdf_id', pdfId);
-      
-    if (checkError) {
-      console.error('Error checking existing chat messages:', checkError);
-      toast.error('Failed to check existing chat messages');
-      return false;
-    }
-    
-    if (!existingMessages || existingMessages.length === 0) {
-      console.log('No messages found to delete for PDF ID:', pdfId);
-      toast.success('No messages to clear');
-      return true; // No messages to delete is still a success
-    }
-    
-    console.log(`Found ${existingMessages.length} messages to delete for PDF ID:`, pdfId);
-    
-    // Delete messages in small batches to avoid potential issues
-    const batchSize = 5;
-    const messageIds = existingMessages.map((msg: any) => msg.id);
-    let totalDeleted = 0;
-    
-    for (let i = 0; i < messageIds.length; i += batchSize) {
-      const batchToDelete = messageIds.slice(i, i + batchSize);
-      console.log(`Deleting batch ${i/batchSize + 1} (${batchToDelete.length} messages)`);
-      
-      const { error: deleteError } = await supabase
-        .from('pdf_chats')
-        .delete()
-        .in('id', batchToDelete);
-      
-      if (deleteError) {
-        console.error(`Error deleting batch ${i/batchSize + 1}:`, deleteError);
-      } else {
-        totalDeleted += batchToDelete.length;
-        console.log(`Successfully deleted batch ${i/batchSize + 1}`);
-      }
-      
-      // Add a small delay between batches to reduce risk of rate limiting
-      if (i + batchSize < messageIds.length) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-    }
-    
-    // Verify deletion
-    const { count, error: countError } = await supabase
+    // First, get a count of how many messages we're dealing with
+    const { count: initialCount, error: countError } = await supabase
       .from('pdf_chats')
       .select('*', { count: 'exact', head: true })
       .eq('pdf_id', pdfId);
       
     if (countError) {
-      console.error('Error verifying message deletion:', countError);
-      toast.warning('Could not verify complete message deletion');
-      return totalDeleted > 0;
+      console.error('Error counting chat messages:', countError);
+      toast.error('Failed to count chat messages');
+      return false;
     }
     
-    if (count && count > 0) {
-      console.log(`Deletion partially successful. ${totalDeleted} messages deleted, ${count} messages remain.`);
-      toast.warning(`Deleted ${totalDeleted} messages, but ${count} messages remain`);
-      return totalDeleted > 0;
+    console.log(`Found ${initialCount} messages to delete for PDF ID:`, pdfId);
+    
+    if (!initialCount || initialCount === 0) {
+      console.log('No messages found to delete for PDF ID:', pdfId);
+      toast.success('No messages to clear');
+      return true;
+    }
+    
+    // Get all message IDs that need to be deleted
+    const { data: messagesToDelete, error: fetchError } = await supabase
+      .from('pdf_chats')
+      .select('id')
+      .eq('pdf_id', pdfId);
+      
+    if (fetchError || !messagesToDelete) {
+      console.error('Error fetching message IDs for deletion:', fetchError);
+      toast.error('Failed to fetch messages for deletion');
+      return false;
+    }
+    
+    console.log(`Retrieved ${messagesToDelete.length} message IDs for deletion`);
+    
+    // Direct delete without batching first - simpler approach
+    const { error: bulkDeleteError } = await supabase
+      .from('pdf_chats')
+      .delete()
+      .eq('pdf_id', pdfId);
+    
+    if (bulkDeleteError) {
+      console.error('Bulk delete failed, falling back to ID-based deletion:', bulkDeleteError);
+      
+      // If bulk delete fails, try deleting messages in small batches by ID
+      const messageIds = messagesToDelete.map((msg: any) => msg.id);
+      const batchSize = 5;
+      let totalDeleted = 0;
+      
+      for (let i = 0; i < messageIds.length; i += batchSize) {
+        const batchToDelete = messageIds.slice(i, i + batchSize);
+        console.log(`Deleting batch ${Math.floor(i/batchSize) + 1} (${batchToDelete.length} messages)`);
+        
+        const { error: batchDeleteError } = await supabase
+          .from('pdf_chats')
+          .delete()
+          .in('id', batchToDelete);
+        
+        if (batchDeleteError) {
+          console.error(`Error deleting batch ${Math.floor(i/batchSize) + 1}:`, batchDeleteError);
+        } else {
+          totalDeleted += batchToDelete.length;
+          console.log(`Successfully deleted batch ${Math.floor(i/batchSize) + 1}`);
+        }
+        
+        // Add a small delay between batches
+        if (i + batchSize < messageIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+      
+      if (totalDeleted === 0) {
+        console.error('All deletion attempts failed');
+        toast.error('Failed to delete any messages');
+        return false;
+      }
+    }
+    
+    // Verify deletion with a delay to allow for any database operations to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const { count: finalCount, error: finalCountError } = await supabase
+      .from('pdf_chats')
+      .select('*', { count: 'exact', head: true })
+      .eq('pdf_id', pdfId);
+      
+    if (finalCountError) {
+      console.error('Error verifying message deletion:', finalCountError);
+      toast.warning('Could not verify complete message deletion');
+      return true; // We did attempt to delete, so consider it a partial success
+    }
+    
+    if (finalCount && finalCount > 0) {
+      console.log(`Deletion partially successful. ${initialCount - finalCount} messages deleted, ${finalCount} messages remain.`);
+      toast.warning(`Deleted some messages, but ${finalCount} messages remain`);
+      
+      // One final attempt with a different approach for any remaining messages
+      const { error: finalDeleteError } = await supabase.rpc('delete_pdf_chats', { pdf_id_param: pdfId });
+      
+      if (finalDeleteError) {
+        console.error('Final delete attempt failed:', finalDeleteError);
+      } else {
+        console.log('Executed final delete attempt');
+        toast.success('Chat history cleared successfully');
+        return true;
+      }
+      
+      return initialCount !== finalCount; // Return true if we deleted at least some messages
     }
     
     console.log('Successfully deleted all chat messages for PDF ID:', pdfId);
