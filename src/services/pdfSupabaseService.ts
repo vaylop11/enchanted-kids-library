@@ -9,6 +9,7 @@ import {
   deleteAllChatMessagesForPDF,
   SupabaseChatMessage
 } from './pdfChatService';
+import { getFriendlyPDFTitle } from './pdfStorage';
 
 // Re-export all types and functions for backward compatibility
 export type { SupabasePDF, AnalysisStage } from './pdfTypes';
@@ -24,5 +25,6 @@ export {
   deletePDF,
   addChatMessageToPDF,
   getChatMessagesForPDF,
-  deleteAllChatMessagesForPDF
+  deleteAllChatMessagesForPDF,
+  getFriendlyPDFTitle
 };

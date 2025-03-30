@@ -18,6 +18,14 @@ export interface ChatMessage {
 const PDF_STORAGE_KEY = 'pdf_storage';
 const MAX_PDF_COUNT = 50; // Maximum number of PDFs to store
 
+// Get a friendly title for a PDF, with fallbacks
+export const getFriendlyPDFTitle = (pdf: PDF | null): string => {
+  if (!pdf) return 'Untitled PDF';
+  
+  // Return the title if it exists, otherwise fall back to a default
+  return pdf.title || 'Untitled PDF';
+};
+
 // Get all saved PDFs
 export const getSavedPDFs = (): UploadedPDF[] => {
   const storedData = localStorage.getItem(PDF_STORAGE_KEY);
