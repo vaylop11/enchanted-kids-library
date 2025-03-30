@@ -29,8 +29,8 @@ const Index = () => {
               </h2>
               <p className="text-lg text-muted-foreground max-w-xl mx-auto">
                 {language === 'ar'
-                  ? 'قم بتحميل مستند PDF وعرضه على منصتنا. يمكنك الاطلاع على المستندات بسهولة.'
-                  : 'Upload a PDF document and view it on our platform. Browse your documents with ease.'
+                  ? 'قم بتحميل مستند PDF وابدأ التحدث معه فورًا. يمكنك طرح الأسئلة واستخراج المعلومات بسهولة.'
+                  : 'Upload a PDF document and start chatting with it instantly. Ask questions and extract information with ease.'
                 }
               </p>
             </div>

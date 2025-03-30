@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const activePdfId = localStorage.getItem('activePdfId');
           if (activePdfId) {
             console.log('Cleaning messages for active PDF on sign in:', activePdfId);
-            await deleteAllChatMessagesForPDF();
+            await deleteAllChatMessagesForPDF(activePdfId);
           }
           
           setUser({
@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const activePdfId = localStorage.getItem('activePdfId');
           if (activePdfId) {
             console.log('Cleaning messages for active PDF on sign out:', activePdfId);
-            await deleteAllChatMessagesForPDF();
+            await deleteAllChatMessagesForPDF(activePdfId);
           }
         } catch (error) {
           console.error('Error cleaning messages on sign out:', error);
