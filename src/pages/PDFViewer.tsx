@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -1033,7 +1033,7 @@ const PDFViewer = () => {
               {showChat && (
                 <>
                   <div className="p-3 border-b bg-muted/10">
-                    <ScrollArea className="whitespace-nowrap w-full" orientation="horizontal">
+                    <ScrollArea className="whitespace-nowrap w-full">
                       <div className="flex space-x-2 px-1">
                         <Button 
                           variant="outline" 
@@ -1079,6 +1079,7 @@ const PDFViewer = () => {
                           {language === 'ar' ? 'ترجمة' : 'Translate'}
                         </Button>
                       </div>
+                      <ScrollBar orientation="horizontal" />
                     </ScrollArea>
                   </div>
                   
