@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { File, Upload, AlertTriangle } from 'lucide-react';
@@ -45,7 +46,7 @@ const UploadZone = () => {
     try {
       setIsUploading(true);
       
-      // Simulate upload progress
+      // Start upload progress animation
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
@@ -58,6 +59,7 @@ const UploadZone = () => {
 
       if (user) {
         // If user is logged in, upload PDF to Supabase
+        console.log('Uploading PDF for authenticated user:', user.id);
         const pdf = await uploadPDFToSupabase(file, user.id);
         
         // Clear interval and complete progress

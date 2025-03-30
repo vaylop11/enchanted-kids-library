@@ -61,31 +61,54 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
     
     console.log('Creating PDF record in database');
     
+    // Prepare the PDF data for database insertion
+    const pdfData = {
+      user_id: userId,
+      title: file.name,
+      summary: `Uploaded on ${formattedDate}`,
+      file_path: filePath,
+      file_size: formatFileSize(file.size),
+      upload_date: formattedDate,
+      page_count: 0 // Will be updated when loaded in the viewer
+    };
+    
+    console.log('Inserting PDF data:', pdfData);
+    
     // Create a record in the pdfs table
-    const { data: pdfData, error: pdfError } = await supabaseUntyped
+    const { data: newPdfRecord, error: pdfError } = await supabaseUntyped
       .from('pdfs')
-      .insert({
-        user_id: userId,
-        title: file.name,
-        summary: `Uploaded on ${formattedDate}`,
-        file_path: filePath,
-        file_size: formatFileSize(file.size),
-        upload_date: formattedDate
-      })
+      .insert(pdfData)
       .select('id')
       .single();
       
     if (pdfError) {
       console.error('Error creating PDF record:', pdfError);
-      toast.error('Failed to save PDF metadata');
+      
+      // Check for specific error cases
+      if (pdfError.message.includes('violates foreign key constraint')) {
+        toast.error('Failed to associate PDF with your account. Please sign in again.');
+      } else if (pdfError.message.includes('duplicate key value')) {
+        toast.error('A PDF with this name already exists. Please rename the file.');
+      } else {
+        toast.error('Failed to save PDF metadata');
+      }
+      
+      // Try to delete the uploaded file to avoid orphaned files
+      try {
+        await supabase.storage.from('pdfs').remove([filePath]);
+        console.log('Deleted orphaned file after metadata error');
+      } catch (deleteError) {
+        console.error('Failed to delete orphaned file:', deleteError);
+      }
+      
       return null;
     }
     
-    console.log('PDF record created with ID:', pdfData.id);
+    console.log('PDF record created with ID:', newPdfRecord.id);
     
     // Return the PDF data
     const newPDF: SupabasePDF = {
-      id: pdfData.id,
+      id: newPdfRecord.id,
       title: file.name,
       summary: `Uploaded on ${formattedDate}`,
       uploadDate: formattedDate,
