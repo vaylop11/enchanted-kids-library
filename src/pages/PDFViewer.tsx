@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -907,4 +908,292 @@ const PDFViewer = () => {
                     {isTempPdf && (
                       <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/30">
                         {language === 'ar' ? 'مؤقت' : 'Temporary'}
-                      </
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleDownload}
+                    className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-muted transition-colors"
+                    aria-label={language === 'ar' ? 'تحميل الملف' : 'Download file'}
+                  >
+                    <DownloadCloud className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* PDF Controls */}
+              <div className={`flex items-center justify-between p-2 border-b ${showPdfControls ? 'bg-muted/50' : ''}`}>
+                <div className="flex items-center gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-muted-foreground h-8 w-8"
+                    onClick={handlePrevPage}
+                    disabled={pageNumber <= 1}
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  
+                  <div className="flex items-center bg-background border rounded-md px-2">
+                    <Input
+                      value={inputPageNumber}
+                      onChange={handlePageInputChange}
+                      onBlur={handlePageInputSubmit}
+                      onKeyDown={(e) => e.key === 'Enter' && handlePageInputSubmit(e)}
+                      className="w-12 h-8 text-center p-0 border-0 text-sm"
+                      aria-label="Page number"
+                    />
+                    <span className="text-muted-foreground text-sm mx-1">/</span>
+                    <span className="text-sm">{numPages || '?'}</span>
+                  </div>
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-muted-foreground h-8 w-8"
+                    onClick={handleNextPage}
+                    disabled={!numPages || pageNumber >= numPages}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-muted-foreground h-8 w-8"
+                    onClick={handleZoomOut}
+                    disabled={!fitToWidth && pdfScale <= 0.5}
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className={cn(
+                      "text-xs h-8 px-2",
+                      fitToWidth && "bg-accent text-accent-foreground"
+                    )}
+                    onClick={toggleFitToWidth}
+                  >
+                    <MonitorSmartphone className="h-3 w-3 mr-1" />
+                    {language === 'ar' ? 'ملائم للعرض' : 'Fit Width'}
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-muted-foreground h-8 w-8"
+                    onClick={handleZoomIn}
+                    disabled={!fitToWidth && pdfScale >= 2.5}
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              {/* PDF Viewer */}
+              <div 
+                ref={pdfContainerRef}
+                className="flex-1 overflow-hidden bg-muted/30 relative"
+              >
+                {isLoadingPdf ? (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <Skeleton className="h-32 w-24 mx-auto mb-4" />
+                      <Skeleton className="h-4 w-32 mx-auto" />
+                    </div>
+                  </div>
+                ) : pdfError ? (
+                  <div className="h-full flex items-center justify-center p-6">
+                    <div className="text-center max-w-md">
+                      <AlertTriangle className="h-10 w-10 text-destructive mx-auto mb-4" />
+                      <h3 className="font-medium text-lg mb-2">
+                        {language === 'ar' ? 'خطأ في تحميل الملف' : 'Error Loading PDF'}
+                      </h3>
+                      <p className="text-muted-foreground mb-4">
+                        {pdfError}
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        onClick={handleRetryLoading}
+                      >
+                        {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-full w-full">
+                    <div className={`flex flex-col items-center py-6 px-3 ${
+                      direction === 'rtl' ? 'space-y-reverse' : ''
+                    } space-y-6`}>
+                      <Document
+                        file={pdf.dataUrl}
+                        onLoadSuccess={handleDocumentLoadSuccess}
+                        onLoadError={handleDocumentLoadError}
+                        loading={
+                          <div className="flex justify-center">
+                            <Skeleton className="h-[calc(100vh-300px)] w-[calc(100vw-500px)] max-w-3xl" />
+                          </div>
+                        }
+                      >
+                        <Page
+                          pageNumber={pageNumber}
+                          scale={fitToWidth ? (pdfContainerWidth / 580) : pdfScale}
+                          width={fitToWidth ? pdfContainerWidth : undefined}
+                          className="shadow-md"
+                          renderAnnotationLayer={false}
+                          renderTextLayer={false}
+                        />
+                      </Document>
+                    </div>
+                    <ScrollBar orientation="vertical" />
+                    <ScrollBar orientation="horizontal" />
+                  </ScrollArea>
+                )}
+              </div>
+            </div>
+            
+            {/* Chat & AI Features Panel */}
+            <div className="lg:w-1/3 flex flex-col">
+              <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm flex flex-col h-full">
+                <div className="flex justify-between items-center p-4 border-b">
+                  <h2 className="font-display text-lg font-medium">
+                    {language === 'ar' ? 'استكشاف المستند' : 'Explore Document'}
+                  </h2>
+                  <button
+                    onClick={() => setShowChat(!showChat)}
+                    className="p-1 rounded-full hover:bg-muted transition-colors"
+                  >
+                    {showChat ? (
+                      <ChevronUp className="h-5 w-5" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+                
+                {showChat && (
+                  <>
+                    <div className="p-3 border-b bg-muted/30">
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs" 
+                          onClick={generateSummary}
+                          disabled={isWaitingForResponse}
+                        >
+                          <FileText className="h-3 w-3 mr-1" />
+                          {language === 'ar' ? 'ملخص' : 'Summary'}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs" 
+                          onClick={translatePDF}
+                          disabled={isWaitingForResponse}
+                        >
+                          <Languages className="h-3 w-3 mr-1" />
+                          {language === 'ar' ? 'ترجمة' : 'Translate'}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs" 
+                          onClick={() => extractPDFContent()}
+                          disabled={isWaitingForResponse || !!pdfTextContent}
+                        >
+                          <Brain className="h-3 w-3 mr-1" />
+                          {language === 'ar' ? 'تحليل' : 'Analyze'}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {isAnalyzing && (
+                      <PDFAnalysisProgress analysis={analysisProgress} />
+                    )}
+                    
+                    <div className="flex-1 overflow-hidden flex flex-col">
+                      <ScrollArea className="flex-1 p-4">
+                        <div className="flex flex-col space-y-4">
+                          {chatMessages.length === 0 ? (
+                            <div className="text-center p-6">
+                              <Brain className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                              <h3 className="font-medium text-lg mb-2">
+                                {language === 'ar' ? 'استكشف المستند' : 'Explore Your Document'}
+                              </h3>
+                              <p className="text-muted-foreground text-sm">
+                                {language === 'ar' 
+                                  ? 'اسأل أي سؤال حول محتوى المستند الخاص بك' 
+                                  : 'Ask any question about your document content'}
+                              </p>
+                            </div>
+                          ) : (
+                            chatMessages.map((msg) => (
+                              <div 
+                                key={msg.id}
+                                className={cn(
+                                  "flex flex-col p-3 rounded-lg max-w-[90%]",
+                                  msg.isUser 
+                                    ? "bg-primary text-primary-foreground ml-auto" 
+                                    : "bg-muted mr-auto"
+                                )}
+                              >
+                                <div className="text-sm whitespace-pre-wrap">
+                                  {msg.content}
+                                </div>
+                                <span className="text-xs opacity-80 mt-1 ml-auto">
+                                  {new Date(msg.timestamp).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                          {isWaitingForResponse && (
+                            <ChatMessageSkeleton />
+                          )}
+                          <div ref={chatEndRef} />
+                        </div>
+                      </ScrollArea>
+                      
+                      <div className="p-3 border-t">
+                        <form onSubmit={handleChatSubmit} className="flex items-center gap-2">
+                          <Textarea
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            placeholder={language === 'ar' 
+                              ? 'اسأل سؤالاً حول المستند...' 
+                              : 'Ask a question about the document...'}
+                            className="min-h-10 max-h-40 text-sm"
+                          />
+                          <Button 
+                            type="submit" 
+                            size="icon" 
+                            className="shrink-0"
+                            disabled={!chatInput.trim() || isWaitingForResponse}
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </form>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default PDFViewer;
