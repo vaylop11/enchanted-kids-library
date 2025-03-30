@@ -7,48 +7,48 @@ const FAQSection = () => {
   
   const faqs = [
     {
-      question: language === 'ar' ? 'ما هو ترانسليت PDF؟' : 'What is TranslatePDF?',
+      question: language === 'ar' ? 'ما هو ChatPDF؟' : 'What is ChatPDF?',
       answer: language === 'ar' 
-        ? 'ترانسليت PDF هي أداة ذكاء اصطناعي تتيح لك ترجمة ملفات PDF بسهولة. ما عليك سوى تحميل المستند الخاص بك واختيار اللغة المستهدفة، وستحصل على ترجمة احترافية فورية.'
-        : 'TranslatePDF is an AI tool that allows you to translate PDF documents easily. Simply upload your document and select the target language, and you\'ll get an instant professional translation.'
+        ? 'ChatPDF هي أداة ذكاء اصطناعي تتيح لك التحدث مع ملفات PDF الخاصة بك. ما عليك سوى تحميل المستند الخاص بك وطرح الأسئلة، وستحصل على إجابات فورية دقيقة.'
+        : 'ChatPDF is an AI tool that allows you to chat with your PDF documents. Simply upload your document and ask questions, and you\'ll get instant, accurate answers.'
     },
     {
-      question: language === 'ar' ? 'كيف يعمل ترانسليت PDF؟' : 'How does TranslatePDF work?',
+      question: language === 'ar' ? 'كيف يعمل ChatPDF؟' : 'How does ChatPDF work?',
       answer: language === 'ar'
-        ? 'يقوم ترانسليت PDF باستخراج النص من ملف PDF الخاص بك، ثم يستخدم الذكاء الاصطناعي المتقدم لترجمة المحتوى مع الحفاظ على التنسيق الأصلي قدر الإمكان.'
-        : 'TranslatePDF extracts text from your PDF file, then uses advanced AI to translate the content while preserving the original formatting as much as possible.'
+        ? 'يقوم ChatPDF بتحليل وفهم محتوى ملف PDF الخاص بك، ثم يستخدم الذكاء الاصطناعي للإجابة على أسئلتك بناءً على المعلومات الموجودة في المستند.'
+        : 'ChatPDF analyzes and understands the content of your PDF file, then uses AI to answer your questions based on the information in the document.'
     },
     {
-      question: language === 'ar' ? 'ما هي اللغات المدعومة؟' : 'What languages are supported?',
+      question: language === 'ar' ? 'هل يمكنني استخدام ChatPDF مع أي ملف PDF؟' : 'Can I use ChatPDF with any PDF file?',
       answer: language === 'ar'
-        ? 'يدعم ترانسليت PDF أكثر من 30 لغة، بما في ذلك العربية، الإنجليزية، الفرنسية، الألمانية، الإسبانية، الصينية، اليابانية، والمزيد.'
-        : 'TranslatePDF supports over 30 languages, including Arabic, English, French, German, Spanish, Chinese, Japanese, and more.'
+        ? 'نعم، يمكنك استخدام ChatPDF مع أي ملف PDF تقريبًا، بما في ذلك الكتب والمقالات والتقارير والعقود والمزيد.'
+        : 'Yes, you can use ChatPDF with almost any PDF file, including books, articles, reports, contracts, and more.'
     },
     {
-      question: language === 'ar' ? 'هل بياناتي آمنة مع ترانسليت PDF؟' : 'Is my data safe with TranslatePDF?',
+      question: language === 'ar' ? 'هل بياناتي آمنة مع ChatPDF؟' : 'Is my data safe with ChatPDF?',
       answer: language === 'ar'
-        ? 'نعم، أمان بياناتك هو أولويتنا القصوى. يتم تشفير ملفات PDF الخاصة بك أثناء النقل والتخزين ولا يتم مشاركتها مع أي طرف ثالث.'
-        : 'Yes, your data security is our top priority. Your PDF files are encrypted during transit and storage and are never shared with any third parties.'
+        ? 'نعم، أمان بياناتك هو أولويتنا القصوى. يتم تخزين ملفات PDF الخاصة بك بشكل آمن ولا يتم مشاركتها مع أي طرف ثالث.'
+        : 'Yes, your data security is our top priority. Your PDF files are stored securely and never shared with any third parties.'
     },
     {
-      question: language === 'ar' ? 'هل يمكنني استخدام ترانسليت PDF على الهاتف المحمول؟' : 'Can I use TranslatePDF on mobile?',
+      question: language === 'ar' ? 'هل يمكنني استخدام ChatPDF على الهاتف المحمول؟' : 'Can I use ChatPDF on mobile?',
       answer: language === 'ar'
-        ? 'نعم، تم تصميم ترانسليت PDF ليكون متجاوبًا تمامًا ويعمل بسلاسة على جميع الأجهزة، بما في ذلك الهواتف المحمولة والأجهزة اللوحية.'
-        : 'Yes, TranslatePDF is designed to be fully responsive and works seamlessly on all devices, including mobile phones and tablets.'
+        ? 'نعم، تم تصميم ChatPDF ليكون متجاوبًا تمامًا ويعمل بسلاسة على جميع الأجهزة، بما في ذلك الهواتف المحمولة والأجهزة اللوحية.'
+        : 'Yes, ChatPDF is designed to be fully responsive and works seamlessly on all devices, including mobile phones and tablets.'
     }
   ];
   
   return (
-    <section id="faq" className="py-20 px-4 md:px-6 bg-muted/20">
+    <section id="faq" className="py-20 px-4 md:px-6 bg-muted/30">
       <div className="container mx-auto max-w-4xl">
         <h2 className="heading-2 mb-10 text-center">
-          {language === 'ar' ? 'الأسئلة الشائعة حول ترانسليت PDF' : 'Frequently Asked Questions about TranslatePDF'}
+          {language === 'ar' ? 'الأسئلة الشائعة حول ChatPDF' : 'Frequently Asked Questions about ChatPDF'}
         </h2>
         
         <Accordion type="single" collapsible className="w-full">
           {faqs.map((faq, index) => (
-            <AccordionItem key={index} value={`item-${index}`} className="border-border/40">
-              <AccordionTrigger className="text-left text-lg font-medium hover:text-primary transition-colors">
+            <AccordionItem key={index} value={`item-${index}`}>
+              <AccordionTrigger className="text-left text-lg font-medium">
                 {faq.question}
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground">

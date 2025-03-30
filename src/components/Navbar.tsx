@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { BookOpen, Menu, X, Languages } from 'lucide-react';
+import { BookOpen, Menu, X } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,9 +55,9 @@ const Navbar = () => {
             className="flex items-center transition-opacity hover:opacity-80"
             style={{ gap: '0.5rem' }}
           >
-            <BookOpen className="h-6 w-6 text-primary" />
+            <BookOpen className="h-6 w-6" />
             <span className="font-display text-lg font-medium">
-              {language === 'ar' ? 'ترانسليت PDF' : 'TranslatePDF'}
+              {language === 'ar' ? 'تشات PDF' : 'ChatPDF'}
             </span>
           </Link>
 
@@ -88,6 +88,19 @@ const Navbar = () => {
                       )}
                     >
                       {t('pdfs')}
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/blog">
+                    <NavigationMenuLink 
+                      className={cn(
+                        navigationMenuTriggerStyle(),
+                        location.pathname === '/blog' && "bg-accent text-accent-foreground",
+                        "px-3 py-2 text-sm font-medium rounded-full"
+                      )}
+                    >
+                      {t('blog')}
                     </NavigationMenuLink>
                   </Link>
                 </NavigationMenuItem>
@@ -137,9 +150,9 @@ const Navbar = () => {
                       className="flex items-center justify-center transition-opacity hover:opacity-80"
                       onClick={() => setIsDrawerOpen(false)}
                     >
-                      <BookOpen className="h-8 w-8 mb-4 text-primary" />
+                      <BookOpen className="h-8 w-8 mb-4" />
                       <span className="font-display text-xl font-medium ml-2 mb-4">
-                        {language === 'ar' ? 'ترانسليت PDF' : 'TranslatePDF'}
+                        {language === 'ar' ? 'تشات PDF' : 'ChatPDF'}
                       </span>
                     </Link>
                     
@@ -167,6 +180,18 @@ const Navbar = () => {
                         )}
                       >
                         {t('pdfs')}
+                      </Link>
+                      <Link 
+                        to="/blog"
+                        onClick={() => setIsDrawerOpen(false)}
+                        className={cn(
+                          "w-full px-4 py-3 text-lg font-medium rounded-lg transition-colors",
+                          location.pathname === '/blog' 
+                            ? "bg-accent text-accent-foreground" 
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        {t('blog')}
                       </Link>
                     </nav>
                     

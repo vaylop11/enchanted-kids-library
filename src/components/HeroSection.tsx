@@ -2,41 +2,35 @@
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Link } from 'react-router-dom';
-import { Languages } from 'lucide-react';
 
 const HeroSection = () => {
   const { language } = useLanguage();
 
   return (
-    <section className="py-24 md:py-32 bg-gradient-to-b from-primary/5 to-background relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-background relative overflow-hidden">
       <div className="container mx-auto px-4 md:px-6 max-w-7xl relative z-10">
         <div className="flex flex-col items-center text-center space-y-8 md:space-y-12">
-          <div className="flex items-center gap-3 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-2">
-            <Languages className="h-4 w-4" />
-            <span>{language === 'ar' ? 'أكثر من 30 لغة مدعومة' : 'Over 30 languages supported'}</span>
-          </div>
-          
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter max-w-3xl gradient-text">
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter max-w-3xl">
             {language === 'ar' 
-              ? 'ترجم ملفات PDF الخاصة بك بطريقة احترافية'
-              : 'Translate Your PDFs Professionally'}
+              ? 'تفاعل مع ملفات PDF بطريقة ذكية مع تشات PDF'
+              : 'Chat with your PDFs intelligently with ChatPDF'}
           </h1>
           
           <p className="text-xl text-muted-foreground max-w-2xl">
             {language === 'ar'
-              ? 'ترجم مستنداتك بدقة وسرعة. ترجمة عالية الجودة لمحتوى PDF الخاص بك بدون فقدان التنسيق.'
-              : 'Translate your documents with precision and speed. High-quality translation of your PDF content without losing formatting.'}
+              ? 'تحدث مع مستنداتك وملفاتك الرقمية بشكل طبيعي. تحليل، استخراج واستكشاف محتويات PDF الخاصة بك بكفاءة.'
+              : 'Talk to your documents naturally. Analyze, extract, and explore your PDF contents efficiently.'}
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button asChild size="lg" className="px-8 rounded-full">
+            <Button asChild size="lg" className="px-8">
               <Link to="/pdfs">
-                {language === 'ar' ? 'ابدأ الترجمة' : 'Start Translating'}
+                {language === 'ar' ? 'ابدأ الآن' : 'Get Started'}
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="px-8 rounded-full">
-              <Link to="/pdfs">
-                {language === 'ar' ? 'استكشف المزيد' : 'Explore More'}
+            <Button asChild variant="outline" size="lg" className="px-8">
+              <Link to="/blog">
+                {language === 'ar' ? 'تعلم المزيد' : 'Learn More'}
               </Link>
             </Button>
           </div>
