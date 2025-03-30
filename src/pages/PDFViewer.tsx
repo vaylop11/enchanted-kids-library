@@ -437,7 +437,7 @@ const PDFViewer = () => {
         });
         
         const userLanguage = language === 'ar' ? 'Arabic' : 'English';
-        const aiContent = await analyzePDFWithGemini(
+        const aiResponse = await analyzePDFWithGemini(
           textContent, 
           userMessageContent + `\n\nPlease respond in ${userLanguage}.`, 
           updateAnalysisProgress
@@ -456,7 +456,7 @@ const PDFViewer = () => {
               
               savedAiMessage = {
                 id: `temp-msg-${Date.now()}`,
-                content: aiContent,
+                content: aiResponse.response,
                 isUser: false,
                 timestamp: new Date()
               };
@@ -469,7 +469,7 @@ const PDFViewer = () => {
             }
           }
         } else if (user) {
-          const result = await addSupabaseChatMessage(id, aiContent, false);
+          const result = await addSupabaseChatMessage(id, aiResponse.response, false);
           if (result) {
             savedAiMessage = {
               id: result.id,
@@ -480,7 +480,7 @@ const PDFViewer = () => {
           }
         } else {
           savedAiMessage = addChatMessageToPDF(id, {
-            content: aiContent,
+            content: aiResponse.response,
             isUser: false,
             timestamp: new Date()
           });
@@ -623,11 +623,11 @@ const PDFViewer = () => {
       
       setChatMessages(prev => [...prev, userMessage]);
       
-      const summary = await analyzePDFWithGemini(textContent, summaryPrompt, updateAnalysisProgress);
+      const summaryResult = await analyzePDFWithGemini(textContent, summaryPrompt, updateAnalysisProgress);
       
       const aiMessage: ChatMessage = {
         id: `temp-${Date.now() + 1}`,
-        content: summary,
+        content: summaryResult.response,
         isUser: false,
         timestamp: new Date()
       };
@@ -733,9 +733,9 @@ Preserve any technical terms, names, and references. Respond only with the trans
       
       setChatMessages(prev => [...prev, userMessage]);
       
-      const translation = await analyzePDFWithGemini(textContent, translatePrompt, updateAnalysisProgress);
+      const translationResult = await analyzePDFWithGemini(textContent, translatePrompt, updateAnalysisProgress);
       
-      if (!translation || translation.trim() === "") {
+      if (!translationResult.response || translationResult.response.trim() === "") {
         throw new Error(language === 'ar' 
           ? 'فشلت ترجمة المستند. الرجاء المحاولة مرة أخرى.' 
           : 'Document translation failed. Please try again.');
@@ -743,7 +743,7 @@ Preserve any technical terms, names, and references. Respond only with the trans
       
       const aiMessage: ChatMessage = {
         id: `temp-${Date.now() + 1}`,
-        content: translation,
+        content: translationResult.response,
         isUser: false,
         timestamp: new Date()
       };

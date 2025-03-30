@@ -20,6 +20,11 @@ export interface AnalysisProgress {
   message: string;
 }
 
+export interface AnalysisResult {
+  response: string;
+  isRTL?: boolean;
+}
+
 /**
  * Extracts text content from a PDF file
  */
@@ -112,7 +117,7 @@ export const analyzePDFWithGemini = async (
   updateProgress?: (progress: AnalysisProgress) => void,
   pageNumber?: number,
   totalPages?: number
-): Promise<{ response: string, isRTL?: boolean }> => {
+): Promise<AnalysisResult> => {
   try {
     updateProgress?.({
       stage: 'analyzing',
@@ -250,7 +255,7 @@ Preserve the original document structure and formatting.
 Your response should ONLY contain the translated text, no additional comments.`;
     
     // Call Gemini to translate the page
-    const { response, isRTL } = await analyzePDFWithGemini(
+    const result = await analyzePDFWithGemini(
       text, 
       translatePrompt, 
       updateProgress,
@@ -265,8 +270,8 @@ Your response should ONLY contain the translated text, no additional comments.`;
     });
     
     return {
-      translatedText: response,
-      isRTL: !!isRTL
+      translatedText: result.response,
+      isRTL: !!result.isRTL
     };
   } catch (error) {
     console.error(`Error translating page ${pageNumber}:`, error);
