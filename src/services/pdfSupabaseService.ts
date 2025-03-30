@@ -3,16 +3,9 @@
 import { generatePDFThumbnail, uploadThumbnail } from './pdfThumbnailService';
 import { uploadPDFToSupabase } from './pdfUploadService';
 import { getUserPDFs, getPDFById, updatePDFMetadata, deletePDF, getPDF } from './pdfManagementService';
-import { 
-  addChatMessageToPDF, 
-  getChatMessagesForPDF, 
-  deleteAllChatMessagesForPDF,
-  SupabaseChatMessage
-} from './pdfChatService';
 
 // Re-export all types and functions for backward compatibility
 export type { SupabasePDF, AnalysisStage } from './pdfTypes';
-export type { SupabaseChatMessage };
 export { 
   generatePDFThumbnail,
   uploadThumbnail,
@@ -21,8 +14,5 @@ export {
   getPDFById,
   getPDF,
   updatePDFMetadata,
-  deletePDF,
-  addChatMessageToPDF,
-  getChatMessagesForPDF,
-  deleteAllChatMessagesForPDF
+  deletePDF
 };
