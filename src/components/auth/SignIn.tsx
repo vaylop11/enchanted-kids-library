@@ -20,6 +20,12 @@ const SignIn = () => {
     setLoading(true);
     
     try {
+      // Store the current active PDF ID before sign-in if any
+      const activePdfId = localStorage.getItem('activePdfId');
+      if (activePdfId) {
+        console.log('Active PDF ID before sign-in:', activePdfId);
+      }
+      
       const user = await signIn(email, password);
       if (user) {
         navigate('/pdfs');
