@@ -183,7 +183,7 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
       
       // One final attempt with a different approach for any remaining messages
       try {
-        // Fix the RPC call by using the proper parameter structure
+        // Call the Edge Function with the correct parameter structure
         const { error: finalDeleteError } = await supabase.functions.invoke('delete-pdf-chats', {
           body: { pdfId }
         });
