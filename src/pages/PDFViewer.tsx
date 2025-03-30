@@ -9,6 +9,7 @@ import RecentPDFs from '@/components/RecentPDFs';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { extractTextFromPDF, analyzePDFWithGemini } from '@/services/pdfAnalysisService';
 import { getPDF } from '@/services/pdfManagementService';
+import { getFriendlyPDFTitle } from '@/services/pdfStorage';
 import { PDF } from '@/services/pdfTypes';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -93,7 +94,7 @@ function PDFViewer() {
               </Button>
             </div>
             
-            <h1 className="text-2xl font-bold">{pdf.title || 'Untitled PDF'}</h1>
+            <h1 className="text-2xl font-bold">{getFriendlyPDFTitle(pdf)}</h1>
           </div>
           
           <div className="bg-card rounded-lg shadow p-4 sm:p-6">
