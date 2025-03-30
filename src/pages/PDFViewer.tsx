@@ -2,14 +2,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, Clock, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -18,8 +19,12 @@ import {
   ChatMessage,
   UploadedPDF
 } from '@/services/pdfStorage';
-import { Badge } from '@/components/ui/badge';
-import { getPDFById as getSupabasePDFById } from '@/services/pdfSupabaseService';
+import {
+  getPDFById as getSupabasePDFById,
+  getChatMessagesForPDF,
+  addChatMessageToPDF as addSupabaseChatMessage,
+  deletePDF as deleteSupabasePDF
+} from '@/services/pdfSupabaseService';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -27,9 +32,9 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const contentRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const { language, direction } = useLanguage();
+  const { user } = useAuth();
   
   const [isLoaded, setIsLoaded] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
@@ -44,6 +49,7 @@ const PDFViewer = () => {
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isTempPdf, setIsTempPdf] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -77,7 +83,7 @@ const PDFViewer = () => {
         return;
       }
 
-      // Not a temporary PDF, load from storage or Supabase
+      // Not a temporary PDF, first try to load from local storage
       const loadedPdf = getPDFById(id);
       if (loadedPdf) {
         setPdf(loadedPdf);
@@ -87,41 +93,81 @@ const PDFViewer = () => {
         
         // Check if PDF data is missing
         if (!loadedPdf.dataUrl) {
-          setPdfError(language === 'ar' 
-            ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
-            : 'Could not load PDF data due to storage limitations');
-          toast.error(language === 'ar' 
-            ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
-            : 'Could not load PDF data due to storage limitations');
+          // Try to load from Supabase if we have a user
+          if (user) {
+            tryLoadFromSupabase(id);
+          } else {
+            setPdfError(language === 'ar' 
+              ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
+              : 'Could not load PDF data due to storage limitations');
+            toast.error(language === 'ar' 
+              ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
+              : 'Could not load PDF data due to storage limitations');
+            setIsLoadingPdf(false);
+          }
+        } else {
           setIsLoadingPdf(false);
         }
       } else {
         // Try loading from Supabase
-        try {
-          const supabasePdf = await getSupabasePDFById(id);
-          if (supabasePdf && supabasePdf.fileUrl) {
-            const newPdf: UploadedPDF = {
-              id: supabasePdf.id,
-              title: supabasePdf.title,
-              summary: supabasePdf.summary,
-              uploadDate: supabasePdf.uploadDate,
-              pageCount: supabasePdf.pageCount,
-              fileSize: supabasePdf.fileSize,
-              dataUrl: supabasePdf.fileUrl,
-              chatMessages: []
-            };
-            setPdf(newPdf);
-          } else {
-            toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
-            navigate('/pdfs');
-            return;
+        tryLoadFromSupabase(id);
+      }
+    };
+
+    const tryLoadFromSupabase = async (pdfId: string) => {
+      if (!user) {
+        toast.error(language === 'ar' ? 'يرجى تسجيل الدخول لعرض هذا الملف' : 'Please sign in to view this PDF');
+        navigate('/login');
+        return;
+      }
+      
+      try {
+        console.log('Trying to load PDF from Supabase with ID:', pdfId);
+        const supabasePdf = await getSupabasePDFById(pdfId);
+        
+        if (supabasePdf && supabasePdf.fileUrl) {
+          console.log('Successfully loaded PDF from Supabase:', supabasePdf);
+          
+          const newPdf: UploadedPDF = {
+            id: supabasePdf.id,
+            title: supabasePdf.title,
+            summary: supabasePdf.summary,
+            uploadDate: supabasePdf.uploadDate,
+            pageCount: supabasePdf.pageCount,
+            fileSize: supabasePdf.fileSize,
+            dataUrl: supabasePdf.fileUrl,
+            chatMessages: []
+          };
+          
+          setPdf(newPdf);
+          setIsLoadingPdf(false);
+          
+          // Load chat messages
+          setIsLoadingMessages(true);
+          const messages = await getChatMessagesForPDF(pdfId);
+          if (messages && messages.length > 0) {
+            // Convert to the format expected by the component
+            const convertedMessages: ChatMessage[] = messages.map(msg => ({
+              id: msg.id,
+              content: msg.content,
+              isUser: msg.isUser,
+              timestamp: msg.timestamp
+            }));
+            
+            setChatMessages(convertedMessages);
           }
-        } catch (error) {
-          console.error('Error loading PDF from Supabase:', error);
+          setIsLoadingMessages(false);
+        } else {
+          console.error('PDF data not found in Supabase');
           toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
           navigate('/pdfs');
           return;
         }
+      } catch (error) {
+        console.error('Error loading PDF from Supabase:', error);
+        toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
+        navigate('/pdfs');
+        return;
       }
     };
 
@@ -135,7 +181,7 @@ const PDFViewer = () => {
     return () => {
       clearTimeout(timer);
     };
-  }, [id, navigate, language, retryCount]);
+  }, [id, navigate, language, retryCount, user]);
 
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -149,7 +195,13 @@ const PDFViewer = () => {
       
       // Only save to persistent storage if it's not a temporary PDF
       if (!isTempPdf) {
-        savePDF(updatedPdf);
+        if (user) {
+          // Update in Supabase
+          updatePDFMetadata(updatedPdf.id, { pageCount: numPages });
+        } else {
+          // Update in local storage
+          savePDF(updatedPdf);
+        }
       } else if (updatedPdf.id.startsWith('temp-')) {
         // Update session storage for temp PDF
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
@@ -188,8 +240,18 @@ const PDFViewer = () => {
         return;
       }
       
-      if (deletePDFById(id)) {
-        navigate('/pdfs');
+      if (user) {
+        // Delete from Supabase
+        deleteSupabasePDF(id).then(success => {
+          if (success) {
+            navigate('/pdfs');
+          }
+        });
+      } else {
+        // Delete from local storage
+        if (deletePDFById(id)) {
+          navigate('/pdfs');
+        }
       }
     }
   };
@@ -241,19 +303,16 @@ const PDFViewer = () => {
     setRetryCount(prev => prev + 1);
   };
 
-  const handleChatSubmit = (e: React.FormEvent) => {
+  const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim() || !id || !pdf) return;
 
     // Add user message to chat
-    const userMessage: Omit<ChatMessage, 'id'> = {
-      content: chatInput,
-      isUser: true,
-      timestamp: new Date()
-    };
-
+    const userMessageContent = chatInput.trim();
+    setChatInput('');
+    
     try {
-      let savedMessage;
+      let savedUserMessage: ChatMessage | null = null;
       
       if (isTempPdf) {
         // For temporary PDFs, manage chat messages in session storage
@@ -266,13 +325,15 @@ const PDFViewer = () => {
             }
             
             // Create a message with ID
-            savedMessage = {
-              ...userMessage,
-              id: `temp-msg-${Date.now()}`
+            savedUserMessage = {
+              id: `temp-msg-${Date.now()}`,
+              content: userMessageContent,
+              isUser: true,
+              timestamp: new Date()
             };
             
             // Add to the chat messages array
-            parsedData.fileData.chatMessages.push(savedMessage);
+            parsedData.fileData.chatMessages.push(savedUserMessage);
             
             // Update session storage
             sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
@@ -280,28 +341,37 @@ const PDFViewer = () => {
             console.error('Error adding user message to temporary PDF:', error);
           }
         }
+      } else if (user) {
+        // For logged-in users using Supabase
+        const result = await addSupabaseChatMessage(id, userMessageContent, true);
+        if (result) {
+          savedUserMessage = {
+            id: result.id,
+            content: result.content,
+            isUser: result.isUser,
+            timestamp: result.timestamp
+          };
+        }
       } else {
-        // For permanent PDFs, use the storage service
-        savedMessage = addChatMessageToPDF(id, userMessage);
+        // For local storage
+        savedUserMessage = addChatMessageToPDF(id, {
+          content: userMessageContent,
+          isUser: true,
+          timestamp: new Date()
+        });
       }
       
-      if (savedMessage) {
+      if (savedUserMessage) {
         // Update local state
-        setChatMessages(prev => [...prev, savedMessage]);
+        setChatMessages(prev => [...prev, savedUserMessage!]);
       }
-      
-      setChatInput('');
 
       // Simulate AI response after a short delay
-      setTimeout(() => {
+      setTimeout(async () => {
         try {
-          const aiMessage: Omit<ChatMessage, 'id'> = {
-            content: "This is a simulated response. In a real application, this would be generated by an AI based on the content of the PDF.",
-            isUser: false,
-            timestamp: new Date()
-          };
+          const aiContent = "This is a simulated response. In a real application, this would be generated by an AI based on the content of the PDF.";
           
-          let savedAiMessage;
+          let savedAiMessage: ChatMessage | null = null;
           
           if (isTempPdf) {
             // For temporary PDFs, manage chat messages in session storage
@@ -315,8 +385,10 @@ const PDFViewer = () => {
                 
                 // Create a message with ID
                 savedAiMessage = {
-                  ...aiMessage,
-                  id: `temp-msg-${Date.now()}`
+                  id: `temp-msg-${Date.now()}`,
+                  content: aiContent,
+                  isUser: false,
+                  timestamp: new Date()
                 };
                 
                 // Add to the chat messages array
@@ -328,13 +400,28 @@ const PDFViewer = () => {
                 console.error('Error adding AI message to temporary PDF:', error);
               }
             }
+          } else if (user) {
+            // For logged-in users using Supabase
+            const result = await addSupabaseChatMessage(id, aiContent, false);
+            if (result) {
+              savedAiMessage = {
+                id: result.id,
+                content: result.content,
+                isUser: result.isUser,
+                timestamp: result.timestamp
+              };
+            }
           } else {
-            // For permanent PDFs, use the storage service
-            savedAiMessage = addChatMessageToPDF(id, aiMessage);
+            // For local storage
+            savedAiMessage = addChatMessageToPDF(id, {
+              content: aiContent,
+              isUser: false,
+              timestamp: new Date()
+            });
           }
           
           if (savedAiMessage) {
-            setChatMessages(prev => [...prev, savedAiMessage]);
+            setChatMessages(prev => [...prev, savedAiMessage!]);
           }
         } catch (error) {
           console.error('Error adding AI message:', error);
@@ -393,7 +480,7 @@ const PDFViewer = () => {
               >
                 <Share className="h-5 w-5" />
               </button>
-              {pdf.dataUrl && !isTempPdf && (
+              {pdf.dataUrl && (
                 <a
                   href={pdf.dataUrl}
                   download={pdf.title}
@@ -605,7 +692,11 @@ const PDFViewer = () => {
               {showChat && (
                 <>
                   <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: '60vh' }}>
-                    {chatMessages.length === 0 ? (
+                    {isLoadingMessages ? (
+                      <div className="flex justify-center items-center h-full">
+                        <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                      </div>
+                    ) : chatMessages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center p-4">
                         <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
                         <p className="font-medium mb-2">
@@ -657,13 +748,13 @@ const PDFViewer = () => {
                         placeholder={language === 'ar' ? 'اكتب سؤالك هنا...' : 'Type your question here...'}
                         className="pr-12 resize-none"
                         rows={3}
-                        disabled={pdfError !== null || !pdf.dataUrl}
+                        disabled={pdfError !== null || !pdf.dataUrl || isLoadingMessages}
                       />
                       <Button 
                         type="submit" 
                         size="icon" 
                         className="absolute bottom-2 right-2"
-                        disabled={!chatInput.trim() || pdfError !== null || !pdf.dataUrl}
+                        disabled={!chatInput.trim() || pdfError !== null || !pdf.dataUrl || isLoadingMessages}
                       >
                         <Send className="h-4 w-4" />
                       </Button>

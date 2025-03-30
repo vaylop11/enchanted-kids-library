@@ -1,5 +1,5 @@
 
-import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { formatFileSize } from './pdfStorage';
@@ -75,7 +75,7 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
     console.log('Inserting PDF data:', pdfData);
     
     // Create a record in the pdfs table
-    const { data: newPdfRecord, error: pdfError } = await supabaseUntyped
+    const { data: newPdfRecord, error: pdfError } = await supabase
       .from('pdfs')
       .insert(pdfData)
       .select('id')
@@ -129,7 +129,7 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
 // Get all PDFs for a user
 export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
   try {
-    const { data, error } = await supabaseUntyped
+    const { data, error } = await supabase
       .from('pdfs')
       .select('*')
       .eq('user_id', userId)
@@ -149,7 +149,9 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
       pageCount: pdf.page_count || 0,
       fileSize: pdf.file_size || '0 B',
       filePath: pdf.file_path,
-      thumbnail: pdf.thumbnail
+      thumbnail: pdf.thumbnail,
+      // Add file URL
+      fileUrl: supabase.storage.from('pdfs').getPublicUrl(pdf.file_path).data.publicUrl
     }));
   } catch (error) {
     console.error('Error in getUserPDFs:', error);
@@ -161,7 +163,7 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
 // Get a PDF by ID
 export const getPDFById = async (pdfId: string): Promise<SupabasePDF | null> => {
   try {
-    const { data, error } = await supabaseUntyped
+    const { data, error } = await supabase
       .from('pdfs')
       .select('*')
       .eq('id', pdfId)
@@ -199,7 +201,7 @@ export const getPDFById = async (pdfId: string): Promise<SupabasePDF | null> => 
 // Update PDF metadata
 export const updatePDFMetadata = async (pdfId: string, updates: Partial<SupabasePDF>): Promise<boolean> => {
   try {
-    const { error } = await supabaseUntyped
+    const { error } = await supabase
       .from('pdfs')
       .update({
         title: updates.title,
@@ -243,7 +245,7 @@ export const deletePDF = async (pdfId: string): Promise<boolean> => {
     }
     
     // Delete the PDF record
-    const { error: recordError } = await supabaseUntyped
+    const { error: recordError } = await supabase
       .from('pdfs')
       .delete()
       .eq('id', pdfId);
@@ -270,13 +272,15 @@ export const addChatMessageToPDF = async (
   isUser: boolean
 ): Promise<SupabaseChatMessage | null> => {
   try {
-    const { data, error } = await supabaseUntyped
+    const messageData = {
+      pdf_id: pdfId,
+      content: content,
+      is_user: isUser
+    };
+    
+    const { data, error } = await supabase
       .from('pdf_chats')
-      .insert({
-        pdf_id: pdfId,
-        content: content,
-        is_user: isUser
-      })
+      .insert(messageData)
       .select('id, content, is_user, timestamp')
       .single();
       
@@ -302,7 +306,7 @@ export const addChatMessageToPDF = async (
 // Get chat messages for a PDF
 export const getChatMessagesForPDF = async (pdfId: string): Promise<SupabaseChatMessage[]> => {
   try {
-    const { data, error } = await supabaseUntyped
+    const { data, error } = await supabase
       .from('pdf_chats')
       .select('*')
       .eq('pdf_id', pdfId)
