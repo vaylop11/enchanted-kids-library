@@ -8,9 +8,12 @@ import BlogSection from '@/components/BlogSection';
 import FAQSection from '@/components/FAQSection';
 import UploadZone from '@/components/UploadZone';
 import RecentPDFs from '@/components/RecentPDFs';
+import FeaturedPDF from '@/components/FeaturedPDF';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const { language } = useLanguage();
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background via-muted/5">
@@ -37,6 +40,9 @@ const Index = () => {
             <UploadZone />
           </div>
         </section>
+        
+        {/* Featured PDF section (only shown if user is logged in) */}
+        {user && <FeaturedPDF />}
         
         {/* Recent PDFs section */}
         <RecentPDFs />
