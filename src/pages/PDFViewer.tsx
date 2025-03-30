@@ -5,7 +5,6 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import PDFPreview from '@/components/PDFPreview';
-import RecentPDFs from '@/components/RecentPDFs';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -94,15 +93,6 @@ function PDFViewer() {
               </div>
             )}
           </div>
-          
-          {user && (
-            <div className="mt-10">
-              <h2 className="text-xl font-semibold mb-4">
-                {language === 'ar' ? 'الملفات المفتوحة مؤخراً' : 'Recently Opened PDFs'}
-              </h2>
-              <RecentPDFs currentPdfId={id} />
-            </div>
-          )}
         </div>
       ) : (
         <div className="text-center text-muted-foreground py-8">

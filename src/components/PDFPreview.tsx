@@ -1,15 +1,27 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
-import { ChevronLeft, ChevronRight, Loader2, Languages, RotateCw } from 'lucide-react';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Loader2, 
+  Languages, 
+  RotateCw, 
+  ZoomIn, 
+  ZoomOut, 
+  Search
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import { SupportedLanguage, supportedLanguages } from '@/components/LanguageSelector';
 import { toast } from 'sonner';
 import { translatePDFPage } from '@/services/pdfAnalysisService';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +46,14 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500, onPageChange }: PDFPreviewProps) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { language, direction } = useLanguage();
+  const isMobile = useIsMobile();
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  // Zoom states
+  const [scale, setScale] = useState(1.0);
+  const minScale = 0.5;
+  const maxScale = 2.5;
+  const scaleStep = 0.1;
   
   // Translation states
   const [isTranslating, setIsTranslating] = useState(false);
@@ -50,6 +70,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500, onPageChange }: PDFPreviewProps) 
     setTranslatedPages({});
     setViewMode('original');
     setActiveTranslation(null);
+    setScale(1.0);
   }, [pdfUrl]);
 
   // Call onPageChange prop when pageNumber changes
@@ -76,6 +97,40 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500, onPageChange }: PDFPreviewProps) 
     if (numPages) {
       setPageNumber(prevPageNumber => Math.min(prevPageNumber + 1, numPages));
     }
+  };
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.trim();
+    if (!value) return;
+    
+    const pageNum = parseInt(value, 10);
+    if (isNaN(pageNum)) return;
+    
+    if (numPages && pageNum >= 1 && pageNum <= numPages) {
+      setPageNumber(pageNum);
+    }
+  };
+
+  const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const input = e.currentTarget;
+      const pageNum = parseInt(input.value.trim(), 10);
+      
+      if (!isNaN(pageNum) && numPages && pageNum >= 1 && pageNum <= numPages) {
+        setPageNumber(pageNum);
+      } else if (numPages) {
+        // Reset to valid value if input is invalid
+        input.value = pageNumber.toString();
+      }
+    }
+  };
+
+  const zoomIn = () => {
+    setScale(prevScale => Math.min(prevScale + scaleStep, maxScale));
+  };
+  
+  const zoomOut = () => {
+    setScale(prevScale => Math.max(prevScale - scaleStep, minScale));
   };
 
   const handleTranslatePage = async (targetLang: SupportedLanguage) => {
@@ -207,10 +262,10 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500, onPageChange }: PDFPreviewProps) 
 
   return (
     <div className="flex flex-col items-center" dir={direction}>
-      <div className="w-full flex justify-between items-center mb-4">
+      <div className="w-full flex flex-col md:flex-row justify-between items-center gap-2 mb-4">
+        {/* Page navigation controls */}
         <div className={cn(
-          "flex items-center space-x-2",
-          direction === 'rtl' ? 'space-x-reverse' : ''
+          "flex flex-wrap items-center gap-2 w-full md:w-auto justify-center md:justify-start",
         )}>
           <Button 
             variant="outline" 
@@ -218,17 +273,32 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500, onPageChange }: PDFPreviewProps) 
             onClick={goToPreviousPage} 
             disabled={pageNumber <= 1 || loading || !!error}
             aria-label={language === 'ar' ? 'الصفحة السابقة' : 'Previous page'}
+            className="flex items-center gap-1"
           >
-            <ChevronLeft className={cn("h-4 w-4", direction === 'rtl' ? 'ml-1 rotate-180' : 'mr-1')} />
-            {language === 'ar' ? 'السابق' : 'Previous'}
+            <ChevronLeft className={cn("h-4 w-4", direction === 'rtl' && 'rotate-180')} />
+            {!isMobile && (language === 'ar' ? 'السابق' : 'Prev')}
           </Button>
           
-          <span className="text-sm">
-            {language === 'ar' 
-              ? `${pageNumber} من ${numPages || '؟'}` 
-              : `Page ${pageNumber} of ${numPages || '?'}`
-            }
-          </span>
+          <div className="flex items-center gap-1">
+            <Input
+              ref={inputRef}
+              type="text"
+              defaultValue={pageNumber}
+              onChange={handlePageInputChange}
+              onKeyDown={handlePageInputKeyDown}
+              onBlur={() => {
+                if (inputRef.current) inputRef.current.value = pageNumber.toString();
+              }}
+              className="w-14 text-center h-9"
+              aria-label={language === 'ar' ? 'رقم الصفحة' : 'Page number'}
+            />
+            <span className="text-sm whitespace-nowrap">
+              {language === 'ar' 
+                ? `من ${numPages || '؟'}` 
+                : `of ${numPages || '?'}`
+              }
+            </span>
+          </div>
           
           <Button 
             variant="outline" 
@@ -236,13 +306,41 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500, onPageChange }: PDFPreviewProps) 
             onClick={goToNextPage} 
             disabled={pageNumber >= (numPages || 1) || loading || !!error}
             aria-label={language === 'ar' ? 'الصفحة التالية' : 'Next page'}
+            className="flex items-center gap-1"
           >
-            {language === 'ar' ? 'التالي' : 'Next'}
-            <ChevronRight className={cn("h-4 w-4", direction === 'rtl' ? 'mr-1 rotate-180' : 'ml-1')} />
+            {!isMobile && (language === 'ar' ? 'التالي' : 'Next')}
+            <ChevronRight className={cn("h-4 w-4", direction === 'rtl' && 'rotate-180')} />
           </Button>
         </div>
         
-        <div className="flex items-center gap-2">
+        {/* Zoom controls and translation options */}
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-center md:justify-end">
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={zoomOut}
+              disabled={scale <= minScale || loading || !!error}
+              aria-label={language === 'ar' ? 'تصغير' : 'Zoom out'}
+            >
+              <ZoomOut className="h-3.5 w-3.5" />
+            </Button>
+            
+            <span className="text-xs bg-muted/30 px-2 py-1 rounded min-w-12 text-center">
+              {Math.round(scale * 100)}%
+            </span>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={zoomIn}
+              disabled={scale >= maxScale || loading || !!error}
+              aria-label={language === 'ar' ? 'تكبير' : 'Zoom in'}
+            >
+              <ZoomIn className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          
           {viewMode === 'translated' && (
             <Button
               variant="outline"
@@ -252,7 +350,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500, onPageChange }: PDFPreviewProps) 
               aria-label={language === 'ar' ? 'العودة للعرض الأصلي' : 'Return to original view'}
             >
               <RotateCw className="h-3 w-3" />
-              {language === 'ar' ? 'العرض الأصلي' : 'Original View'}
+              {!isMobile && (language === 'ar' ? 'العرض الأصلي' : 'Original')}
             </Button>
           )}
           
@@ -270,7 +368,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500, onPageChange }: PDFPreviewProps) 
                 ) : (
                   <Languages className="h-3 w-3" />
                 )}
-                {language === 'ar' ? 'ترجمة الصفحة' : 'Translate Page'}
+                {!isMobile && (language === 'ar' ? 'ترجمة' : 'Translate')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align={direction === 'rtl' ? 'end' : 'start'} className={direction === 'rtl' ? 'rtl' : 'ltr'}>
@@ -295,7 +393,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500, onPageChange }: PDFPreviewProps) 
       </div>
       
       <div 
-        style={{ maxHeight: `${maxHeight}px`, overflow: 'auto' }} 
+        style={{ maxHeight: `${maxHeight}px`, overflow: 'auto', width: '100%' }} 
         className="border rounded-lg w-full bg-white dark:bg-gray-800 shadow-sm relative"
       >
         {loading && (
@@ -329,7 +427,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500, onPageChange }: PDFPreviewProps) 
                   pageNumber={pageNumber} 
                   renderTextLayer={true}
                   renderAnnotationLayer={true}
-                  scale={1.0}
+                  scale={scale}
                   className="mx-auto"
                 />
               </Document>
