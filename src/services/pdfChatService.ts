@@ -183,20 +183,20 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
       
       // One final attempt with a different approach for any remaining messages
       try {
-        // Fix the type error by using the correct parameter object structure
-        const { error: finalDeleteError } = await supabase.rpc('delete_pdf_chats', {
-          pdf_id_param: pdfId
+        // Fix the RPC call by using the proper parameter structure
+        const { error: finalDeleteError } = await supabase.functions.invoke('delete-pdf-chats', {
+          body: { pdfId }
         });
         
         if (finalDeleteError) {
           console.error('Final delete attempt failed:', finalDeleteError);
         } else {
-          console.log('Executed final delete attempt');
+          console.log('Executed final delete attempt using edge function');
           toast.success('Chat history cleared successfully');
           return true;
         }
       } catch (rpcError) {
-        console.error('RPC call error:', rpcError);
+        console.error('Edge function call error:', rpcError);
       }
       
       return initialCount !== finalCount; // Return true if we deleted at least some messages
