@@ -25,9 +25,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 interface PDFPreviewProps {
   pdfUrl: string;
   maxHeight?: number;
+  onPageChange?: (pageNumber: number) => void;
 }
 
-const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
+const PDFPreview = ({ pdfUrl, maxHeight = 500, onPageChange }: PDFPreviewProps) => {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -50,6 +51,11 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
     setViewMode('original');
     setActiveTranslation(null);
   }, [pdfUrl]);
+
+  // Call onPageChange prop when pageNumber changes
+  useEffect(() => {
+    onPageChange?.(pageNumber);
+  }, [pageNumber, onPageChange]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
