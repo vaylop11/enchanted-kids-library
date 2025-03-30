@@ -106,36 +106,34 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
     
     console.log(`Found ${existingMessages.length} messages to delete for PDF ID:`, pdfId);
     
-    // Instead of batch deletion by IDs, use a direct delete with eq filter and retry logic
-    let attempts = 0;
-    const maxAttempts = 3;
-    let success = false;
+    // Delete messages in small batches to avoid potential issues
+    const batchSize = 5;
+    const messageIds = existingMessages.map((msg: any) => msg.id);
+    let totalDeleted = 0;
     
-    while (attempts < maxAttempts && !success) {
-      attempts++;
-      console.log(`Attempt ${attempts} to delete messages for PDF ID: ${pdfId}`);
+    for (let i = 0; i < messageIds.length; i += batchSize) {
+      const batchToDelete = messageIds.slice(i, i + batchSize);
+      console.log(`Deleting batch ${i/batchSize + 1} (${batchToDelete.length} messages)`);
       
       const { error: deleteError } = await supabase
         .from('pdf_chats')
         .delete()
-        .eq('pdf_id', pdfId);
+        .in('id', batchToDelete);
       
       if (deleteError) {
-        console.error(`Error deleting messages (attempt ${attempts}):`, deleteError);
-        
-        if (attempts === maxAttempts) {
-          toast.error(`Failed to delete messages: ${deleteError.message}`);
-          return false;
-        }
-        
-        // Wait a short time before retrying
-        await new Promise(resolve => setTimeout(resolve, 500));
+        console.error(`Error deleting batch ${i/batchSize + 1}:`, deleteError);
       } else {
-        success = true;
+        totalDeleted += batchToDelete.length;
+        console.log(`Successfully deleted batch ${i/batchSize + 1}`);
+      }
+      
+      // Add a small delay between batches to reduce risk of rate limiting
+      if (i + batchSize < messageIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
     
-    // Final verification to check if all messages were deleted
+    // Verify deletion
     const { count, error: countError } = await supabase
       .from('pdf_chats')
       .select('*', { count: 'exact', head: true })
@@ -143,14 +141,14 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
       
     if (countError) {
       console.error('Error verifying message deletion:', countError);
-      toast.error('Could not verify complete message deletion');
-      return success; // Return true if we successfully executed the delete command
+      toast.warning('Could not verify complete message deletion');
+      return totalDeleted > 0;
     }
     
     if (count && count > 0) {
-      console.error(`Delete operation not fully successful. ${count} messages still remain.`);
-      toast.warning(`${count} messages could not be deleted. Please try again.`);
-      return false;
+      console.log(`Deletion partially successful. ${totalDeleted} messages deleted, ${count} messages remain.`);
+      toast.warning(`Deleted ${totalDeleted} messages, but ${count} messages remain`);
+      return totalDeleted > 0;
     }
     
     console.log('Successfully deleted all chat messages for PDF ID:', pdfId);
