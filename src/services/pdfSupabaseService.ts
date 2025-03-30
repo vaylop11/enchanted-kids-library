@@ -55,15 +55,14 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
     
     // Create a record in the pdfs table
     const { data: pdfData, error: pdfError } = await supabaseUntyped
-      .from('pdf_documents')
+      .from('pdfs')
       .insert({
         user_id: userId,
         title: file.name,
         summary: `Uploaded on ${formattedDate}`,
-        storage_path: filePath,
+        file_path: filePath,
         file_size: formatFileSize(file.size),
-        upload_date: formattedDate,
-        file_url: publicURL
+        upload_date: formattedDate
       })
       .select('id')
       .single();
@@ -98,7 +97,7 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
 export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
   try {
     const { data, error } = await supabaseUntyped
-      .from('pdf_documents')
+      .from('pdfs')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -111,14 +110,13 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
     
     return data.map((pdf: any) => ({
       id: pdf.id,
-      title: pdf.title || pdf.name || 'Unnamed PDF',
+      title: pdf.title,
       summary: pdf.summary || '',
-      uploadDate: new Date(pdf.upload_date || pdf.created_at).toISOString().split('T')[0],
+      uploadDate: new Date(pdf.upload_date).toISOString().split('T')[0],
       pageCount: pdf.page_count || 0,
       fileSize: pdf.file_size || '0 B',
-      filePath: pdf.storage_path || pdf.file_path,
-      thumbnail: pdf.thumbnail || pdf.thumbnail_url,
-      fileUrl: pdf.file_url
+      filePath: pdf.file_path,
+      thumbnail: pdf.thumbnail
     }));
   } catch (error) {
     console.error('Error in getUserPDFs:', error);
@@ -131,38 +129,32 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
 export const getPDFById = async (pdfId: string): Promise<SupabasePDF | null> => {
   try {
     const { data, error } = await supabaseUntyped
-      .from('pdf_documents')
+      .from('pdfs')
       .select('*')
       .eq('id', pdfId)
-      .maybeSingle();
+      .single();
       
-    if (error || !data) {
+    if (error) {
       console.error('Error fetching PDF:', error);
       toast.error('Failed to fetch PDF');
       return null;
     }
     
-    let fileUrl = data.file_url;
-    
-    // If file_url is not present but storage_path is, generate the URL
-    if (!fileUrl && data.storage_path) {
-      const { data: publicURLData } = supabase.storage
-        .from('pdfs')
-        .getPublicUrl(data.storage_path);
-      
-      fileUrl = publicURLData.publicUrl;
-    }
+    // Get the file URL
+    const { data: publicURLData } = supabase.storage
+      .from('pdfs')
+      .getPublicUrl(data.file_path);
     
     return {
       id: data.id,
-      title: data.title || data.name || 'Unnamed PDF',
+      title: data.title,
       summary: data.summary || '',
-      uploadDate: new Date(data.upload_date || data.created_at).toISOString().split('T')[0],
+      uploadDate: new Date(data.upload_date).toISOString().split('T')[0],
       pageCount: data.page_count || 0,
       fileSize: data.file_size || '0 B',
-      filePath: data.storage_path || data.file_path,
-      thumbnail: data.thumbnail || data.thumbnail_url,
-      fileUrl: fileUrl
+      filePath: data.file_path,
+      thumbnail: data.thumbnail,
+      fileUrl: publicURLData.publicUrl
     };
   } catch (error) {
     console.error('Error in getPDFById:', error);
@@ -175,7 +167,7 @@ export const getPDFById = async (pdfId: string): Promise<SupabasePDF | null> => 
 export const updatePDFMetadata = async (pdfId: string, updates: Partial<SupabasePDF>): Promise<boolean> => {
   try {
     const { error } = await supabaseUntyped
-      .from('pdf_documents')
+      .from('pdfs')
       .update({
         title: updates.title,
         summary: updates.summary,
@@ -206,22 +198,20 @@ export const deletePDF = async (pdfId: string): Promise<boolean> => {
     const pdf = await getPDFById(pdfId);
     if (!pdf) return false;
     
-    // Delete the file from storage if filePath exists
-    if (pdf.filePath) {
-      const { error: storageError } = await supabase.storage
-        .from('pdfs')
-        .remove([pdf.filePath]);
-        
-      if (storageError) {
-        console.error('Error deleting PDF file:', storageError);
-        toast.error('Failed to delete PDF file');
-        return false;
-      }
+    // Delete the file from storage
+    const { error: storageError } = await supabase.storage
+      .from('pdfs')
+      .remove([pdf.filePath]);
+      
+    if (storageError) {
+      console.error('Error deleting PDF file:', storageError);
+      toast.error('Failed to delete PDF file');
+      return false;
     }
     
     // Delete the PDF record
     const { error: recordError } = await supabaseUntyped
-      .from('pdf_documents')
+      .from('pdfs')
       .delete()
       .eq('id', pdfId);
       
@@ -248,14 +238,13 @@ export const addChatMessageToPDF = async (
 ): Promise<SupabaseChatMessage | null> => {
   try {
     const { data, error } = await supabaseUntyped
-      .from('chat_messages')
+      .from('pdf_chats')
       .insert({
-        pdf_document_id: pdfId,
+        pdf_id: pdfId,
         content: content,
-        is_user: isUser,
-        role: isUser ? 'user' : 'assistant'
+        is_user: isUser
       })
-      .select('id, content, is_user, created_at')
+      .select('id, content, is_user, timestamp')
       .single();
       
     if (error) {
@@ -268,7 +257,7 @@ export const addChatMessageToPDF = async (
       id: data.id,
       content: data.content,
       isUser: data.is_user,
-      timestamp: new Date(data.created_at)
+      timestamp: new Date(data.timestamp)
     };
   } catch (error) {
     console.error('Error in addChatMessageToPDF:', error);
@@ -281,10 +270,10 @@ export const addChatMessageToPDF = async (
 export const getChatMessagesForPDF = async (pdfId: string): Promise<SupabaseChatMessage[]> => {
   try {
     const { data, error } = await supabaseUntyped
-      .from('chat_messages')
+      .from('pdf_chats')
       .select('*')
-      .eq('pdf_document_id', pdfId)
-      .order('created_at', { ascending: true });
+      .eq('pdf_id', pdfId)
+      .order('timestamp', { ascending: true });
       
     if (error) {
       console.error('Error fetching chat messages:', error);
@@ -296,7 +285,7 @@ export const getChatMessagesForPDF = async (pdfId: string): Promise<SupabaseChat
       id: message.id,
       content: message.content,
       isUser: message.is_user,
-      timestamp: new Date(message.created_at)
+      timestamp: new Date(message.timestamp)
     }));
   } catch (error) {
     console.error('Error in getChatMessagesForPDF:', error);
