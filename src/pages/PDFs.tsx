@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PDFCard from '@/components/PDFCard';
@@ -23,7 +22,10 @@ const PDFs = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Load PDFs when component mounts or user changes
+  const handlePDFDelete = (deletedPdfId: string) => {
+    setPdfs(prevPdfs => prevPdfs.filter(pdf => pdf.id !== deletedPdfId));
+  };
+
   useEffect(() => {
     const loadPDFs = async () => {
       if (authLoading) return;
@@ -48,7 +50,6 @@ const PDFs = () => {
     loadPDFs();
   }, [user, authLoading, navigate, language]);
   
-  // Update filtered PDFs when search changes or when pdfs changes
   useEffect(() => {
     if (searchTerm) {
       const lowercaseSearch = searchTerm.toLowerCase();
@@ -63,7 +64,6 @@ const PDFs = () => {
     }
   }, [searchTerm, pdfs]);
 
-  // Handle file upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -72,20 +72,17 @@ const PDFs = () => {
   };
 
   const handleFileUpload = async (file: File) => {
-    // Check if user is logged in
     if (!user) {
       toast.error(language === 'ar' ? 'يرجى تسجيل الدخول لتحميل الملفات' : 'Please sign in to upload files');
       navigate('/signin');
       return;
     }
     
-    // Check if file is PDF
     if (file.type !== 'application/pdf') {
       toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       return;
     }
 
-    // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast.error(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
       return;
@@ -94,23 +91,15 @@ const PDFs = () => {
     try {
       setIsUploading(true);
       
-      // Upload PDF to Supabase
       const pdf = await uploadPDFToSupabase(file, user.id);
       
       if (pdf) {
-        // Show success message
         toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-        
-        // Add the new PDF to the list
         setPdfs(prevPDFs => [pdf, ...prevPDFs]);
-        
-        // Reset state
         setIsUploading(false);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
-        
-        // Navigate to the PDF viewer
         navigate(`/pdf/${pdf.id}`);
       } else {
         throw new Error('Upload failed');
@@ -140,7 +129,6 @@ const PDFs = () => {
   }
   
   if (!user) {
-    // This should redirect in the useEffect, but just in case
     navigate('/signin');
     return null;
   }
@@ -161,7 +149,6 @@ const PDFs = () => {
         </div>
         
         <div className="flex flex-col md:flex-row gap-6 mb-8 items-start">
-          {/* Search Bar */}
           <div className="relative flex-grow">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
@@ -182,7 +169,6 @@ const PDFs = () => {
             )}
           </div>
           
-          {/* Hidden file input */}
           <input
             ref={fileInputRef}
             type="file"
@@ -191,7 +177,6 @@ const PDFs = () => {
             onChange={handleFileChange}
           />
           
-          {/* Upload Button */}
           <Button 
             onClick={handleUploadClick}
             className="md:w-auto w-full bg-primary text-primary-foreground hover:bg-primary/90"
@@ -213,7 +198,6 @@ const PDFs = () => {
           </Button>
         </div>
         
-        {/* PDF Grid */}
         <div>
           {isLoading ? (
             <div className="text-center py-20 bg-muted/10 rounded-lg border border-border/40">
@@ -232,7 +216,12 @@ const PDFs = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredPDFs.map((pdf, index) => (
-                  <PDFCard key={pdf.id} pdf={pdf} index={index} />
+                  <PDFCard 
+                    key={pdf.id} 
+                    pdf={pdf} 
+                    index={index} 
+                    onDelete={handlePDFDelete}
+                  />
                 ))}
               </div>
             </>
@@ -270,7 +259,6 @@ const PDFs = () => {
         </div>
       </main>
       
-      {/* Footer */}
       <footer className="mt-auto py-10 bg-muted/30 border-t border-border">
         <div className="container mx-auto px-4 md:px-6 text-center text-muted-foreground">
           <p className="text-sm">
