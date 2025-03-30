@@ -657,7 +657,7 @@ const PDFViewer = () => {
       }
       
       setAnalysisProgress({
-        stage: 'completed',
+        stage: 'complete',
         progress: 100,
         message: language === 'ar' ? 'تم إنشاء الملخص بنجاح' : 'Summary generated successfully'
       });
@@ -762,7 +762,7 @@ const PDFViewer = () => {
       }
       
       setAnalysisProgress({
-        stage: 'completed',
+        stage: 'complete',
         progress: 100,
         message: language === 'ar' ? 'تمت الترجمة بنجاح' : 'Translation completed successfully'
       });
