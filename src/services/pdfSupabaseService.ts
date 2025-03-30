@@ -7,13 +7,12 @@ import {
   addChatMessageToPDF, 
   getChatMessagesForPDF, 
   deleteAllChatMessagesForPDF,
-  SupabaseChatMessage
 } from './pdfChatService';
 
 // Re-export all types and functions for backward compatibility
 export type { SupabasePDF, AnalysisStage } from './pdfTypes';
-export type { SupabaseChatMessage };
-export { 
+export type { SupabaseChatMessage } from './pdfChatService';
+export {
   generatePDFThumbnail,
   uploadThumbnail,
   uploadPDFToSupabase,
