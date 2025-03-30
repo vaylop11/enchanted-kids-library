@@ -17,7 +17,7 @@ serve(async (req) => {
   }
 
   try {
-    const { pdfText, userQuestion } = await req.json();
+    const { pdfText, userQuestion, pageNumber, totalPages } = await req.json();
     
     if (!GEMINI_API_KEY) {
       throw new Error('Missing Gemini API Key');
@@ -47,14 +47,34 @@ serve(async (req) => {
       console.log(`Translation request detected. Target language: ${responseLanguage}`);
     }
     
-    console.log(`Processing request in ${responseLanguage}. PDF content length: ${pdfText.length} characters`);
+    const isTranslation = userQuestion.toLowerCase().includes('translate');
+    const isPageTranslation = pageNumber !== undefined && totalPages !== undefined;
+    
+    if (isPageTranslation) {
+      console.log(`Page-specific translation. Page ${pageNumber} of ${totalPages}`);
+    } else {
+      console.log(`Processing request in ${responseLanguage}. PDF content length: ${pdfText.length} characters`);
+    }
 
     // Increase temperature for translation tasks to improve fluency
-    const isTranslation = userQuestion.toLowerCase().includes('translate');
     const temperature = isTranslation ? 0.4 : 0.3;
     
     // Adjust max tokens based on task - translations need more space
     const maxOutputTokens = isTranslation ? 8192 : 2048;
+
+    // Construct an enhanced prompt for page-specific translation
+    let finalPrompt = userQuestion;
+    if (isTranslation && isPageTranslation) {
+      const targetLang = translationMatch ? translationMatch[1] : responseLanguage;
+      finalPrompt = `Translate the following text from page ${pageNumber} of ${totalPages} to ${targetLang}.
+Focus ONLY on this page content.
+Your response should ONLY contain the translated text with no additional commentary.
+Preserve the original formatting, paragraph structure, and technical terms.
+This is page ${pageNumber} from a ${totalPages}-page document.
+
+Content to translate:
+${pdfText}`;
+    }
 
     // Call Gemini API with improved parameters
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
@@ -64,7 +84,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         contents: [{
-          parts: [{ text: userQuestion + "\n\n" + pdfText }]
+          parts: [{ text: isPageTranslation ? finalPrompt : userQuestion + "\n\n" + pdfText }]
         }],
         generationConfig: {
           temperature: temperature,
@@ -113,7 +133,13 @@ serve(async (req) => {
     const generatedText = data.candidates[0].content.parts[0].text;
     console.log(`Generated response of length: ${generatedText.length} characters`);
 
-    return new Response(JSON.stringify({ response: generatedText }), {
+    // Determine text direction for the response
+    const isRTL = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(generatedText);
+
+    return new Response(JSON.stringify({ 
+      response: generatedText,
+      isRTL: isRTL
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
