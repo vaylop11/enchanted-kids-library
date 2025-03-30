@@ -791,6 +791,10 @@ const PDFViewer = () => {
       : 'Are you sure you want to delete all messages?')) {
       
       try {
+        const loadingToastId = toast.loading(language === 'ar' 
+          ? 'جاري حذف الرسائل...' 
+          : 'Deleting messages...');
+          
         if (isTempPdf) {
           const tempPdfData = sessionStorage.getItem('tempPdfFile');
           if (tempPdfData) {
@@ -799,33 +803,52 @@ const PDFViewer = () => {
               parsedData.fileData.chatMessages = [];
               sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
               setChatMessages([]);
+              
+              toast.dismiss(loadingToastId);
               toast.success(language === 'ar' 
                 ? 'تم حذف جميع الرسائل بنجاح' 
                 : 'All messages deleted successfully');
             } catch (error) {
               console.error('Error clearing temporary PDF chat messages:', error);
+              
+              toast.dismiss(loadingToastId);
               toast.error(language === 'ar' 
                 ? 'فشل في حذف الرسائل' 
                 : 'Failed to delete messages');
             }
           }
         } else if (user) {
-          console.log('Attempting to delete all messages for PDF ID:', id);
+          setChatMessages([]);
+          
           const success = await deleteAllChatMessagesForPDF(id);
           
-          if (success) {
-            console.log('Successfully deleted messages, updating UI');
-            setChatMessages([]);
-          } else {
+          toast.dismiss(loadingToastId);
+          
+          if (!success) {
             console.error('Failed to delete messages from database');
-            toast.error(language === 'ar' 
-              ? 'فشل في حذف الرسائل من قاعدة البيانات' 
-              : 'Failed to delete messages from database');
+            
+            const messages = await getChatMessagesForPDF(id);
+            if (messages && messages.length > 0) {
+              const convertedMessages: ChatMessage[] = messages.map(msg => ({
+                id: msg.id,
+                content: msg.content,
+                isUser: msg.isUser,
+                timestamp: msg.timestamp
+              }));
+              
+              setChatMessages(convertedMessages);
+              
+              toast.error(language === 'ar' 
+                ? 'فشل في حذف الرسائل من قاعدة البيانات' 
+                : 'Failed to delete messages from database');
+            }
           }
         } else {
           const updatedPdf = { ...pdf, chatMessages: [] };
           savePDF(updatedPdf);
           setChatMessages([]);
+          
+          toast.dismiss(loadingToastId);
           toast.success(language === 'ar' 
             ? 'تم حذف جميع الرسائل بنجاح' 
             : 'All messages deleted successfully');
