@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -826,4 +827,59 @@ const PDFViewer = () => {
                               "flex flex-col p-3 rounded-lg max-w-[80%]",
                               message.isUser 
                                 ? "ml-auto bg-primary text-primary-foreground" 
-                                : "
+                                : "mr-auto bg-muted"
+                            )}
+                          >
+                            <div className="whitespace-pre-wrap break-words">
+                              {message.content}
+                            </div>
+                            <div className="flex justify-between items-center mt-2">
+                              <span className="text-xs opacity-70">
+                                {message.isUser 
+                                  ? language === 'ar' ? 'أنت' : 'You' 
+                                  : 'Gemini AI'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        {isWaitingForResponse && (
+                          <ChatMessageSkeleton />
+                        )}
+                        <div ref={chatEndRef} />
+                      </>
+                    )}
+                  </div>
+                  
+                  <form 
+                    onSubmit={handleChatSubmit}
+                    className="p-4 border-t flex gap-2 items-end bg-card mt-auto"
+                  >
+                    <Textarea
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder={language === 'ar' 
+                        ? 'اطرح سؤالاً حول هذا الملف...' 
+                        : 'Ask a question about this PDF...'}
+                      className="min-h-10 resize-none border rounded-md flex-1"
+                      disabled={isAnalyzing}
+                    />
+                    <Button 
+                      type="submit" 
+                      size="icon" 
+                      disabled={!chatInput.trim() || isAnalyzing}
+                      className="h-10 w-10 rounded-full flex-shrink-0"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </form>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default PDFViewer;
