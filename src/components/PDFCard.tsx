@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
-import { Clock, FileText, MessageSquare, Download, Trash2, History, FileText as Summarize, Languages } from 'lucide-react';
+import { Clock, FileText, MessageSquare, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { deletePDF } from '@/services/pdfSupabaseService';
 import { toast } from 'sonner';
@@ -78,64 +78,6 @@ const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
     }
   };
 
-  // Handle PDF download
-  const handleDownload = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Check if PDF has a fileUrl
-    if ('fileUrl' in pdf && (pdf as any).fileUrl) {
-      const fileUrl = (pdf as any).fileUrl;
-      
-      try {
-        // Create an anchor element and trigger download
-        const a = document.createElement('a');
-        a.href = fileUrl;
-        a.download = pdf.title;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        toast.success(language === 'ar' ? 'جارٍ تنزيل الملف...' : 'Downloading PDF...');
-      } catch (error) {
-        console.error('Error downloading PDF:', error);
-        toast.error(language === 'ar' ? 'فشل في تنزيل الملف' : 'Failed to download PDF');
-      }
-    } else {
-      toast.error(language === 'ar' ? 'رابط الملف غير متوفر' : 'File URL not available');
-    }
-  };
-  
-  // Navigate to PDF history
-  const viewHistory = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Navigate to PDF history page (will be implemented in the future)
-    toast.info(language === 'ar' ? 'سيتم تنفيذ هذه الميزة قريبًا' : 'This feature will be implemented soon');
-    // You would typically navigate like: window.location.href = `/pdf/${pdf.id}/history`;
-  };
-  
-  // Generate summary for PDF
-  const generateSummary = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Generate summary (will be implemented in the future)
-    toast.info(language === 'ar' ? 'سيتم تنفيذ هذه الميزة قريبًا' : 'This feature will be implemented soon');
-    // You would typically navigate like: window.location.href = `/pdf/${pdf.id}/summarize`;
-  };
-  
-  // Translate PDF
-  const translatePDF = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Translate PDF (will be implemented in the future)
-    toast.info(language === 'ar' ? 'سيتم تنفيذ هذه الميزة قريبًا' : 'This feature will be implemented soon');
-    // You would typically navigate like: window.location.href = `/pdf/${pdf.id}/translate`;
-  };
-
   return (
     <Card 
       id={`pdf-card-${pdf.id}`}
@@ -198,59 +140,11 @@ const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
         </CardContent>
       </Link>
       
-      <CardFooter className="flex flex-wrap gap-2 p-3 pt-0 border-t">
+      <CardFooter className="flex p-3 pt-0 border-t">
         <Button 
           variant="outline" 
           size="sm" 
-          className="h-8 px-2 rounded-md flex-1"
-          onClick={handleDownload}
-        >
-          <Download className="h-3.5 w-3.5 mr-1" />
-          <span className="text-xs">
-            {language === 'ar' ? 'تنزيل' : 'Download'}
-          </span>
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-8 px-2 rounded-md flex-1"
-          onClick={viewHistory}
-        >
-          <History className="h-3.5 w-3.5 mr-1" />
-          <span className="text-xs">
-            {language === 'ar' ? 'السجل' : 'History'}
-          </span>
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-8 px-2 rounded-md flex-1"
-          onClick={generateSummary}
-        >
-          <Summarize className="h-3.5 w-3.5 mr-1" />
-          <span className="text-xs">
-            {language === 'ar' ? 'تلخيص' : 'Summary'}
-          </span>
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-8 px-2 rounded-md flex-1"
-          onClick={translatePDF}
-        >
-          <Languages className="h-3.5 w-3.5 mr-1" />
-          <span className="text-xs">
-            {language === 'ar' ? 'ترجمة' : 'Translate'}
-          </span>
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-8 px-2 rounded-md text-destructive hover:bg-destructive/10 hover:text-destructive flex-1"
+          className="h-8 px-2 rounded-md text-destructive hover:bg-destructive/10 hover:text-destructive w-full"
           onClick={handleDelete}
         >
           <Trash2 className="h-3.5 w-3.5 mr-1" />
