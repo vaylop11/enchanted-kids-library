@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -812,6 +811,7 @@ const PDFViewer = () => {
             try {
               const success = await deleteAllChatMessagesForPDF(id);
               if (success) {
+                // Important: Set chat messages to empty array to update UI immediately
                 setChatMessages([]);
                 toast.success(language === 'ar' 
                   ? 'تم حذف جميع الرسائل بنجاح' 

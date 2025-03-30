@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -450,6 +451,27 @@ export const getChatMessagesForPDF = async (pdfId: string): Promise<SupabaseChat
 // Delete all chat messages for a PDF
 export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolean> => {
   try {
+    console.log('Deleting all chat messages for PDF:', pdfId);
+    
+    // First check if there are any messages to delete
+    const { data: existingMessages, error: checkError } = await supabase
+      .from('pdf_chats')
+      .select('id')
+      .eq('pdf_id', pdfId);
+      
+    if (checkError) {
+      console.error('Error checking existing chat messages:', checkError);
+      return false;
+    }
+    
+    if (!existingMessages || existingMessages.length === 0) {
+      console.log('No messages found to delete');
+      return true; // No messages to delete is still a success
+    }
+    
+    console.log(`Found ${existingMessages.length} messages to delete`);
+    
+    // Delete all messages for this PDF
     const { error } = await supabase
       .from('pdf_chats')
       .delete()
@@ -461,6 +483,8 @@ export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolea
       return false;
     }
     
+    console.log('Successfully deleted all chat messages');
+    toast.success('Chat history cleared successfully');
     return true;
   } catch (error) {
     console.error('Error in deleteAllChatMessagesForPDF:', error);
