@@ -9,161 +9,48 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      chat_messages: {
-        Row: {
-          content: string
-          created_at: string | null
-          id: string
-          pdf_document_id: string | null
-          role: string
-          user_id: string | null
-        }
-        Insert: {
-          content: string
-          created_at?: string | null
-          id?: string
-          pdf_document_id?: string | null
-          role: string
-          user_id?: string | null
-        }
-        Update: {
-          content?: string
-          created_at?: string | null
-          id?: string
-          pdf_document_id?: string | null
-          role?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_messages_pdf_document_id_fkey"
-            columns: ["pdf_document_id"]
-            isOneToOne: false
-            referencedRelation: "pdf_documents"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      pdf_documents: {
-        Row: {
-          content: string
-          created_at: string | null
-          embedding: string | null
-          file_url: string
-          filename: string
-          id: string
-          metadata: Json | null
-          name: string
-          status: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          content: string
-          created_at?: string | null
-          embedding?: string | null
-          file_url: string
-          filename: string
-          id?: string
-          metadata?: Json | null
-          name: string
-          status?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          content?: string
-          created_at?: string | null
-          embedding?: string | null
-          file_url?: string
-          filename?: string
-          id?: string
-          metadata?: Json | null
-          name?: string
-          status?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
-          avatar_url: string | null
-          created_at: string
-          full_name: string | null
+          created_at: string | null
+          gemini_api_key: string | null
           id: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          full_name?: string | null
+          created_at?: string | null
+          gemini_api_key?: string | null
           id: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          avatar_url?: string | null
-          created_at?: string
-          full_name?: string | null
+          created_at?: string | null
+          gemini_api_key?: string | null
           id?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
-      research_history: {
+      system_settings: {
         Row: {
-          content: string
-          created_at: string
+          created_at: string | null
           id: string
-          title: string
-          user_id: string
+          key: string
+          updated_at: string | null
+          value: string | null
         }
         Insert: {
-          content: string
-          created_at?: string
+          created_at?: string | null
           id?: string
-          title: string
-          user_id?: string
+          key: string
+          updated_at?: string | null
+          value?: string | null
         }
         Update: {
-          content?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
-          title?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      transactions: {
-        Row: {
-          amount: number
-          checkout_url: string | null
-          created_at: string
-          id: string
-          payment_id: string | null
-          research_content: string | null
-          research_topic: string
-          status: string
-        }
-        Insert: {
-          amount: number
-          checkout_url?: string | null
-          created_at?: string
-          id?: string
-          payment_id?: string | null
-          research_content?: string | null
-          research_topic: string
-          status: string
-        }
-        Update: {
-          amount?: number
-          checkout_url?: string | null
-          created_at?: string
-          id?: string
-          payment_id?: string | null
-          research_content?: string | null
-          research_topic?: string
-          status?: string
+          key?: string
+          updated_at?: string | null
+          value?: string | null
         }
         Relationships: []
       }
@@ -172,178 +59,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      binary_quantize:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-      halfvec_avg: {
-        Args: {
-          "": number[]
-        }
-        Returns: unknown
-      }
-      halfvec_out: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: {
-          "": unknown
-        }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: {
-          "": unknown[]
-        }
-        Returns: number
-      }
-      hnsw_bit_support: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      ivfflat_bit_support: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      l2_norm:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-      l2_normalize:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-      sparsevec_out: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: {
-          "": unknown
-        }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: {
-          "": unknown[]
-        }
-        Returns: number
-      }
-      vector_avg: {
-        Args: {
-          "": number[]
-        }
-        Returns: string
-      }
-      vector_dims:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-      vector_norm: {
-        Args: {
-          "": string
-        }
-        Returns: number
-      }
-      vector_out: {
-        Args: {
-          "": string
-        }
-        Returns: unknown
-      }
-      vector_send: {
-        Args: {
-          "": string
-        }
-        Returns: string
-      }
-      vector_typmod_in: {
-        Args: {
-          "": unknown[]
-        }
-        Returns: number
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
