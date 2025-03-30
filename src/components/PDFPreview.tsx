@@ -79,8 +79,11 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
     setActiveTranslation(targetLang);
     
     try {
-      // Check if this page is already translated to this language
-      const cacheKey = `${pageNumber}-${targetLang.code}`;
+      // تأكد من أننا نترجم فقط الصفحة الحالية المعروضة
+      const currentPageToTranslate = pageNumber;
+      
+      // تحقق مما إذا كانت هذه الصفحة مترجمة بالفعل إلى هذه اللغة
+      const cacheKey = `${currentPageToTranslate}-${targetLang.code}`;
       const existingTranslation = sessionStorage.getItem(cacheKey);
       
       if (existingTranslation) {
@@ -89,7 +92,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
           
           setTranslatedPages(prev => ({
             ...prev,
-            [pageNumber]: {
+            [currentPageToTranslate]: {
               text: parsed.text,
               isRTL: parsed.isRTL
             }
@@ -97,8 +100,8 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
           
           setViewMode('translated');
           toast.success(language === 'ar' 
-            ? `تم تحميل الترجمة المحفوظة للصفحة ${pageNumber} إلى ${targetLang.localName}` 
-            : `Loaded cached translation of page ${pageNumber} to ${targetLang.name}`);
+            ? `تم تحميل الترجمة المحفوظة للصفحة ${currentPageToTranslate} إلى ${targetLang.localName}` 
+            : `Loaded cached translation of page ${currentPageToTranslate} to ${targetLang.name}`);
           
           setIsTranslating(false);
           return;
@@ -110,12 +113,13 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
       
       // Show loading toast
       const loadingId = toast.loading(language === 'ar' 
-        ? `جاري ترجمة الصفحة ${pageNumber} إلى ${targetLang.localName}...` 
-        : `Translating page ${pageNumber} to ${targetLang.name}...`);
+        ? `جاري ترجمة الصفحة ${currentPageToTranslate} إلى ${targetLang.localName}...` 
+        : `Translating page ${currentPageToTranslate} to ${targetLang.name}...`);
       
+      // استدعاء وظيفة ترجمة الصفحة الحالية فقط
       const { translatedText, isRTL } = await translatePDFPage(
         pdfUrl,
-        pageNumber,
+        currentPageToTranslate,
         targetLang.name,
         targetLang.code,
         (progress) => {
@@ -126,7 +130,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
       // Save the translation
       setTranslatedPages(prev => ({
         ...prev,
-        [pageNumber]: {
+        [currentPageToTranslate]: {
           text: translatedText,
           isRTL: isRTL
         }
@@ -144,8 +148,8 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
       
       toast.dismiss(loadingId);
       toast.success(language === 'ar' 
-        ? `تمت ترجمة الصفحة ${pageNumber} إلى ${targetLang.localName}` 
-        : `Page ${pageNumber} translated to ${targetLang.name}`);
+        ? `تمت ترجمة الصفحة ${currentPageToTranslate} إلى ${targetLang.localName}` 
+        : `Page ${currentPageToTranslate} translated to ${targetLang.name}`);
       
       setViewMode('translated');
     } catch (error) {
@@ -300,14 +304,14 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
           </div>
         ) : (
           <>
-            {/* Show translated content when in translated view mode */}
+            {/* عرض المحتوى المترجم عندما تكون في وضع عرض الترجمة */}
             {viewMode === 'translated' && translatedPages[pageNumber] ? (
               <CustomPageRenderer 
                 canvasRef={{ current: null }}
                 pageNumber={pageNumber}
               />
             ) : (
-              /* Show original PDF */
+              /* عرض PDF الأصلي */
               <Document
                 file={pdfUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
