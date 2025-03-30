@@ -36,30 +36,25 @@ serve(async (req) => {
       });
     }
 
-    // Detect if question is in Arabic
+    // Detect if question is in Arabic or contains a language directive
     const containsArabic = /[\u0600-\u06FF]/.test(userQuestion);
-    const responseLanguage = containsArabic ? 'Arabic' : 'English';
+    let responseLanguage = containsArabic ? 'Arabic' : 'English';
     
-    console.log(`Processing question in ${responseLanguage}. PDF content length: ${pdfText.length} characters`);
+    // Check if the request is a translation request and extract target language
+    const translationMatch = userQuestion.match(/Translate.*to\s+(\w+)\s+\((\w+)\)/i);
+    if (translationMatch) {
+      responseLanguage = translationMatch[1]; // Use the target language from the prompt
+      console.log(`Translation request detected. Target language: ${responseLanguage}`);
+    }
+    
+    console.log(`Processing request in ${responseLanguage}. PDF content length: ${pdfText.length} characters`);
 
-    // Build context and prompt with stricter instructions
-    const prompt = `
-      You are an AI assistant that helps users analyze PDF documents and answer questions about them.
-      
-      Here is the text content from a PDF document:
-      """
-      ${pdfText}
-      """
-      
-      User question: ${userQuestion}
-      
-      Analyze the PDF content carefully and provide a detailed, relevant response to the user's question.
-      If the question cannot be answered based on the PDF content, explain why and what information is missing.
-      
-      IMPORTANT: The user's question is in ${containsArabic ? 'Arabic' : 'English'}. 
-      You MUST respond in ${responseLanguage} only.
-      If you're responding in Arabic, use proper Arabic grammar and vocabulary.
-    `;
+    // Increase temperature for translation tasks to improve fluency
+    const isTranslation = userQuestion.toLowerCase().includes('translate');
+    const temperature = isTranslation ? 0.4 : 0.3;
+    
+    // Adjust max tokens based on task - translations need more space
+    const maxOutputTokens = isTranslation ? 8192 : 2048;
 
     // Call Gemini API with improved parameters
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
@@ -69,13 +64,13 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         contents: [{
-          parts: [{ text: prompt }]
+          parts: [{ text: userQuestion + "\n\n" + pdfText }]
         }],
         generationConfig: {
-          temperature: 0.3,
+          temperature: temperature,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 2048,
+          maxOutputTokens: maxOutputTokens,
         }
       }),
     });
