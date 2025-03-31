@@ -19,8 +19,10 @@ const PrivacyPolicy = () => {
           <Breadcrumb className="mb-6">
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink as={Link} to="/">
-                  {language === 'ar' ? 'الرئيسية' : 'Home'}
+                <BreadcrumbLink>
+                  <Link to="/">
+                    {language === 'ar' ? 'الرئيسية' : 'Home'}
+                  </Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
@@ -32,16 +34,16 @@ const PrivacyPolicy = () => {
             </BreadcrumbList>
           </Breadcrumb>
           
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mb-6" 
-            as={Link} 
-            to="/"
-          >
-            <ArrowLeft className={`w-4 h-4 ${direction === 'rtl' ? 'ml-2 rotate-180' : 'mr-2'}`} />
-            {language === 'ar' ? 'العودة للصفحة الرئيسية' : 'Back to Home'}
-          </Button>
+          <Link to="/">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mb-6"
+            >
+              <ArrowLeft className={`w-4 h-4 ${direction === 'rtl' ? 'ml-2 rotate-180' : 'mr-2'}`} />
+              {language === 'ar' ? 'العودة للصفحة الرئيسية' : 'Back to Home'}
+            </Button>
+          </Link>
           
           <h1 className="heading-1 mb-8 font-bold">
             {language === 'ar' ? 'سياسة الخصوصية' : 'Privacy Policy'}
