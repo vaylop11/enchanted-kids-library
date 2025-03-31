@@ -1,7 +1,7 @@
-
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowLeft, Calendar, ChevronRight, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,6 @@ interface BlogPostData {
 }
 
 const getBlogPost = (id: string, language: string): BlogPostData | null => {
-  // Simulate fetching a blog post based on ID
   const blogPosts: Record<string, BlogPostData> = {
     'chatpdf-vs-traditional': {
       id: 'chatpdf-vs-traditional',
@@ -59,7 +58,7 @@ const getBlogPost = (id: string, language: string): BlogPostData | null => {
              <li>Time Savings: Reduce research time by 80%.</li>
              <li>Higher Accuracy: Get precise answers based on document content.</li>
              <li>Ease of Use: Simple, intuitive chat interface.</li>
-             <li>Better Comprehension: Quickly extract key insights from complex documents.</li>
+             <li>Better Comprehension: Extract key insights from complex documents quickly.</li>
            </ul>
            <h2>Performance Comparison</h2>
            <p>According to our internal studies, <strong>ChatPDF</strong> users can find specific information in documents 5x faster than traditional methods. This translates to significant time savings, especially for professionals like lawyers, researchers, and students.</p>
@@ -163,7 +162,6 @@ const getBlogPost = (id: string, language: string): BlogPostData | null => {
       category: language === 'ar' ? 'تعليم' : 'Education',
       image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
     },
-    // Add more blog posts as needed
   };
   
   return blogPosts[id] || null;
@@ -182,7 +180,6 @@ const BlogPost = () => {
       if (fetchedPost) {
         setPost(fetchedPost);
         
-        // Simulate fetching related posts
         const related = [
           getBlogPost('chatpdf-education', language),
           getBlogPost('chatpdf-vs-traditional', language)
@@ -204,7 +201,6 @@ const BlogPost = () => {
       <Navbar />
       
       <article className="pt-32 pb-20 px-4 md:px-6">
-        {/* Breadcrumb */}
         <div className="container mx-auto max-w-4xl mb-8">
           <div className="flex items-center text-sm text-muted-foreground">
             <Link to="/" className="hover:text-foreground">
@@ -219,7 +215,6 @@ const BlogPost = () => {
           </div>
         </div>
         
-        {/* Article Header */}
         <header className="container mx-auto max-w-4xl mb-10">
           <Button
             variant="ghost"
@@ -254,14 +249,14 @@ const BlogPost = () => {
           </div>
         </header>
         
-        {/* Article Content */}
         <div className="container mx-auto max-w-3xl">
           <div 
             className="prose prose-lg max-w-none custom-blog-content"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
           
-          <style jsx="true">{`
+          <style>
+            {`
             .custom-blog-content h2 {
               font-size: 1.75rem;
               font-weight: 700;
@@ -292,10 +287,10 @@ const BlogPost = () => {
             .custom-blog-content strong {
               font-weight: 600;
             }
-          `}</style>
+            `}
+          </style>
         </div>
         
-        {/* Related Posts */}
         {relatedPosts.length > 0 && (
           <div className="container mx-auto max-w-4xl mt-20 pt-10 border-t">
             <h2 className="heading-3 mb-8 font-bold">
@@ -331,7 +326,6 @@ const BlogPost = () => {
         )}
       </article>
       
-      {/* Call to Action */}
       <div className="bg-muted/30 py-16 px-4 md:px-6">
         <div className="container mx-auto max-w-3xl text-center">
           <h2 className="heading-2 mb-4 font-bold">
@@ -351,22 +345,7 @@ const BlogPost = () => {
         </div>
       </div>
       
-      {/* Footer */}
-      <footer className="mt-auto py-10 bg-muted/30 border-t border-border">
-        <div className="container mx-auto px-4 md:px-6 text-center text-muted-foreground">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <span className="font-display text-lg font-medium">
-              {language === 'ar' ? 'ChatPDF' : 'ChatPDF'}
-            </span>
-          </div>
-          <p className="text-sm">
-            {language === 'ar' 
-              ? `© ${new Date().getFullYear()} ChatPDF. جميع الحقوق محفوظة.`
-              : `© ${new Date().getFullYear()} ChatPDF. All rights reserved.`
-            }
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
