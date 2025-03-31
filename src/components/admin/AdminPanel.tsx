@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseUntyped } from '@/integrations/supabase/client';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -134,7 +134,7 @@ const AdminPanel = () => {
         : `${readTimeMinutes} min read`;
       
       // Save blog post to Supabase
-      const { data, error } = await supabase
+      const { data, error } = await supabaseUntyped
         .from('blog_posts')
         .insert({
           title: values.title,

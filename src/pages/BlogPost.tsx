@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowLeft, Calendar, ChevronRight, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseUntyped } from '@/integrations/supabase/client';
 
 interface BlogPostData {
   id: string;
@@ -34,7 +34,7 @@ const BlogPost = () => {
 
       try {
         // First try to fetch from Supabase
-        const { data, error } = await supabase
+        const { data, error } = await supabaseUntyped
           .from('blog_posts')
           .select('*')
           .eq('id', id)
@@ -71,16 +71,18 @@ const BlogPost = () => {
           setPost(formattedPost);
           
           // Fetch related posts (posts with the same category)
-          const { data: relatedData } = await supabase
-            .from('blog_posts')
-            .select('*')
-            .eq('published', true)
-            .eq('category', data.category)
-            .neq('id', id)
-            .limit(2);
-            
-          if (relatedData && relatedData.length > 0) {
-            setRelatedPosts(relatedData as BlogPostData[]);
+          if (data.category) {
+            const { data: relatedData } = await supabaseUntyped
+              .from('blog_posts')
+              .select('*')
+              .eq('published', true)
+              .eq('category', data.category)
+              .neq('id', id)
+              .limit(2);
+              
+            if (relatedData && relatedData.length > 0) {
+              setRelatedPosts(relatedData as BlogPostData[]);
+            }
           }
         } else {
           navigate('/blog');

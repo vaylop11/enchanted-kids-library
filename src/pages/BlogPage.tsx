@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseUntyped } from '@/integrations/supabase/client';
 import Footer from '@/components/Footer';
 
 interface BlogPost {
@@ -33,7 +34,7 @@ const BlogPage = () => {
   useEffect(() => {
     const fetchBlogPosts = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseUntyped
           .from('blog_posts')
           .select('*')
           .eq('published', true)

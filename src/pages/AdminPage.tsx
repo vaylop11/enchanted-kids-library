@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import AdminPanel from '@/components/admin/AdminPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseUntyped } from '@/integrations/supabase/client';
 
 const AdminPage = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -20,9 +20,9 @@ const AdminPage = () => {
     // Test Supabase connection
     const checkSupabaseConnection = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseUntyped
           .from('blog_posts')
-          .select('count(*)')
+          .select('count')
           .single();
           
         if (error) {

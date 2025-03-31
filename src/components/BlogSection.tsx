@@ -5,7 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { ArrowRight, Calendar, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseUntyped } from "@/integrations/supabase/client";
 
 interface BlogPost {
   id: string;
@@ -25,7 +25,7 @@ const BlogSection = () => {
   useEffect(() => {
     const fetchBlogPosts = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseUntyped
           .from('blog_posts')
           .select('*')
           .eq('published', true)
