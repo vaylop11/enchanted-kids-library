@@ -40,10 +40,17 @@ serve(async (req) => {
       2. مقدمة تشرح الموضوع
       3. عدة عناوين فرعية باستخدام ## و ### في بداية الأسطر
       4. فقرات تحت كل عنوان
-      5. على الأقل صورتين مناسبتين للمحتوى باستخدام [Image: وصف تفصيلي للصورة المطلوبة] حيث سيتم إضافة صورة
+      5. صورة مناسبة للمحتوى في مكان استراتيجي باستخدام [Image: وصف تفصيلي للصورة المطلوبة] حيث سيتم إضافة صورة
       6. خاتمة تلخص النقاط الرئيسية
       
-      اجعل المحتوى معلوماتيًا وجذابًا ومنظمًا جيدًا. ضع الصور في أماكن استراتيجية بين الأقسام المختلفة.`
+      ملاحظات مهمة:
+      - اكتب كل عنوان في سطر مستقل تمامًا
+      - اترك سطرًا فارغًا قبل وبعد كل عنوان
+      - اترك سطرًا فارغًا بين الفقرات
+      - ضع صيغة الصورة [Image: وصف] في سطر مستقل
+      - لا تنسَ وضع سطر فارغ قبل وبعد الصورة
+      
+      اجعل المحتوى معلوماتيًا وجذابًا ومنظمًا جيدًا.`
       
       : `You are a blog writing assistant specialized in ChatPDF and AI technologies. Create a complete blog post based on the following title: "${blogTitle}".
       
@@ -52,10 +59,17 @@ serve(async (req) => {
       2. An introduction that explains the topic
       3. Several subheadings using ## and ### at the start of the lines
       4. Paragraphs under each heading
-      5. At least 2 strategically placed images using the format [Image: detailed description of the desired image] where an image will be inserted
+      5. One strategically placed image using the format [Image: detailed description of the desired image] where an image will be inserted
       6. A conclusion that summarizes the key points
       
-      Make the content informative, engaging, and well-structured. Place the images at strategic locations between different sections of the content.`;
+      Important formatting notes:
+      - Each heading should be on its own line
+      - Leave a blank line before and after each heading
+      - Leave a blank line between paragraphs
+      - Put the image placeholder [Image: description] on its own line
+      - Always leave a blank line before and after the image placeholder
+      
+      Make the content informative, engaging, and well-structured.`;
 
     // Call Gemini API
     const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent', {

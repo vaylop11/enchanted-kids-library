@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Trash2, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface BlogPost {
   id: string;
@@ -27,6 +28,8 @@ const BlogManagement = () => {
   const { language } = useLanguage();
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -54,25 +57,33 @@ const BlogManagement = () => {
     }
   };
 
-  const deletePost = async (id: string) => {
-    if (window.confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذا المقال؟' : 'Are you sure you want to delete this post?')) {
-      try {
-        const { error } = await supabaseUntyped
-          .from('blog_posts')
-          .delete()
-          .eq('id', id);
+  const deletePost = async () => {
+    if (!deleteId) return;
+    
+    try {
+      setIsDeleting(true);
+      const { error } = await supabaseUntyped
+        .from('blog_posts')
+        .delete()
+        .eq('id', deleteId);
 
-        if (error) {
-          throw error;
-        }
-
-        toast.success(language === 'ar' ? 'تم حذف المقال بنجاح' : 'Post deleted successfully');
-        fetchBlogPosts(); // Refresh the list
-      } catch (error) {
-        console.error('Error deleting post:', error);
-        toast.error(language === 'ar' ? 'فشل في حذف المقال' : 'Failed to delete post');
+      if (error) {
+        throw error;
       }
+
+      toast.success(language === 'ar' ? 'تم حذف المقال بنجاح' : 'Post deleted successfully');
+      fetchBlogPosts(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error(language === 'ar' ? 'فشل في حذف المقال' : 'Failed to delete post');
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
     }
+  };
+
+  const openDeleteDialog = (id: string) => {
+    setDeleteId(id);
   };
 
   const viewPost = (id: string) => {
@@ -130,7 +141,7 @@ const BlogManagement = () => {
                       <Button variant="ghost" size="icon" onClick={() => viewPost(post.id)}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => deletePost(post.id)}>
+                      <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(post.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
@@ -141,6 +152,36 @@ const BlogManagement = () => {
           </Table>
         </div>
       )}
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {language === 'ar' ? 'تأكيد الحذف' : 'Confirm Deletion'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language === 'ar' 
+                ? 'هل أنت متأكد من حذف هذا المقال؟ لا يمكن التراجع عن هذا الإجراء.'
+                : 'Are you sure you want to delete this post? This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {language === 'ar' ? 'إلغاء' : 'Cancel'}
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={deletePost} 
+              disabled={isDeleting} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent"></span>
+              ) : null}
+              {language === 'ar' ? 'حذف' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -9,13 +9,14 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { supabaseUntyped } from '@/integrations/supabase/client';
-import { Loader2, RefreshCw, Eye, Image } from 'lucide-react';
+import { Loader2, RefreshCw, Eye } from 'lucide-react';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BlogManagement from './BlogManagement';
+import ImageUploader from './ImageUploader';
 
 const formSchema = z.object({
   title: z.string().min(5, {
@@ -23,9 +24,6 @@ const formSchema = z.object({
   }),
   category: z.string().min(2, {
     message: "Category must be at least 2 characters.",
-  }),
-  imageUrl: z.string().url({
-    message: "Please enter a valid URL for the image.",
   }),
   content: z.string().min(50, {
     message: "Content must be at least 50 characters.",
@@ -40,14 +38,13 @@ const AdminPanel = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [activeTab, setActiveTab] = useState('create');
-  const [imageKeywords, setImageKeywords] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: '',
       category: '',
-      imageUrl: '',
       content: '',
     },
   });
@@ -90,7 +87,6 @@ const AdminPanel = () => {
     
     // Replace image placeholders with actual images
     formattedContent = formattedContent.replace(/\[Image: (.+?)\]/g, (match, description) => {
-      const imageUrl = form.getValues('imageUrl');
       if (imageUrl) {
         return `<img src="${imageUrl}" alt="${description}" class="w-full h-auto rounded-lg my-4" />`;
       }
@@ -119,14 +115,7 @@ const AdminPanel = () => {
       if (data?.generatedText) {
         form.setValue('content', data.generatedText);
         
-        // Extract keywords for image search from title and content
-        const keywords = title.split(' ').slice(0, 3).join(' ');
-        setImageKeywords(keywords);
-        
-        // Set a default image URL
-        const placeholderImageUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(keywords)}`;
-        form.setValue('imageUrl', placeholderImageUrl);
-        
+        // Set a default category if none exists
         if (!form.getValues('category')) {
           form.setValue('category', 'AI');
         }
@@ -149,20 +138,22 @@ const AdminPanel = () => {
     }
   };
 
-  const generateNewImage = () => {
-    const keywords = imageKeywords || form.getValues('title').split(' ').slice(0, 3).join(' ');
-    if (keywords) {
-      const newImageUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(keywords)}&random=${Date.now()}`;
-      form.setValue('imageUrl', newImageUrl);
-      toast.success(language === 'ar' ? 'تم تحديث الصورة' : 'Image updated');
-    } else {
-      toast.error(language === 'ar' ? 'يرجى إدخال عنوان أولاً' : 'Please enter a title first');
-    }
+  const onImageUploaded = (url: string) => {
+    setImageUrl(url);
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
       toast.error('You must be logged in to publish a blog post');
+      return;
+    }
+    
+    if (!imageUrl) {
+      toast.error(
+        language === 'ar'
+          ? 'يرجى رفع صورة للمقال'
+          : 'Please upload an image for the blog post'
+      );
       return;
     }
     
@@ -186,7 +177,7 @@ const AdminPanel = () => {
           title: values.title,
           content: formattedContent,
           excerpt: excerpt,
-          image_url: values.imageUrl,
+          image_url: imageUrl,
           category: values.category,
           read_time: readTime,
           author_id: user.id,
@@ -200,6 +191,7 @@ const AdminPanel = () => {
       toast.success(language === 'ar' ? 'تم نشر المقال بنجاح' : 'Blog post published successfully');
       
       form.reset();
+      setImageUrl('');
       setPreviewMode(false);
       setActiveTab('manage'); // Switch to manage tab after successful publish
       
@@ -303,58 +295,20 @@ const AdminPanel = () => {
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="imageUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          {language === 'ar' ? 'صورة المقال' : 'Post Image'}
-                        </FormLabel>
-                        <div className="space-y-4">
-                          <div className="flex gap-2">
-                            <FormControl>
-                              <Input
-                                placeholder={language === 'ar' ? 'رابط صورة المقال' : 'Blog image URL'}
-                                {...field}
-                              />
-                            </FormControl>
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              onClick={generateNewImage}
-                            >
-                              <Image className="mr-2 h-4 w-4" />
-                              {language === 'ar' ? 'تحديث' : 'New Image'}
-                            </Button>
-                          </div>
-                          
-                          {field.value && (
-                            <div className="relative aspect-video w-full overflow-hidden rounded-md border">
-                              <img 
-                                src={field.value} 
-                                alt="Blog post image preview"
-                                className="h-full w-full object-cover"
-                                onError={() => {
-                                  toast.error(
-                                    language === 'ar' 
-                                      ? 'فشل في تحميل الصورة، يرجى تجربة صورة أخرى' 
-                                      : 'Failed to load image, please try another one'
-                                  );
-                                }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <FormDescription>
-                          {language === 'ar'
-                            ? 'يمكنك استخدام رابط صورة من Unsplash أو أي مصدر آخر'
-                            : 'You can use an image URL from Unsplash or any other source'}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <FormItem>
+                    <FormLabel>
+                      {language === 'ar' ? 'صورة المقال' : 'Post Image'}
+                    </FormLabel>
+                    <ImageUploader 
+                      onImageUploaded={onImageUploaded} 
+                      existingImageUrl={imageUrl}
+                    />
+                    <FormDescription>
+                      {language === 'ar'
+                        ? 'يمكنك رفع صورة من جهازك أو توليد صورة باستخدام كلمات البحث'
+                        : 'You can upload an image from your device or generate one using keywords'}
+                    </FormDescription>
+                  </FormItem>
                   
                   <FormField
                     control={form.control}
