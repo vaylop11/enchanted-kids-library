@@ -5,7 +5,7 @@ import { supabaseUntyped } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Image, Upload, RefreshCw } from 'lucide-react';
+import { Image, Upload } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ImageUploaderProps {
@@ -17,7 +17,6 @@ const ImageUploader = ({ onImageUploaded, existingImageUrl }: ImageUploaderProps
   const { language } = useLanguage();
   const [isUploading, setIsUploading] = useState(false);
   const [imageUrl, setImageUrl] = useState(existingImageUrl || '');
-  const [imageKeywords, setImageKeywords] = useState('');
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -96,56 +95,18 @@ const ImageUploader = ({ onImageUploaded, existingImageUrl }: ImageUploaderProps
     }
   };
 
-  const generateNewImage = () => {
-    const keywords = imageKeywords || 'blog post';
-    if (keywords) {
-      const newImageUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(keywords)}&random=${Date.now()}`;
-      setImageUrl(newImageUrl);
-      onImageUploaded(newImageUrl);
-      toast.success(language === 'ar' ? 'تم تحديث الصورة' : 'Image updated');
-    }
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {language === 'ar' ? 'رفع صورة' : 'Upload Image'}
-            </label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                disabled={isUploading}
-                className="flex-1"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {language === 'ar' ? 'أو توليد صورة' : 'Or Generate Image'}
-            </label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="text"
-                placeholder={language === 'ar' ? 'كلمات البحث للصورة' : 'Image keywords'}
-                value={imageKeywords}
-                onChange={(e) => setImageKeywords(e.target.value)}
-                className="flex-1"
-              />
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={generateNewImage}
-                disabled={isUploading}
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                {language === 'ar' ? 'توليد' : 'Generate'}
-              </Button>
-            </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              disabled={isUploading}
+              className="flex-1"
+            />
           </div>
         </div>
 

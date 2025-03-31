@@ -9,12 +9,13 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { supabaseUntyped } from '@/integrations/supabase/client';
-import { Loader2, RefreshCw, Eye } from 'lucide-react';
+import { Loader2, RefreshCw, Eye, Bold, Heading1, Heading2, Heading3 } from 'lucide-react';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import BlogManagement from './BlogManagement';
 import ImageUploader from './ImageUploader';
 import UserManagement from './UserManagement';
@@ -78,6 +79,9 @@ const AdminPanel = () => {
     formattedContent = formattedContent.replace(/^# (.+)$/gm, '<h1>$1</h1>');
     formattedContent = formattedContent.replace(/^## (.+)$/gm, '<h2>$1</h2>');
     formattedContent = formattedContent.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    
+    // Convert bold text to HTML
+    formattedContent = formattedContent.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     
     // Convert paragraphs to HTML
     formattedContent = '<p>' + formattedContent.replace(/\n\n/g, '</p><p>') + '</p>';
@@ -212,6 +216,74 @@ const AdminPanel = () => {
     setPreviewMode(!previewMode);
   };
 
+  const insertFormatting = (type: string) => {
+    const textarea = document.querySelector('textarea[name="content"]') as HTMLTextAreaElement;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+    let formattedText = '';
+    let cursorPosition = 0;
+
+    switch (type) {
+      case 'bold':
+        formattedText = `**${selectedText}**`;
+        cursorPosition = start + formattedText.length;
+        if (!selectedText) {
+          formattedText = '**bold text**';
+          cursorPosition = start + 2;
+        }
+        break;
+      case 'h1':
+        formattedText = `\n# ${selectedText}\n`;
+        cursorPosition = start + formattedText.length;
+        if (!selectedText) {
+          formattedText = '\n# Heading 1\n';
+          cursorPosition = start + 3;
+        }
+        break;
+      case 'h2':
+        formattedText = `\n## ${selectedText}\n`;
+        cursorPosition = start + formattedText.length;
+        if (!selectedText) {
+          formattedText = '\n## Heading 2\n';
+          cursorPosition = start + 4;
+        }
+        break;
+      case 'h3':
+        formattedText = `\n### ${selectedText}\n`;
+        cursorPosition = start + formattedText.length;
+        if (!selectedText) {
+          formattedText = '\n### Heading 3\n';
+          cursorPosition = start + 5;
+        }
+        break;
+    }
+
+    // Update the content in the form
+    const currentContent = form.getValues('content');
+    const newContent = 
+      currentContent.substring(0, start) + 
+      formattedText + 
+      currentContent.substring(end);
+    
+    form.setValue('content', newContent, { shouldDirty: true });
+    
+    // After React updates the DOM, set the cursor position
+    setTimeout(() => {
+      textarea.focus();
+      if (!selectedText) {
+        textarea.setSelectionRange(
+          start + (type === 'bold' ? 2 : (type === 'h1' ? 3 : (type === 'h2' ? 4 : 5))), 
+          cursorPosition
+        );
+      } else {
+        textarea.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    }, 0);
+  };
+
   return (
     <div className="container mx-auto max-w-3xl py-12">
       <h1 className="text-3xl font-bold mb-8">
@@ -309,8 +381,8 @@ const AdminPanel = () => {
                     />
                     <FormDescription>
                       {language === 'ar'
-                        ? 'يمكنك رفع صورة من جهازك أو توليد صورة باستخدام كلمات البحث'
-                        : 'You can upload an image from your device or generate one using keywords'}
+                        ? 'يمكنك رفع صورة من جهازك'
+                        : 'You can upload an image from your device'}
                     </FormDescription>
                   </FormItem>
                   
@@ -337,6 +409,25 @@ const AdminPanel = () => {
                           </Button>
                         </div>
                         
+                        {!previewMode && (
+                          <div className="mb-2">
+                            <ToggleGroup type="multiple" className="justify-start">
+                              <ToggleGroupItem value="bold" onClick={() => insertFormatting('bold')} title="Bold">
+                                <Bold className="h-4 w-4" />
+                              </ToggleGroupItem>
+                              <ToggleGroupItem value="h1" onClick={() => insertFormatting('h1')} title="Heading 1">
+                                <Heading1 className="h-4 w-4" />
+                              </ToggleGroupItem>
+                              <ToggleGroupItem value="h2" onClick={() => insertFormatting('h2')} title="Heading 2">
+                                <Heading2 className="h-4 w-4" />
+                              </ToggleGroupItem>
+                              <ToggleGroupItem value="h3" onClick={() => insertFormatting('h3')} title="Heading 3">
+                                <Heading3 className="h-4 w-4" />
+                              </ToggleGroupItem>
+                            </ToggleGroup>
+                          </div>
+                        )}
+                        
                         {previewMode ? (
                           <div 
                             className="min-h-[300px] p-4 border rounded-md overflow-auto prose max-w-none"
@@ -356,8 +447,8 @@ const AdminPanel = () => {
                         
                         <FormDescription>
                           {language === 'ar' 
-                            ? 'يمكنك استخدام علامات مثل # و ## و ### للعناوين، و[Image: وصف] لإضافة الصورة'
-                            : 'You can use # ## ### for headings, and [Image: description] to add the image'}
+                            ? 'يمكنك استخدام علامات مثل # و ## و ### للعناوين، و**النص** للنص العريض'
+                            : 'You can use # ## ### for headings, and **text** for bold text'}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
