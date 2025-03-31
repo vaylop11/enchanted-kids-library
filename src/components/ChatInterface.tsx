@@ -4,11 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, XCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChatMessage } from '@/services/pdfStorage';
-import { SupabaseChat } from '@/services/pdfSupabaseService';
+import { PDFChatMessage, formatMessageTimestamp, getMessageId } from '@/types/chat';
 
 interface ChatInterfaceProps {
-  messages: ChatMessage[] | SupabaseChat[];
+  messages: PDFChatMessage[];
   isLoadingMessages: boolean;
   isWaitingForResponse: boolean;
   language: string;
@@ -53,15 +52,6 @@ const ChatInterface = ({
     }
   };
 
-  // Helper function to get common message properties regardless of message type
-  const getMessageContent = (message: ChatMessage | SupabaseChat) => {
-    return {
-      id: message.id,
-      content: message.content,
-      isUser: message.isUser
-    };
-  };
-
   return (
     <div className="flex flex-col h-full border rounded-lg overflow-hidden">
       <div className="p-3 border-b bg-muted/20 flex justify-between items-center">
@@ -84,27 +74,27 @@ const ChatInterface = ({
             </div>
           ) : (
             messages.map((message) => {
-              const { id, content, isUser } = getMessageContent(message);
+              const id = getMessageId(message);
               
               return (
                 <div
                   key={id}
                   className={`group flex flex-col p-3 rounded-lg max-w-[80%] relative ${
-                    isUser 
+                    message.isUser 
                       ? 'ml-auto bg-primary text-primary-foreground' 
                       : 'mr-auto bg-muted'
                   }`}
                 >
-                  <div className="whitespace-pre-wrap break-words">{content}</div>
+                  <div className="whitespace-pre-wrap break-words">{message.content}</div>
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-xs opacity-70">
-                      {isUser 
+                      {message.isUser 
                         ? language === 'ar' ? 'أنت' : 'You' 
                         : 'AI'}
                     </span>
                   </div>
                   
-                  {onDeleteMessage && isUser && (
+                  {onDeleteMessage && message.isUser && (
                     <button
                       onClick={() => onDeleteMessage(id)}
                       disabled={isDeletingMessage}

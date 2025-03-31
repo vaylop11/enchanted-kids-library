@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -30,6 +29,7 @@ import {
 } from '@/services/pdfSupabaseService';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/hooks/use-debounce';
+import { PDFChatMessage, isSameMessageType } from '@/types/chat';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
@@ -48,7 +48,7 @@ const PDFViewer = () => {
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
   const [isDeletingMessage, setIsDeletingMessage] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[] | SupabaseChat[]>([]);
+  const [messages, setMessages] = useState<PDFChatMessage[]>([]);
   const [pdfTitle, setPdfTitle] = useState('');
   const debouncedPdfTitle = useDebounce(pdfTitle, 500);
 
@@ -184,8 +184,16 @@ const PDFViewer = () => {
         });
         
         if (newChat) {
-          // We know messages is SupabaseChat[] in this branch
-          setMessages((prevMessages) => [...prevMessages as SupabaseChat[], newChat]);
+          setMessages((prevMessages) => {
+            if (prevMessages.length > 0 && 'pdfId' in prevMessages[0]) {
+              // If we already have Supabase messages, we can safely add another
+              return [...prevMessages, newChat];
+            } else {
+              // If we don't have any messages or they're of a different type, 
+              // we need to replace the entire array
+              return [newChat];
+            }
+          });
           refetchSupabaseChats();
         } else {
           throw new Error('Failed to create chat message');
@@ -199,8 +207,16 @@ const PDFViewer = () => {
         });
         
         if (newMessage) {
-          // We know messages is ChatMessage[] in this branch
-          setMessages((prevMessages) => [...prevMessages as ChatMessage[], newMessage]);
+          setMessages((prevMessages) => {
+            if (prevMessages.length > 0 && !('pdfId' in prevMessages[0])) {
+              // If we already have local messages, we can safely add another
+              return [...prevMessages, newMessage];
+            } else {
+              // If we don't have any messages or they're of a different type,
+              // we need to replace the entire array
+              return [newMessage];
+            }
+          });
         } else {
           throw new Error('Failed to create chat message');
         }
@@ -220,8 +236,16 @@ const PDFViewer = () => {
             userId: 'ai'
           }).then((aiChat) => {
             if (aiChat) {
-              // We know messages is SupabaseChat[] in this branch
-              setMessages((prevMessages) => [...prevMessages as SupabaseChat[], aiChat]);
+              setMessages((prevMessages) => {
+                if (prevMessages.length > 0 && 'pdfId' in prevMessages[0]) {
+                  // If we already have Supabase messages, we can safely add another
+                  return [...prevMessages, aiChat];
+                } else {
+                  // If we don't have any messages or they're of a different type,
+                  // we need to replace the entire array
+                  return [aiChat];
+                }
+              });
               refetchSupabaseChats();
             } else {
               throw new Error('Failed to create AI chat message');
@@ -236,8 +260,16 @@ const PDFViewer = () => {
           });
           
           if (aiMessage) {
-            // We know messages is ChatMessage[] in this branch
-            setMessages((prevMessages) => [...prevMessages as ChatMessage[], aiMessage]);
+            setMessages((prevMessages) => {
+              if (prevMessages.length > 0 && !('pdfId' in prevMessages[0])) {
+                // If we already have local messages, we can safely add another
+                return [...prevMessages, aiMessage];
+              } else {
+                // If we don't have any messages or they're of a different type,
+                // we need to replace the entire array
+                return [aiMessage];
+              }
+            });
           }
         }
         
@@ -265,16 +297,20 @@ const PDFViewer = () => {
       
       // Then delete from local storage if applicable
       if (!isSupabasePDF && pdfId && pdf) {
-        const updatedMessages = [...messages].filter((msg) => msg.id !== messageId);
+        const updatedMessages = messages.filter((msg) => msg.id !== messageId);
         
-        // Update the PDF with filtered messages
-        const updatedPdf = {
-          ...pdf as UploadedPDF,
-          chatMessages: updatedMessages as ChatMessage[]
-        };
-        
-        // Save the updated PDF back to storage
-        savePDF(updatedPdf);
+        if ('chatMessages' in pdf) {
+          // Update the PDF with filtered messages
+          const updatedPdf = {
+            ...pdf as UploadedPDF,
+            chatMessages: updatedMessages.filter((msg): msg is ChatMessage => 
+              !('pdfId' in msg)
+            ) as ChatMessage[]
+          };
+          
+          // Save the updated PDF back to storage
+          savePDF(updatedPdf);
+        }
         
         // Update state
         setMessages(updatedMessages);
