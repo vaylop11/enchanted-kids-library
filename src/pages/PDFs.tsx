@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Plus, Loader2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PDFCard, PDF } from '@/components/PDFCard';
+import PDFCard, { PDF } from '@/components/PDFCard';
 import PDFPreview from '@/components/PDFPreview';
 import { 
   getSavedPDFs, 
@@ -22,7 +22,7 @@ import {
 } from '@/services/pdfSupabaseService';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/hooks/use-debounce';
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/components/ui/use-toast";
 
 const PDFs = () => {
   const navigate = useNavigate();
@@ -221,20 +221,17 @@ const PDFs = () => {
     ? supabasePDFs?.filter(pdf => pdf.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) || []
     : localPDFs.filter(pdf => pdf.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
 
-  // Find the specific part where the SupabasePDF type is causing an issue with the PDF type
-  // and add a type conversion function or adapter
-
-const convertSupabasePDFtoPDF = (pdf: SupabasePDF): PDF => {
-  return {
-    id: pdf.id,
-    title: pdf.title,
-    summary: pdf.summary || '',  // Ensure summary is always a string
-    uploadDate: pdf.uploadDate,
-    pageCount: pdf.pageCount,
-    fileSize: pdf.fileSize,
-    thumbnail: pdf.thumbnail
+  const convertSupabasePDFtoPDF = (pdf: SupabasePDF): PDF => {
+    return {
+      id: pdf.id,
+      title: pdf.title,
+      summary: pdf.summary || '',  // Ensure summary is always a string
+      uploadDate: new Date(pdf.uploadDate).toISOString().split('T')[0],
+      pageCount: pdf.pageCount || 0,
+      fileSize: pdf.fileSize || '0 KB',
+      thumbnail: pdf.thumbnail
+    };
   };
-};
 
   return (
     <div className="container mx-auto py-8">

@@ -48,7 +48,7 @@ const PDFViewer = () => {
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
   const [isDeletingMessage, setIsDeletingMessage] = useState(false);
-  const [messages, setMessages] = useState<SupabaseChat[] | ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[] | SupabaseChat[]>([]);
   const [pdfTitle, setPdfTitle] = useState('');
   const debouncedPdfTitle = useDebounce(pdfTitle, 500);
 
@@ -174,6 +174,7 @@ const PDFViewer = () => {
     setIsWaitingForResponse(true);
     try {
       if (isSupabasePDF) {
+        // For Supabase PDFs
         const newChat = await createSupabaseChat({
           pdfId: pdfId,
           content: messageContent,
@@ -183,13 +184,14 @@ const PDFViewer = () => {
         });
         
         if (newChat) {
-          // TypeScript knows the current messages are SupabaseChat[] in this branch
-          setMessages(prevMessages => [...prevMessages, newChat] as SupabaseChat[]);
+          // We know messages is SupabaseChat[] in this branch
+          setMessages((prevMessages) => [...prevMessages as SupabaseChat[], newChat]);
           refetchSupabaseChats();
         } else {
           throw new Error('Failed to create chat message');
         }
       } else {
+        // For local PDFs
         const newMessage = addChatMessageToPDF(pdfId, {
           content: messageContent,
           isUser: true,
@@ -197,8 +199,8 @@ const PDFViewer = () => {
         });
         
         if (newMessage) {
-          // TypeScript knows the current messages are ChatMessage[] in this branch
-          setMessages(prevMessages => [...prevMessages, newMessage] as ChatMessage[]);
+          // We know messages is ChatMessage[] in this branch
+          setMessages((prevMessages) => [...prevMessages as ChatMessage[], newMessage]);
         } else {
           throw new Error('Failed to create chat message');
         }
@@ -209,6 +211,7 @@ const PDFViewer = () => {
         const aiResponse = language === 'ar' ? 'هذا رد تجريبي من الذكاء الاصطناعي.' : 'This is a dummy response from the AI.';
         
         if (isSupabasePDF) {
+          // For Supabase PDFs
           createSupabaseChat({
             pdfId: pdfId,
             content: aiResponse,
@@ -217,14 +220,15 @@ const PDFViewer = () => {
             userId: 'ai'
           }).then((aiChat) => {
             if (aiChat) {
-              // Use type assertion to help TypeScript understand the correct type
-              setMessages(prevMessages => [...prevMessages, aiChat] as SupabaseChat[]);
+              // We know messages is SupabaseChat[] in this branch
+              setMessages((prevMessages) => [...prevMessages as SupabaseChat[], aiChat]);
               refetchSupabaseChats();
             } else {
               throw new Error('Failed to create AI chat message');
             }
           });
         } else {
+          // For local PDFs
           const aiMessage = addChatMessageToPDF(pdfId, {
             content: aiResponse,
             isUser: false,
@@ -232,8 +236,8 @@ const PDFViewer = () => {
           });
           
           if (aiMessage) {
-            // Use type assertion to help TypeScript understand the correct type
-            setMessages(prevMessages => [...prevMessages, aiMessage] as ChatMessage[]);
+            // We know messages is ChatMessage[] in this branch
+            setMessages((prevMessages) => [...prevMessages as ChatMessage[], aiMessage]);
           }
         }
         
@@ -249,6 +253,7 @@ const PDFViewer = () => {
   const handleDeleteMessage = async (messageId: string) => {
     try {
       setIsDeletingMessage(true);
+      
       // If PDF is from Supabase, delete message from Supabase first
       if (isSupabasePDF) {
         const success = await deleteSupabaseChatMessage(messageId);
@@ -261,13 +266,16 @@ const PDFViewer = () => {
       // Then delete from local storage if applicable
       if (!isSupabasePDF && pdfId && pdf) {
         const updatedMessages = [...messages].filter((msg) => msg.id !== messageId);
+        
         // Update the PDF with filtered messages
         const updatedPdf = {
-          ...pdf,
-          chatMessages: updatedMessages
+          ...pdf as UploadedPDF,
+          chatMessages: updatedMessages as ChatMessage[]
         };
+        
         // Save the updated PDF back to storage
-        savePDF(updatedPdf as UploadedPDF);
+        savePDF(updatedPdf);
+        
         // Update state
         setMessages(updatedMessages);
         toast.success(language === 'ar' ? 'تم حذف الرسالة بنجاح' : 'Message deleted successfully');
