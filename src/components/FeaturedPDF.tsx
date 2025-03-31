@@ -71,7 +71,7 @@ const FeaturedPDF = () => {
           <div className="bg-card border rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold">{latestPDF.title}</h3>
-              <span className="text-xs text-muted-foreground">{latestPDF.upload_date || new Date(latestPDF.created_at).toLocaleDateString()}</span>
+              <span className="text-xs text-muted-foreground">{latestPDF.uploadDate}</span>
             </div>
             
             {latestPDF.fileUrl ? (

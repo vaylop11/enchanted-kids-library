@@ -1,436 +1,1242 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import Navbar from '@/components/Navbar';
+import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Brain, Languages } from 'lucide-react';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, Loader2, Plus, Upload, Download, XCircle } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Document, Page, pdfjs } from 'react-pdf';
+import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import ChatInterface from '@/components/ChatInterface';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
+import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
+import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
-  getPDFById as getLocalPDFById,
-  UploadedPDF,
+  getPDFById,
   addChatMessageToPDF,
   savePDF,
+  deletePDFById,
+  ChatMessage,
+  UploadedPDF
 } from '@/services/pdfStorage';
 import {
-  getSupabasePDFById,
-  updateSupabasePDF,
-  createSupabaseChat,
-  getSupabaseChatsByPdfId,
-  deleteSupabaseChatMessage,
+  getPDFById as getSupabasePDFById,
+  getChatMessagesForPDF,
+  addChatMessageToPDF as addSupabaseChatMessage,
+  updatePDFMetadata,
+  deletePDF as deleteSupabasePDF,
   deleteAllChatMessagesForPDF,
-  SupabasePDF,
-  SupabaseChat,
+  AnalysisStage
 } from '@/services/pdfSupabaseService';
-import { analyzePDF, AnalysisProgress } from '@/services/pdfAnalysisService';
-import { useQuery } from '@tanstack/react-query';
-import { useDebounce } from '@/hooks/use-debounce';
+import {
+  extractTextFromPDF,
+  analyzePDFWithGemini,
+  AnalysisProgress
+} from '@/services/pdfAnalysisService';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 const PDFViewer = () => {
-  const { id: pdfId } = useParams<{ id: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { language } = useLanguage();
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const { language, direction } = useLanguage();
   const { user } = useAuth();
   
-  const [pdf, setPdf] = useState<UploadedPDF | SupabasePDF | null>(null);
-  const [isSupabasePDF, setIsSupabasePDF] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
-  const [scale, setScale] = useState(1.0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
+  const [pdfScale, setPdfScale] = useState(1.0);
+  const [showPdfControls, setShowPdfControls] = useState(true);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [showChat, setShowChat] = useState(true);
+  const [pdf, setPdf] = useState<UploadedPDF | null>(null);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(true);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isTempPdf, setIsTempPdf] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [pdfTextContent, setPdfTextContent] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
-  const [isDeletingMessage, setIsDeletingMessage] = useState(false);
-  const [messages, setMessages] = useState<SupabaseChat[]>([]);
-  const [pdfTitle, setPdfTitle] = useState('');
-  const debouncedPdfTitle = useDebounce(pdfTitle, 500);
-  
-  const initialAnalysisProgress: AnalysisProgress = {
-    stage: "waiting",
+  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>({
+    stage: 'extracting',
     progress: 0,
-    message: "Waiting to start analysis...",
-    summary: 0,
-    keywords: 0,
-    questions: 0
-  };
-  
-  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>(initialAnalysisProgress);
-  
-  const { data: supabasePdf, refetch: refetchSupabasePdf } = useQuery({
-    queryKey: ['supabasePdf', pdfId],
-    queryFn: () => getSupabasePDFById(pdfId as string),
-    enabled: !!pdfId,
-    retry: false,
+    message: 'Preparing to analyze PDF...'
   });
-  
-  const { data: supabaseChats, refetch: refetchSupabaseChats } = useQuery({
-    queryKey: ['supabaseChats', pdfId],
-    queryFn: () => getSupabaseChatsByPdfId(pdfId as string),
-    enabled: !!pdfId && isSupabasePDF,
-    retry: false,
-    onSuccess: (data) => {
-      setIsLoadingMessages(false);
-      setMessages(data);
-    },
-    onError: () => {
-      setIsLoadingMessages(false);
-      toast.error(language === 'ar' ? 'فشل في تحميل الرسائل' : 'Failed to load messages');
-    }
-  });
-  
+  const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
+
   useEffect(() => {
-    if (!user) {
-      navigate('/signin');
+    if (!id) {
+      navigate('/');
       return;
     }
-    
-    const loadPDF = async () => {
-      setIsLoading(true);
-      setIsLoadingMessages(true);
-      
-      try {
-        if (pdfId?.startsWith('temp_')) {
-          const localPdf = getLocalPDFById(pdfId);
-          if (localPdf) {
-            setPdf(localPdf);
-            setIsSupabasePDF(false);
-            setNumPages(localPdf.pageCount || 0);
-            setPdfTitle(localPdf.title);
-            setIsLoadingMessages(false);
-          } else {
-            toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'File not found');
-            navigate('/pdfs');
-          }
-        } else {
-          if (supabasePdf) {
-            setPdf(supabasePdf);
-            setIsSupabasePDF(true);
-            setNumPages(supabasePdf.pageCount || 0);
-            setPdfTitle(supabasePdf.title);
-            refetchSupabaseChats();
-          } else {
-            toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'File not found');
-            navigate('/pdfs');
-          }
-        }
-      } catch (error) {
-        console.error('Error loading PDF:', error);
-        toast.error(language === 'ar' ? 'فشل في تحميل الملف' : 'Failed to load PDF');
-        navigate('/pdfs');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadPDF();
-  }, [pdfId, navigate, language, user, supabasePdf, refetchSupabaseChats]);
-  
-  useEffect(() => {
-    if (debouncedPdfTitle && pdf && debouncedPdfTitle !== pdf.title) {
-      const updateTitle = async () => {
-        try {
-          if (isSupabasePDF) {
-            const updated = await updateSupabasePDF(pdfId as string, { title: debouncedPdfTitle });
-            if (updated) {
-              setPdf(prevPdf => ({ ...prevPdf as SupabasePDF, title: debouncedPdfTitle }));
-              toast.success(language === 'ar' ? 'تم تحديث العنوان' : 'Title updated');
-              refetchSupabasePdf();
-            } else {
-              toast.error(language === 'ar' ? 'فشل في تحديث العنوان' : 'Failed to update title');
+
+    const loadPdf = async () => {
+      if (id.startsWith('temp-') || window.location.pathname.includes('/pdf/temp/')) {
+        setIsTempPdf(true);
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          try {
+            const parsedData = JSON.parse(tempPdfData);
+            if (parsedData.fileData && parsedData.fileData.id === id) {
+              setPdf(parsedData.fileData);
+              setChatMessages(parsedData.fileData.chatMessages || []);
+              setIsLoadingPdf(false);
+              setIsLoaded(true);
+              return;
             }
+          } catch (error) {
+            console.error('Error parsing temporary PDF:', error);
           }
-        } catch (error) {
-          console.error('Error updating PDF title:', error);
-          toast.error(language === 'ar' ? 'فشل في تحديث العنوان' : 'Failed to update title');
         }
-      };
-      
-      updateTitle();
-    }
-  }, [debouncedPdfTitle, pdf, pdfId, isSupabasePDF, language, refetchSupabasePdf]);
-  
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-  };
-  
-  const changePage = (offset: number) => {
-    setPageNumber(prevPageNumber => Math.max(1, Math.min(prevPageNumber + offset, numPages || 1)));
-  };
-  
-  const zoomIn = () => {
-    setScale(prevScale => Math.min(3, prevScale + 0.25));
-  };
-  
-  const zoomOut = () => {
-    setScale(prevScale => Math.max(0.5, prevScale - 0.25));
-  };
-  
-  const handleSendMessage = async (messageContent: string) => {
-    if (!pdfId || !user) return;
-    
-    setIsWaitingForResponse(true);
-    
-    try {
-      if (isSupabasePDF) {
-        const newChat = await createSupabaseChat({
-          pdfId: pdfId,
-          content: messageContent,
-          isUser: true,
-          timestamp: new Date(),
-          userId: user.id
-        });
+        toast.error(language === 'ar' ? 'لم يتم العثور على الملف المؤقت' : 'Temporary PDF not found');
+        navigate('/');
+        return;
+      }
+
+      const loadedPdf = getPDFById(id);
+      if (loadedPdf) {
+        setPdf(loadedPdf);
+        if (loadedPdf.chatMessages) {
+          setChatMessages(loadedPdf.chatMessages);
+        }
         
-        if (newChat) {
-          setMessages(prevMessages => [...prevMessages, newChat]);
-          refetchSupabaseChats();
+        if (!loadedPdf.dataUrl) {
+          if (user) {
+            tryLoadFromSupabase(id);
+          } else {
+            setPdfError(language === 'ar' 
+              ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
+              : 'Could not load PDF data due to storage limitations');
+            toast.error(language === 'ar' 
+              ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
+              : 'Could not load PDF data due to storage limitations');
+            setIsLoadingPdf(false);
+          }
         } else {
-          throw new Error('Failed to create chat message');
+          setIsLoadingPdf(false);
         }
       } else {
-        const newMessage = addChatMessageToPDF(pdfId, {
-          content: messageContent,
+        tryLoadFromSupabase(id);
+      }
+    };
+
+    const tryLoadFromSupabase = async (pdfId: string) => {
+      if (!user) {
+        toast.error(language === 'ar' ? 'يرجى تسجيل الدخول لعرض هذا الملف' : 'Please sign in to view this PDF');
+        navigate('/login');
+        return;
+      }
+      
+      try {
+        console.log('Trying to load PDF from Supabase with ID:', pdfId);
+        const supabasePdf = await getSupabasePDFById(pdfId);
+        
+        if (supabasePdf && supabasePdf.fileUrl) {
+          console.log('Successfully loaded PDF from Supabase:', supabasePdf);
+          
+          const newPdf: UploadedPDF = {
+            id: supabasePdf.id,
+            title: supabasePdf.title,
+            summary: supabasePdf.summary,
+            uploadDate: supabasePdf.uploadDate,
+            pageCount: supabasePdf.pageCount,
+            fileSize: supabasePdf.fileSize,
+            dataUrl: supabasePdf.fileUrl,
+            chatMessages: []
+          };
+          
+          setPdf(newPdf);
+          setIsLoadingPdf(false);
+          
+          setIsLoadingMessages(true);
+          const messages = await getChatMessagesForPDF(pdfId);
+          if (messages && messages.length > 0) {
+            const convertedMessages: ChatMessage[] = messages.map(msg => ({
+              id: msg.id,
+              content: msg.content,
+              isUser: msg.isUser,
+              timestamp: msg.timestamp
+            }));
+            
+            setChatMessages(convertedMessages);
+          }
+          setIsLoadingMessages(false);
+        } else {
+          console.error('PDF data not found in Supabase');
+          toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
+          navigate('/pdfs');
+          return;
+        }
+      } catch (error) {
+        console.error('Error loading PDF from Supabase:', error);
+        toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
+        navigate('/pdfs');
+        return;
+      }
+    };
+
+    loadPdf();
+    
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 100);
+    
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [id, navigate, language, retryCount, user]);
+
+  const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setIsLoadingPdf(false);
+    setPdfError(null);
+    
+    if (pdf && pdf.pageCount !== numPages) {
+      const updatedPdf = { ...pdf, pageCount: numPages };
+      setPdf(updatedPdf);
+      
+      if (!isTempPdf) {
+        if (user) {
+          updatePDFMetadata(updatedPdf.id, { pageCount: numPages });
+        } else {
+          savePDF(updatedPdf);
+        }
+      } else if (updatedPdf.id.startsWith('temp-')) {
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          try {
+            const parsedData = JSON.parse(tempPdfData);
+            parsedData.fileData.pageCount = numPages;
+            sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+          } catch (error) {
+            console.error('Error updating temporary PDF page count:', error);
+          }
+        }
+      }
+    }
+  };
+
+  const handleDocumentLoadError = (error: Error) => {
+    console.error('Error loading PDF:', error);
+    setPdfError(language === 'ar'
+      ? 'فشل في تحميل ملف PDF. قد يكون الملف تالفًا أو غير متوافق.'
+      : 'Failed to load PDF. The file may be corrupted or incompatible.');
+    setIsLoadingPdf(false);
+  };
+
+  const handleDeletePDF = () => {
+    if (!id) return;
+    
+    if (window.confirm(language === 'ar' 
+      ? 'هل أنت متأكد من أنك تريد حذف هذا الملف؟' 
+      : 'Are you sure you want to delete this PDF?')) {
+      
+      if (isTempPdf) {
+        sessionStorage.removeItem('tempPdfFile');
+        navigate('/');
+        return;
+      }
+      
+      if (user) {
+        deleteSupabasePDF(id).then(success => {
+          if (success) {
+            navigate('/pdfs');
+          }
+        });
+      } else {
+        if (deletePDFById(id)) {
+          navigate('/pdfs');
+        }
+      }
+    }
+  };
+
+  const scrollToLatestMessage = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToLatestMessage();
+  }, [chatMessages]);
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: pdf ? pdf.title : '',
+        text: pdf ? pdf.summary : '',
+        url: window.location.href,
+      })
+      .catch((error) => console.log('Error sharing', error));
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast(language === 'ar' ? 'تم نسخ الرابط إلى الحافظة' : 'Link copied to clipboard');
+    }
+  };
+
+  const handlePrevPage = () => {
+    setPageNumber(prevPage => Math.max(prevPage - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    if (numPages) {
+      setPageNumber(prevPage => Math.min(prevPage + 1, numPages));
+    }
+  };
+
+  const handleZoomIn = () => {
+    setPdfScale(prev => Math.min(prev + 0.2, 2.0));
+  };
+
+  const handleZoomOut = () => {
+    setPdfScale(prev => Math.max(prev - 0.2, 0.5));
+  };
+
+  const handleRetryLoading = () => {
+    setIsLoadingPdf(true);
+    setPdfError(null);
+    setRetryCount(prev => prev + 1);
+  };
+
+  const updateAnalysisProgress = (progress: AnalysisProgress) => {
+    setAnalysisProgress(progress);
+  };
+
+  const extractPDFContent = async () => {
+    if (!pdf?.dataUrl || pdfTextContent) return;
+    
+    try {
+      setAnalysisProgress({
+        stage: 'extracting',
+        progress: 10,
+        message: language === 'ar' 
+          ? 'بدء استخراج النص من ملف PDF...' 
+          : 'Starting text extraction from PDF...'
+      });
+      
+      const text = await extractTextFromPDF(pdf.dataUrl, updateAnalysisProgress);
+      setPdfTextContent(text);
+      
+      setAnalysisProgress({
+        stage: 'extracting',
+        progress: 100,
+        message: language === 'ar'
+          ? 'تم استخراج النص بنجاح من الملف'
+          : 'Text successfully extracted from PDF'
+      });
+      
+      return text;
+    } catch (error) {
+      console.error('Error extracting PDF text:', error);
+      setAnalysisProgress({
+        stage: 'error',
+        progress: 0,
+        message: language === 'ar'
+          ? 'فشل في استخراج النص من الملف'
+          : 'Failed to extract text from PDF'
+      });
+      return null;
+    }
+  };
+
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !id || !pdf) return;
+
+    const userMessageContent = chatInput.trim();
+    setChatInput('');
+    
+    try {
+      let savedUserMessage: ChatMessage | null = null;
+      
+      if (isTempPdf) {
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          try {
+            const parsedData = JSON.parse(tempPdfData);
+            if (!parsedData.fileData.chatMessages) {
+              parsedData.fileData.chatMessages = [];
+            }
+            
+            savedUserMessage = {
+              id: `temp-msg-${Date.now()}`,
+              content: userMessageContent,
+              isUser: true,
+              timestamp: new Date()
+            };
+            
+            parsedData.fileData.chatMessages.push(savedUserMessage);
+            
+            sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+          } catch (error) {
+            console.error('Error adding user message to temporary PDF:', error);
+          }
+        }
+      } else if (user) {
+        const result = await addSupabaseChatMessage(id, userMessageContent, true);
+        if (result) {
+          savedUserMessage = {
+            id: result.id,
+            content: result.content,
+            isUser: result.isUser,
+            timestamp: result.timestamp
+          };
+        }
+      } else {
+        savedUserMessage = addChatMessageToPDF(id, {
+          content: userMessageContent,
           isUser: true,
           timestamp: new Date()
         });
-        
-        if (newMessage) {
-          // Cast the local message to match SupabaseChat structure
-          const convertedMessage: SupabaseChat = {
-            id: newMessage.id,
-            pdfId: pdfId,
-            content: newMessage.content,
-            isUser: newMessage.isUser,
-            timestamp: newMessage.timestamp,
-            userId: user.id
-          };
-          setMessages(prevMessages => [...prevMessages, convertedMessage]);
-        } else {
-          throw new Error('Failed to create chat message');
-        }
       }
       
-      // Simulate AI response (replace with actual AI integration)
-      setTimeout(() => {
-        const aiResponse = language === 'ar'
-          ? 'هذا رد تجريبي من الذكاء الاصطناعي.'
-          : 'This is a dummy response from the AI.';
-        
-        if (isSupabasePDF) {
-          createSupabaseChat({
-            pdfId: pdfId,
-            content: aiResponse,
-            isUser: false,
-            timestamp: new Date(),
-            userId: 'ai'
-          }).then(aiChat => {
-            if (aiChat) {
-              setMessages(prevMessages => [...prevMessages, aiChat]);
-              refetchSupabaseChats();
-            } else {
-              throw new Error('Failed to create AI chat message');
-            }
+      if (savedUserMessage) {
+        setChatMessages(prev => [...prev, savedUserMessage!]);
+      }
+
+      setIsAnalyzing(true);
+      setIsWaitingForResponse(true);
+      
+      try {
+        let textContent = pdfTextContent;
+        if (!textContent) {
+          setAnalysisProgress({
+            stage: 'extracting',
+            progress: 25,
+            message: language === 'ar'
+              ? 'استخراج النص من ملف PDF...'
+              : 'Extracting text from PDF...'
           });
-        } else {
-          const aiMessage = addChatMessageToPDF(pdfId, {
-            content: aiResponse,
-            isUser: false,
-            timestamp: new Date()
-          });
+          textContent = await extractPDFContent();
           
-          // Convert local message to SupabaseChat format
-          if (aiMessage) {
-            const convertedAiMessage: SupabaseChat = {
-              id: 'ai-' + Date.now(),
-              pdfId: pdfId,
-              content: aiResponse,
-              isUser: false,
-              timestamp: new Date(),
-              userId: 'ai'
-            };
-            setMessages(prevMessages => [...prevMessages, convertedAiMessage]);
+          if (!textContent) {
+            throw new Error(language === 'ar'
+              ? 'فشل في استخراج النص من الملف'
+              : 'Failed to extract text from PDF');
           }
         }
         
+        setAnalysisProgress({
+          stage: 'analyzing',
+          progress: 50,
+          message: language === 'ar'
+            ? 'تحليل محتوى الملف...'
+            : 'Analyzing PDF content...'
+        });
+        
+        setAnalysisProgress({
+          stage: 'generating',
+          progress: 75,
+          message: language === 'ar'
+            ? 'إنشاء إجابة دقيقة...'
+            : 'Generating accurate answer...'
+        });
+        
+        const aiContent = await analyzePDFWithGemini(textContent, userMessageContent, updateAnalysisProgress);
+        
+        let savedAiMessage: ChatMessage | null = null;
+        
+        if (isTempPdf) {
+          const tempPdfData = sessionStorage.getItem('tempPdfFile');
+          if (tempPdfData) {
+            try {
+              const parsedData = JSON.parse(tempPdfData);
+              if (!parsedData.fileData.chatMessages) {
+                parsedData.fileData.chatMessages = [];
+              }
+              
+              savedAiMessage = {
+                id: `temp-msg-${Date.now()}`,
+                content: aiContent,
+                isUser: false,
+                timestamp: new Date()
+              };
+              
+              parsedData.fileData.chatMessages.push(savedAiMessage);
+              
+              sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+            } catch (error) {
+              console.error('Error adding AI message to temporary PDF:', error);
+            }
+          }
+        } else if (user) {
+          const result = await addSupabaseChatMessage(id, aiContent, false);
+          if (result) {
+            savedAiMessage = {
+              id: result.id,
+              content: result.content,
+              isUser: result.isUser,
+              timestamp: result.timestamp
+            };
+          }
+        } else {
+          savedAiMessage = addChatMessageToPDF(id, {
+            content: aiContent,
+            isUser: false,
+            timestamp: new Date()
+          });
+        }
+        
+        if (savedAiMessage) {
+          setChatMessages(prev => [...prev, savedAiMessage!]);
+        }
+      } catch (error) {
+        console.error('Error in AI analysis:', error);
+        setAnalysisProgress({
+          stage: 'error',
+          progress: 0,
+          message: language === 'ar'
+            ? 'حدث خطأ أثناء تحليل الملف'
+            : 'Error during PDF analysis'
+        });
+          
+        const fallbackResponse = language === 'ar'
+          ? "عذرًا، حدث خطأ أثناء تحليل الملف. يرجى المحاولة مرة أخرى لاحقًا."
+          : "Sorry, there was an error analyzing the PDF. Please try again later.";
+          
+        let savedFallbackMessage: ChatMessage | null = null;
+        
+        if (isTempPdf) {
+          const tempPdfData = sessionStorage.getItem('tempPdfFile');
+          if (tempPdfData) {
+            try {
+              const parsedData = JSON.parse(tempPdfData);
+              if (!parsedData.fileData.chatMessages) {
+                parsedData.fileData.chatMessages = [];
+              }
+              
+              savedFallbackMessage = {
+                id: `temp-msg-${Date.now()}`,
+                content: fallbackResponse,
+                isUser: false,
+                timestamp: new Date()
+              };
+              
+              parsedData.fileData.chatMessages.push(savedFallbackMessage);
+              
+              sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+            } catch (error) {
+              console.error('Error adding fallback message to temporary PDF:', error);
+            }
+          }
+        } else if (user) {
+          const result = await addSupabaseChatMessage(id, fallbackResponse, false);
+          if (result) {
+            savedFallbackMessage = {
+              id: result.id,
+              content: result.content,
+              isUser: result.isUser,
+              timestamp: result.timestamp
+            };
+          }
+        } else {
+          savedFallbackMessage = addChatMessageToPDF(id, {
+            content: fallbackResponse,
+            isUser: false,
+            timestamp: new Date()
+          });
+        }
+        
+        if (savedFallbackMessage) {
+          setChatMessages(prev => [...prev, savedFallbackMessage!]);
+        }
+      } finally {
+        setIsAnalyzing(false);
         setIsWaitingForResponse(false);
-      }, 1500);
+      }
     } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error(language === 'ar' ? 'فشل في إرسال الرسالة' : 'Failed to send message');
+      console.error('Error adding user message:', error);
+      setIsAnalyzing(false);
+      setIsWaitingForResponse(false);
+      toast.error(language === 'ar' 
+        ? 'حدث خطأ أثناء إضافة رسالتك' 
+        : 'Error adding your message');
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!pdf?.dataUrl) {
+      toast.error(language === 'ar' ? 'رابط الملف غير متوفر' : 'File URL not available');
+      return;
+    }
+    
+    try {
+      const a = document.createElement('a');
+      a.href = pdf.dataUrl;
+      a.download = pdf.title;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      toast.success(language === 'ar' ? 'جارٍ تنزيل الملف...' : 'Downloading PDF...');
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast.error(language === 'ar' ? 'فشل في تنزيل الملف' : 'Failed to download PDF');
+    }
+  };
+
+  const generateSummary = async () => {
+    if (!pdfTextContent && !pdf?.dataUrl) {
+      toast.error(language === 'ar' ? 'محتوى الملف غير متوفر' : 'PDF content not available');
+      return;
+    }
+    
+    toast.info(language === 'ar' ? 'جاري تلخيص الملف...' : 'Generating summary...');
+    
+    try {
+      setIsWaitingForResponse(true);
+      let textContent = pdfTextContent;
+      
+      if (!textContent) {
+        textContent = await extractPDFContent();
+      }
+      
+      if (!textContent) {
+        throw new Error('Failed to extract PDF content');
+      }
+      
+      const summaryPrompt = language === 'ar' 
+        ? 'قم بتلخيص هذا المستند بطريقة شاملة وموجزة'
+        : 'Provide a comprehensive summary of this document';
+        
+      setAnalysisProgress({
+        stage: 'generating',
+        progress: 50,
+        message: language === 'ar' ? 'إنشاء ملخص للمستند...' : 'Generating document summary...'
+      });
+      
+      const userMessage: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        content: language === 'ar' ? 'تلخيص المستند' : 'Summarize this document',
+        isUser: true,
+        timestamp: new Date()
+      };
+      
+      setChatMessages(prev => [...prev, userMessage]);
+      
+      const summary = await analyzePDFWithGemini(textContent, summaryPrompt, updateAnalysisProgress);
+      
+      const aiMessage: ChatMessage = {
+        id: `temp-${Date.now() + 1}`,
+        content: summary,
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setChatMessages(prev => [...prev, aiMessage]);
+      
+      if (user && !isTempPdf) {
+        await addSupabaseChatMessage(id as string, userMessage.content, true);
+        await addSupabaseChatMessage(id as string, aiMessage.content, false);
+      } else if (isTempPdf) {
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          try {
+            const parsedData = JSON.parse(tempPdfData);
+            if (!parsedData.fileData.chatMessages) {
+              parsedData.fileData.chatMessages = [];
+            }
+            parsedData.fileData.chatMessages.push(userMessage, aiMessage);
+            sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+          } catch (error) {
+            console.error('Error updating temporary PDF chat messages:', error);
+          }
+        }
+      } else {
+        addChatMessageToPDF(id as string, {
+          content: userMessage.content,
+          isUser: true,
+          timestamp: new Date()
+        });
+        addChatMessageToPDF(id as string, {
+          content: aiMessage.content,
+          isUser: false,
+          timestamp: new Date()
+        });
+      }
+      
+      setAnalysisProgress({
+        stage: 'complete',
+        progress: 100,
+        message: language === 'ar' ? 'تم إنشاء الملخص بنجاح' : 'Summary generated successfully'
+      });
+      
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      setAnalysisProgress({
+        stage: 'error',
+        progress: 0,
+        message: language === 'ar' ? 'فشل في إنشاء الملخص' : 'Failed to generate summary'
+      });
+      
+      toast.error(language === 'ar' ? 'فشل في إنشاء الملخص' : 'Failed to generate summary');
+    } finally {
       setIsWaitingForResponse(false);
     }
   };
-  
-  const handleClearMessages = () => {
-    setMessages([]);
-  };
-  
-  const handleGenerateSummary = () => {
-    toast.info(language === 'ar' ? 'غير متوفر حاليا' : 'Not available yet');
-  };
-  
-  const handleTranslate = () => {
-    toast.info(language === 'ar' ? 'غير متوفر حاليا' : 'Not available yet');
-  };
 
-  const handleDeleteMessage = async (messageId: string) => {
+  const translatePDF = async () => {
+    if (!pdfTextContent && !pdf?.dataUrl) {
+      toast.error(language === 'ar' ? 'محتوى الملف غير متوفر' : 'PDF content not available');
+      return;
+    }
+    
+    const targetLanguage = language === 'ar' ? 'English' : 'Arabic';
+    toast.info(language === 'ar' 
+      ? `جاري ترجمة المستند إلى ${targetLanguage}...` 
+      : `Translating document to ${targetLanguage}...`);
+    
     try {
-      setIsDeletingMessage(true);
+      setIsWaitingForResponse(true);
+      let textContent = pdfTextContent;
       
-      // If PDF is from Supabase, delete message from Supabase first
-      if (isSupabasePDF) {
-        const success = await deleteSupabaseChatMessage(messageId);
-        if (!success) {
-          toast.error(language === 'ar' 
-            ? 'فشل في حذف الرسالة' 
-            : 'Failed to delete message');
-          return;
+      if (!textContent) {
+        textContent = await extractPDFContent();
+      }
+      
+      if (!textContent) {
+        throw new Error('Failed to extract PDF content');
+      }
+      
+      const translatePrompt = language === 'ar' 
+        ? `ترجم هذا المستند إلى اللغة ${targetLanguage}` 
+        : `Translate this document to ${targetLanguage}`;
+        
+      setAnalysisProgress({
+        stage: 'generating',
+        progress: 50,
+        message: language === 'ar' 
+          ? `ترجمة المستند إلى ${targetLanguage}...` 
+          : `Translating document to ${targetLanguage}...`
+      });
+      
+      const userMessage: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        content: translatePrompt,
+        isUser: true,
+        timestamp: new Date()
+      };
+      
+      setChatMessages(prev => [...prev, userMessage]);
+      
+      const translation = await analyzePDFWithGemini(textContent, translatePrompt, updateAnalysisProgress);
+      
+      const aiMessage: ChatMessage = {
+        id: `temp-${Date.now() + 1}`,
+        content: translation,
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setChatMessages(prev => [...prev, aiMessage]);
+      
+      if (user && !isTempPdf) {
+        await addSupabaseChatMessage(id as string, userMessage.content, true);
+        await addSupabaseChatMessage(id as string, aiMessage.content, false);
+      } else if (isTempPdf) {
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          try {
+            const parsedData = JSON.parse(tempPdfData);
+            if (!parsedData.fileData.chatMessages) {
+              parsedData.fileData.chatMessages = [];
+            }
+            parsedData.fileData.chatMessages.push(userMessage, aiMessage);
+            sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+          } catch (error) {
+            console.error('Error updating temporary PDF chat messages:', error);
+          }
         }
+      } else {
+        addChatMessageToPDF(id as string, {
+          content: userMessage.content,
+          isUser: true,
+          timestamp: new Date()
+        });
+        addChatMessageToPDF(id as string, {
+          content: aiMessage.content,
+          isUser: false,
+          timestamp: new Date()
+        });
       }
       
-      // Then delete from local storage if applicable
-      if (!isSupabasePDF && pdfId && pdf) {
-        const updatedMessages = [...messages].filter(msg => msg.id !== messageId);
-        
-        // Update the PDF with filtered messages
-        const updatedPdf = {
-          ...pdf as UploadedPDF,
-          chatMessages: updatedMessages
-        };
-        
-        // Save the updated PDF back to storage
-        savePDF(updatedPdf);
-        
-        // Update state
-        setMessages(updatedMessages);
-        toast.success(language === 'ar' 
-          ? 'تم حذف الرسالة بنجاح' 
-          : 'Message deleted successfully');
-      }
+      setAnalysisProgress({
+        stage: 'complete',
+        progress: 100,
+        message: language === 'ar' ? 'تمت الترجمة بنجاح' : 'Translation completed successfully'
+      });
       
-      // Update state for Supabase PDFs
-      if (isSupabasePDF) {
-        setMessages(prevMessages => prevMessages.filter(msg => msg.id !== messageId));
-        toast.success(language === 'ar' 
-          ? 'تم حذف الرسالة بنجاح' 
-          : 'Message deleted successfully');
-      }
     } catch (error) {
-      console.error('Error deleting message:', error);
-      toast.error(language === 'ar' 
-        ? 'حدث خطأ أثناء حذف الرسالة' 
-        : 'Error occurred while deleting message');
+      console.error('Error translating PDF:', error);
+      setAnalysisProgress({
+        stage: 'error',
+        progress: 0,
+        message: language === 'ar' ? 'فشل في ترجمة المستند' : 'Failed to translate document'
+      });
+      
+      toast.error(language === 'ar' ? 'فشل في ترجمة المستند' : 'Failed to translate document');
     } finally {
-      setIsDeletingMessage(false);
+      setIsWaitingForResponse(false);
     }
   };
-  
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
-  }
-  
+
+  const clearChatMessages = () => {
+    if (!id || !pdf) return;
+    
+    if (window.confirm(language === 'ar' 
+      ? 'هل أنت متأكد من أنك تريد حذف جميع الرسائل؟' 
+      : 'Are you sure you want to delete all messages?')) {
+      
+      try {
+        if (isTempPdf) {
+          const tempPdfData = sessionStorage.getItem('tempPdfFile');
+          if (tempPdfData) {
+            try {
+              const parsedData = JSON.parse(tempPdfData);
+              parsedData.fileData.chatMessages = [];
+              sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+              setChatMessages([]);
+            } catch (error) {
+              console.error('Error clearing temporary PDF chat messages:', error);
+              toast.error(language === 'ar' 
+                ? 'فشل في حذف الرسائل' 
+                : 'Failed to delete messages');
+            }
+          }
+        } else if (user) {
+          const deleteAllMessages = async () => {
+            try {
+              const success = await deleteAllChatMessagesForPDF(id);
+              if (success) {
+                setChatMessages([]);
+                toast.success(language === 'ar' 
+                  ? 'تم حذف جميع الرسائل بنجاح' 
+                  : 'All messages deleted successfully');
+              } else {
+                toast.error(language === 'ar' 
+                  ? 'فشل في حذف الرسائل' 
+                  : 'Failed to delete messages');
+              }
+            } catch (error) {
+              console.error('Error deleting chat messages:', error);
+              toast.error(language === 'ar' 
+                ? 'فشل في حذف الرسائل' 
+                : 'Failed to delete messages');
+            }
+          };
+          
+          deleteAllMessages();
+        } else {
+          const updatedPdf = { ...pdf, chatMessages: [] };
+          savePDF(updatedPdf);
+          setChatMessages([]);
+          toast.success(language === 'ar' 
+            ? 'تم حذف جميع الرسائل بنجاح' 
+            : 'All messages deleted successfully');
+        }
+      } catch (error) {
+        console.error('Error clearing chat messages:', error);
+        toast.error(language === 'ar' 
+          ? 'فشل في حذف الرسائل' 
+          : 'Failed to delete messages');
+      }
+    }
+  };
+
   if (!pdf) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <XCircle className="h-6 w-6 text-red-500 mr-2" />
-        {language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found'}
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+        <h1 className="text-xl font-medium mb-2">
+          {language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF Not Found'}
+        </h1>
+        <Link 
+          to="/" 
+          className="text-primary hover:underline"
+        >
+          {language === 'ar' ? 'العودة إلى الصفحة الرئيسية' : 'Return to Home'}
+        </Link>
       </div>
     );
   }
-  
+
   return (
-    <div className="container mx-auto py-8 flex flex-col h-screen">
-      <header className="mb-4 flex items-center justify-between">
-        <Button onClick={() => navigate('/pdfs')} variant="ghost">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          {language === 'ar' ? 'العودة إلى ملفاتي' : 'Back to My PDFs'}
-        </Button>
-        
-        <Input
-          type="text"
-          placeholder={language === 'ar' ? 'أدخل عنوان الملف...' : 'Enter PDF title...'}
-          value={pdfTitle}
-          onChange={(e) => setPdfTitle(e.target.value)}
-          className="max-w-md"
-        />
-      </header>
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
       
-      <main className="flex flex-col lg:flex-row flex-grow">
-        <section className="lg:w-2/3 flex flex-col">
-          <div className="relative">
-            <Document
-              file={isSupabasePDF ? (pdf as SupabasePDF).fileUrl : (pdf as UploadedPDF).dataUrl}
-              onLoadSuccess={onDocumentLoadSuccess}
-              className="max-w-full"
+      <main className="flex-1 pt-24 pb-10">
+        <div className="container mx-auto px-4 md:px-6 max-w-7xl">
+          <div className="flex justify-between items-center mb-6">
+            <Link 
+              to={isTempPdf ? "/" : "/pdfs"} 
+              className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Page pageNumber={pageNumber} scale={scale} />
-            </Document>
+              <ArrowLeft className={`h-4 w-4 ${direction === 'rtl' ? 'ml-2 rotate-180' : 'mr-2'}`} />
+              {language === 'ar' 
+                ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
+                : isTempPdf ? 'Back to Home' : 'Back to PDFs'}
+            </Link>
             
-            <div className="absolute top-2 left-2 bg-secondary/80 text-secondary-foreground rounded-md p-2 shadow-md">
-              <p className="text-sm">
-                {language === 'ar'
-                  ? `صفحة ${pageNumber} من ${numPages}`
-                  : `Page ${pageNumber} of ${numPages}`}
-              </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleShare}
+                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-muted transition-colors"
+                aria-label={language === 'ar' ? 'مشاركة الملف' : 'Share file'}
+              >
+                <Share className="h-5 w-5" />
+              </button>
+              <button
+                onClick={handleDeletePDF}
+                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-destructive/10 text-destructive transition-colors"
+                aria-label={language === 'ar' ? 'حذف الملف' : 'Delete file'}
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
             </div>
           </div>
           
-          <div className="flex justify-center items-center mt-4 space-x-2">
-            <Button onClick={() => changePage(-1)} disabled={pageNumber <= 1}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Button onClick={() => changePage(1)} disabled={pageNumber >= (numPages || 0)}>
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-            <Button onClick={zoomIn}>
-              <Plus className="h-4 w-4" />
-            </Button>
-            <Button onClick={zoomOut}>
-              <Download className="h-4 w-4" />
-            </Button>
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="lg:w-2/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+              <div className="flex justify-between items-center p-4 border-b">
+                <div>
+                  <h1 className="font-display text-xl font-medium truncate">
+                    {pdf.title}
+                  </h1>
+                  <div className="flex gap-2 mt-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {pdf.fileSize}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {pdf.pageCount || '?'} {language === 'ar' ? 'صفحات' : 'pages'}
+                    </Badge>
+                    {isTempPdf && (
+                      <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/30">
+                        {language === 'ar' ? 'مؤقت' : 'Temporary'}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowPdfControls(!showPdfControls)}
+                  className="p-1 rounded-md hover:bg-muted transition-colors"
+                >
+                  {showPdfControls ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </button>
+              </div>
+              
+              {showPdfControls && (
+                <div className="flex flex-wrap justify-between items-center p-4 bg-muted/20 border-b">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handlePrevPage}
+                        disabled={pageNumber <= 1 || pdfError !== null || !pdf.dataUrl}
+                      >
+                        {language === 'ar' ? 'السابق' : 'Prev'}
+                      </Button>
+                      <span className="text-sm">
+                        {language === 'ar' 
+                          ? `${pageNumber} من ${numPages || '?'}`
+                          : `${pageNumber} of ${numPages || '?'}`
+                        }
+                      </span>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleNextPage}
+                        disabled={!numPages || pageNumber >= numPages || pdfError !== null || !pdf.dataUrl}
+                      >
+                        {language === 'ar' ? 'التالي' : 'Next'}
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleZoomOut}
+                        disabled={pdfError !== null || !pdf.dataUrl}
+                      >-</Button>
+                      <span className="text-sm">{Math.round(pdfScale * 100)}%</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleZoomIn}
+                        disabled={pdfError !== null || !pdf.dataUrl}
+                      >+</Button>
+                    </div>
+                  </div>
+                  
+                  <div className="text-sm text-muted-foreground">
+                    {language === 'ar' ? 'تم التحميل' : 'Uploaded'}: {pdf.uploadDate}
+                  </div>
+                </div>
+              )}
+              
+              <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
+                {isLoadingPdf ? (
+                  <div className="flex flex-col items-center justify-center h-full w-full">
+                    <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
+                    <p className="text-lg font-medium mb-2">
+                      {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'ar' ? 'يرجى الانتظار' : 'Please wait'}
+                    </p>
+                  </div>
+                ) : pdfError ? (
+                  <div className="flex flex-col items-center justify-center h-full w-full">
+                    <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" />
+                    <h2 className="text-xl font-medium mb-2 text-center">
+                      {language === 'ar' ? 'تعذر تحميل الملف' : 'Failed to load PDF'}
+                    </h2>
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                      {pdfError}
+                    </p>
+                    <div className="flex gap-3">
+                      <Button variant="outline" onClick={handleRetryLoading}>
+                        {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                      </Button>
+                      <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
+                        {language === 'ar'
+                          ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
+                          : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : !pdf.dataUrl ? (
+                  <div className="flex flex-col items-center justify-center h-full w-full">
+                    <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h2 className="text-xl font-medium mb-2 text-center">
+                      {language === 'ar' ? 'لا توجد بيانات PDF' : 'No PDF Data Available'}
+                    </h2>
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                      {language === 'ar' 
+                        ? 'لم يتم تخزين بيانات PDF بسبب قيود التخزين. حاول حذف بعض الملفات القديمة وتحميل هذا الملف مرة أخرى.'
+                        : 'PDF data was not stored due to storage limitations. Try deleting some older PDFs and upload this file again.'}
+                    </p>
+                    <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
+                      {language === 'ar'
+                        ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
+                        : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
+                    </Button>
+                  </div>
+                ) : (
+                  <Document
+                    file={pdf.dataUrl}
+                    onLoadSuccess={handleDocumentLoadSuccess}
+                    onLoadError={handleDocumentLoadError}
+                    loading={
+                      <div className="flex items-center justify-center h-full w-full">
+                        <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                      </div>
+                    }
+                    error={
+                      <div className="flex flex-col items-center justify-center h-full w-full">
+                        <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground text-center mb-2">
+                          {language === 'ar' ? 'فشل تحميل الملف' : 'Failed to load PDF'}
+                        </p>
+                        <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
+                          {language === 'ar' 
+                            ? 'قد تكون هناك مشكلة في تنسيق الملف أو أن الملف قد يكون كبيرًا جدًا للعرض.' 
+                            : 'There might be an issue with the file format or the file may be too large to display.'}
+                        </p>
+                        <Button variant="outline" onClick={handleRetryLoading}>
+                          {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                        </Button>
+                      </div>
+                    }
+                  >
+                    <Page 
+                      pageNumber={pageNumber} 
+                      scale={pdfScale}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                      error={
+                        <div className="flex flex-col items-center justify-center p-6">
+                          <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
+                          <p className="text-sm text-center">
+                            {language === 'ar' ? 'خطأ في عرض الصفحة' : 'Error rendering page'}
+                          </p>
+                        </div>
+                      }
+                    />
+                  </Document>
+                )}
+              </div>
+            </div>
+            
+            <div className="lg:w-1/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm flex flex-col">
+              <div className="flex justify-between items-center p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-display text-lg font-medium">
+                    {language === 'ar' ? 'دردشة مع هذا الملف' : 'Chat with this PDF'}
+                  </h2>
+                  <Badge 
+                    variant="outline" 
+                    className="bg-primary/10 text-primary text-xs"
+                  >
+                    <Brain className="h-3 w-3 mr-1" />
+                    Gemini AI
+                  </Badge>
+                </div>
+                <button 
+                  onClick={() => setShowChat(!showChat)}
+                  className="p-1 rounded-md hover:bg-muted transition-colors"
+                >
+                  {showChat ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </button>
+              </div>
+              
+              {showChat && (
+                <>
+                  <div className="p-3 border-b bg-muted/10">
+                    <ScrollArea className="whitespace-nowrap w-full">
+                      <div className="flex space-x-2 px-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={clearChatMessages}
+                          disabled={chatMessages.length === 0}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-1" />
+                          {language === 'ar' ? 'مسح المحادثة' : 'Clear Chat'}
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 px-2 text-xs"
+                          onClick={handleDownload}
+                          disabled={!pdf?.dataUrl}
+                        >
+                          <DownloadCloud className="h-3.5 w-3.5 mr-1" />
+                          {language === 'ar' ? 'تنزيل' : 'Download'}
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 px-2 text-xs"
+                          onClick={generateSummary}
+                          disabled={isAnalyzing || isWaitingForResponse}
+                        >
+                          <FileText className="h-3.5 w-3.5 mr-1" />
+                          {language === 'ar' ? 'تلخيص' : 'Summarize'}
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 px-2 text-xs"
+                          onClick={translatePDF}
+                          disabled={isAnalyzing || isWaitingForResponse}
+                        >
+                          <Languages className="h-3.5 w-3.5 mr-1" />
+                          {language === 'ar' ? 'ترجمة' : 'Translate'}
+                        </Button>
+                      </div>
+                      <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: '60vh' }}>
+                    {isAnalyzing && (
+                      <PDFAnalysisProgress analysis={analysisProgress} />
+                    )}
+                    
+                    {isLoadingMessages ? (
+                      <div className="flex justify-center items-center h-full">
+                        <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                      </div>
+                    ) : chatMessages.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                        <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                        <p className="font-medium mb-2">
+                          {language === 'ar' ? 'اطرح سؤالاً حول هذا الملف' : 'Ask a question about this PDF'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {language === 'ar' 
+                            ? 'يمكنك طرح أسئلة حول محتوى الملف والحصول على إجابات دقيقة باستخدام الذكاء الاصطناعي من Gemini'
+                            : 'Ask questions about the PDF content and get accurate AI-powered answers from Gemini'
+                          }
+                        </p>
+                        {isTempPdf && (
+                          <p className="text-xs text-amber-600 mt-4">
+                            {language === 'ar'
+                              ? 'ملاحظة: هذا ملف مؤقت. سيتم فقدان المحادثة عند إغلاق المتصفح.'
+                              : 'Note: This is a temporary file. Chat will be lost when you close the browser.'}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {chatMessages.map(message => (
+                          <div 
+                            key={message.id}
+                            className={cn(
+                              "flex flex-col p-3 rounded-lg max-w-[80%]",
+                              message.isUser 
+                                ? "ml-auto bg-primary text-primary-foreground" 
+                                : "mr-auto bg-muted"
+                            )}
+                          >
+                            <div className="whitespace-pre-wrap break-words">
+                              {message.content}
+                            </div>
+                            <div className="flex justify-between items-center mt-2">
+                              <span className="text-xs opacity-70">
+                                {message.isUser 
+                                  ? language === 'ar' ? 'أنت' : 'You' 
+                                  : 'Gemini AI'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        {isWaitingForResponse && (
+                          <ChatMessageSkeleton />
+                        )}
+                        <div ref={chatEndRef} />
+                      </>
+                    )}
+                  </div>
+                  
+                  <form 
+                    onSubmit={handleChatSubmit}
+                    className="p-4 border-t flex gap-2 items-end bg-card mt-auto"
+                  >
+                    <Textarea
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder={language === 'ar' 
+                        ? 'اطرح سؤالاً ��ول هذا الملف...' 
+                        : 'Ask a question about this PDF...'}
+                      className="min-h-10 resize-none border rounded-md flex-1"
+                      disabled={isAnalyzing}
+                    />
+                    <Button 
+                      type="submit" 
+                      size="icon" 
+                      disabled={!chatInput.trim() || isAnalyzing}
+                      className="h-10 w-10 rounded-full flex-shrink-0"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </form>
+                </>
+              )}
+            </div>
           </div>
-        </section>
-        
-        <Separator orientation="vertical" className="hidden lg:flex mx-4" />
-        
-        <section className="lg:w-1/3 flex flex-col">
-          <ChatInterface
-            messages={messages}
-            isLoadingMessages={isLoadingMessages}
-            isAnalyzing={isAnalyzing}
-            isWaitingForResponse={isWaitingForResponse}
-            analysisProgress={analysisProgress}
-            language={language}
-            onSendMessage={handleSendMessage}
-            onClearMessages={handleClearMessages}
-            onGenerateSummary={handleGenerateSummary}
-            onTranslate={handleTranslate}
-            onDeleteMessage={handleDeleteMessage}
-            isDeletingMessage={isDeletingMessage}
-          />
-        </section>
+        </div>
       </main>
-      
-      <footer className="mt-8 text-center text-muted-foreground">
-        <p className="text-sm">
-          {language === 'ar'
-            ? `© ${new Date().getFullYear()} أداة دردشة PDF. جميع الحقوق محفوظة.`
-            : `© ${new Date().getFullYear()} PDF Chat Tool. All rights reserved.`}
-        </p>
-      </footer>
     </div>
   );
 };

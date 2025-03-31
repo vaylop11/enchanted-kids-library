@@ -13,18 +13,9 @@ function Skeleton({
   )
 }
 
-interface ChatMessageSkeletonProps {
-  isUser?: boolean;
-}
-
-function ChatMessageSkeleton({ isUser = false }: ChatMessageSkeletonProps) {
+function ChatMessageSkeleton() {
   return (
-    <div className={cn(
-      "flex flex-col space-y-3 p-3 rounded-lg max-w-[80%]",
-      isUser 
-        ? "bg-primary/10 ml-auto rounded-br-none" 
-        : "bg-muted mr-auto rounded-bl-none"
-    )}>
+    <div className="flex flex-col space-y-3 mr-auto max-w-[80%] bg-muted p-3 rounded-lg">
       <Skeleton className="h-4 w-[250px]" />
       <Skeleton className="h-4 w-[200px]" />
       <Skeleton className="h-4 w-[150px]" />

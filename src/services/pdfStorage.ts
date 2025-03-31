@@ -1,3 +1,4 @@
+
 import { PDF } from '@/components/PDFCard';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
@@ -208,26 +209,4 @@ export const formatFileSize = (size: number): string => {
   if (size < 1024) return `${size} B`;
   if (size < 1048576) return `${(size / 1024).toFixed(2)} KB`;
   return `${(size / 1048576).toFixed(2)} MB`;
-};
-
-// Add or update the deleteAllChatMessagesForPDF function
-export const deleteAllChatMessagesForPDF = (pdfId: string): boolean => {
-  try {
-    const pdf = getPDFById(pdfId);
-    if (!pdf) return false;
-    
-    // Create updated PDF without chat messages
-    const updatedPdf = {
-      ...pdf,
-      chatMessages: []
-    };
-    
-    // Save the updated PDF
-    savePDF(updatedPdf);
-    
-    return true;
-  } catch (error) {
-    console.error('Error deleting chat messages:', error);
-    return false;
-  }
 };

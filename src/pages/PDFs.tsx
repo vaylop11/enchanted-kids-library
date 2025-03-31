@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PDFCard from '@/components/PDFCard';
@@ -92,7 +91,7 @@ const PDFs = () => {
     try {
       setIsUploading(true);
       
-      const pdf = await uploadPDFToSupabase(file, user.id, {});
+      const pdf = await uploadPDFToSupabase(file, user.id);
       
       if (pdf) {
         toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
@@ -219,15 +218,7 @@ const PDFs = () => {
                 {filteredPDFs.map((pdf, index) => (
                   <PDFCard 
                     key={pdf.id} 
-                    pdf={{
-                      id: pdf.id,
-                      title: pdf.title,
-                      summary: pdf.summary || '',
-                      uploadDate: pdf.upload_date || new Date(pdf.created_at).toLocaleDateString(),
-                      pageCount: pdf.pageCount,
-                      fileSize: pdf.fileSize || '',
-                      thumbnail: pdf.thumbnail
-                    }}
+                    pdf={pdf} 
                     index={index} 
                     onDelete={handlePDFDelete}
                   />

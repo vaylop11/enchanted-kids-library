@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { File, Upload, AlertTriangle } from 'lucide-react';
@@ -59,9 +60,7 @@ const UploadZone = () => {
       if (user) {
         // If user is logged in, upload PDF to Supabase
         console.log('Uploading PDF for authenticated user:', user.id);
-        
-        // Pass an empty object as metadata (third parameter)
-        const pdf = await uploadPDFToSupabase(file, user.id, {});
+        const pdf = await uploadPDFToSupabase(file, user.id);
         
         // Clear interval and complete progress
         clearInterval(progressInterval);
