@@ -225,13 +225,13 @@ const BlogPost = () => {
             variant="ghost"
             size="sm"
             onClick={() => navigate('/blog')}
-            className="mb-6"
+            className="mb-6 group hover:bg-muted/50"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-4 w-4 mr-2 transition-transform group-hover:-translate-x-1" />
             {language === 'ar' ? 'العودة إلى المدونة' : 'Back to Blog'}
           </Button>
           
-          <h1 className="heading-1 mb-6">{post.title}</h1>
+          <h1 className="heading-1 mb-6 font-bold">{post.title}</h1>
           
           <div className="flex items-center text-sm text-muted-foreground mb-8">
             <div className="flex items-center mr-4">
@@ -245,11 +245,11 @@ const BlogPost = () => {
             <span>{post.readTime}</span>
           </div>
           
-          <div className="rounded-2xl overflow-hidden aspect-[21/9] mb-10">
+          <div className="rounded-2xl overflow-hidden aspect-[21/9] mb-10 shadow-lg">
             <img 
               src={post.image} 
               alt={post.title} 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-transform hover:scale-105 duration-500"
             />
           </div>
         </header>
@@ -257,15 +257,48 @@ const BlogPost = () => {
         {/* Article Content */}
         <div className="container mx-auto max-w-3xl">
           <div 
-            className="prose prose-lg max-w-none"
+            className="prose prose-lg max-w-none custom-blog-content"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
+          
+          <style jsx="true">{`
+            .custom-blog-content h2 {
+              font-size: 1.75rem;
+              font-weight: 700;
+              margin-top: 2.5rem;
+              margin-bottom: 1rem;
+              color: var(--primary);
+              border-bottom: 1px solid var(--border);
+              padding-bottom: 0.5rem;
+            }
+            
+            .custom-blog-content p {
+              font-size: 1.125rem;
+              line-height: 1.75;
+              margin-bottom: 1.5rem;
+              color: rgba(var(--foreground), 0.9);
+            }
+            
+            .custom-blog-content ul {
+              padding-left: 1.5rem;
+              margin-bottom: 1.5rem;
+            }
+            
+            .custom-blog-content li {
+              margin-bottom: 0.5rem;
+              font-size: 1.125rem;
+            }
+            
+            .custom-blog-content strong {
+              font-weight: 600;
+            }
+          `}</style>
         </div>
         
         {/* Related Posts */}
         {relatedPosts.length > 0 && (
           <div className="container mx-auto max-w-4xl mt-20 pt-10 border-t">
-            <h2 className="heading-3 mb-8">
+            <h2 className="heading-3 mb-8 font-bold">
               {language === 'ar' ? 'مقالات ذات صلة' : 'Related Articles'}
             </h2>
             
@@ -301,7 +334,7 @@ const BlogPost = () => {
       {/* Call to Action */}
       <div className="bg-muted/30 py-16 px-4 md:px-6">
         <div className="container mx-auto max-w-3xl text-center">
-          <h2 className="heading-2 mb-4">
+          <h2 className="heading-2 mb-4 font-bold">
             {language === 'ar' ? 'جرب ChatPDF اليوم' : 'Try ChatPDF Today'}
           </h2>
           <p className="paragraph mb-8 max-w-2xl mx-auto">
