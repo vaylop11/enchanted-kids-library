@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +18,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import BlogManagement from './BlogManagement';
 import ImageUploader from './ImageUploader';
 import UserManagement from './UserManagement';
+import AdsenseManagement from './AdsenseManagement';
 
 const formSchema = z.object({
   title: z.string().min(5, {
@@ -301,6 +301,9 @@ const AdminPanel = () => {
           <TabsTrigger value="users">
             {language === 'ar' ? 'إدارة المستخدمين' : 'Manage Users'}
           </TabsTrigger>
+          <TabsTrigger value="adsense">
+            {language === 'ar' ? 'إدارة الإعلانات' : 'Manage Ads'}
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="create">
@@ -502,6 +505,10 @@ const AdminPanel = () => {
               <UserManagement />
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="adsense">
+          <AdsenseManagement />
         </TabsContent>
       </Tabs>
     </div>

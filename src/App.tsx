@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import AdSenseScript from "./components/AdSenseScript";
 import Index from "./pages/Index";
 import PDFs from "./pages/PDFs";
 import PDFViewer from "./pages/PDFViewer";
@@ -28,6 +29,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <AdSenseScript />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
