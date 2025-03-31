@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, LogOut, File } from 'lucide-react';
+import { User, LogOut, File, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/authService';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const UserProfileMenu = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
@@ -62,6 +62,23 @@ const UserProfileMenu = () => {
           <File className="mr-2 h-4 w-4" />
           {language === 'ar' ? 'ملفات PDF الخاصة بي' : 'My PDFs'}
         </DropdownMenuItem>
+        
+        {isAdmin && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              className="cursor-pointer"
+              onClick={() => {
+                setIsOpen(false);
+                navigate('/admin');
+              }}
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              {language === 'ar' ? 'لوحة الإدارة' : 'Admin Panel'}
+            </DropdownMenuItem>
+          </>
+        )}
+        
         <DropdownMenuSeparator />
         <DropdownMenuItem 
           className="cursor-pointer text-destructive focus:text-destructive"
