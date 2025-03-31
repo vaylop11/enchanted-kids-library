@@ -1,7 +1,4 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,162 +7,145 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
-
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 20% 98%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
-
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-
     --accent: 240 4.8% 95.9%;
     --accent-foreground: 240 5.9% 10%;
-
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-
+    --ring: 142.1 76.2% 36.3%;
     --radius: 0.75rem;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
+  .dark {
+    --background: 20 14.3% 4.1%;
+    --foreground: 0 0% 95%;
+    --card: 24 9.8% 10%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 263.4 70% 50.4%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 12 6.5% 15.1%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 85.7% 97.3%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 142.4 71.8% 29.2%;
+  }
+}
+
+@layer base {
   * {
     @apply border-border;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
   }
-
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  }
-
-  /* Set appropriate font family based on language */
-  html[lang="ar"] body {
-    font-family: 'Tajawal', 'Inter', sans-serif;
-  }
-
-  /* Mirror UI elements for RTL */
-  [dir="rtl"] .mirror-rtl {
-    transform: scaleX(-1);
-  }
-
-  /* RTL text alignment */
-  [dir="rtl"] .text-left {
-    text-align: right;
-  }
-
-  [dir="rtl"] .text-right {
-    text-align: left;
-  }
-
-  /* Adjust padding and margins for RTL */
-  [dir="rtl"] .pl-4 {
-    padding-left: 0;
-    padding-right: 1rem;
-  }
-
-  [dir="rtl"] .pr-4 {
-    padding-right: 0;
-    padding-left: 1rem;
-  }
-
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-muted rounded-full;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/30;
   }
   
-  /* Page transitions */
-  .page-transition-enter {
-    @apply opacity-0;
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-display font-semibold;
   }
   
-  .page-transition-enter-active {
-    @apply opacity-100 transition-opacity duration-300 ease-in-out;
-  }
-  
-  .page-transition-exit {
-    @apply opacity-100;
-  }
-  
-  .page-transition-exit-active {
-    @apply opacity-0 transition-opacity duration-300 ease-in-out;
-  }
-  
-  /* Hover effects for interactive elements */
-  .hover-lift {
-    @apply transition-all duration-300 ease-out;
-  }
-  
-  .hover-lift:hover {
-    @apply -translate-y-1 shadow-lg;
-  }
-  
-  /* Typography classes */
   .heading-1 {
-    @apply font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-foreground;
+    @apply text-3xl sm:text-4xl md:text-5xl;
   }
   
   .heading-2 {
-    @apply font-display text-3xl sm:text-4xl font-bold tracking-tight text-foreground;
+    @apply text-2xl sm:text-3xl md:text-4xl;
   }
   
   .heading-3 {
-    @apply font-display text-2xl sm:text-3xl font-semibold tracking-tight text-foreground;
+    @apply text-xl sm:text-2xl md:text-3xl;
   }
   
   .paragraph {
-    @apply text-base sm:text-lg leading-relaxed text-foreground/80;
+    @apply text-base md:text-lg text-muted-foreground;
   }
   
-  .caption {
-    @apply text-sm text-muted-foreground;
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1;
   }
+}
 
-  /* Focus styles for better accessibility */
-  :focus-visible {
-    @apply outline-none ring-2 ring-ring;
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
   }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
 
-  /* Enhanced button loading state */
-  .btn-loading {
-    @apply relative overflow-hidden;
-  }
+/* Blog content styling */
+.prose h2 {
+  @apply text-2xl font-display font-semibold mt-8 mb-4 scroll-mt-16;
+}
 
-  .btn-loading::after {
-    content: "";
-    @apply absolute inset-0 bg-current opacity-20;
-  }
+.prose h3 {
+  @apply text-xl font-display font-medium mt-6 mb-3;
+}
+
+.prose p {
+  @apply my-4 leading-relaxed;
+}
+
+.prose strong {
+  @apply font-semibold text-foreground;
+}
+
+.prose ul {
+  @apply my-6 ml-6 list-disc;
+}
+
+.prose ul li {
+  @apply mb-2;
+}
+
+.prose img {
+  @apply rounded-lg my-8 mx-auto;
+}
+
+.prose a {
+  @apply text-primary font-medium transition-colors hover:text-primary/80;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-primary/20 pl-4 italic my-6;
+}
+
+/* Add styling for Arabic content */
+[dir="rtl"] .prose {
+  @apply text-right;
+}
+
+[dir="rtl"] .prose ul {
+  @apply mr-6 ml-0;
+}
+
+[dir="rtl"] .prose blockquote {
+  @apply border-r-4 border-l-0 pr-4 pl-0;
 }

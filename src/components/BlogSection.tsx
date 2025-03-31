@@ -1,14 +1,15 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { ArrowRight, Calendar, Clock } from "lucide-react";
+import { ArrowRight, Calendar, Clock, Tag } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const BlogSection = () => {
   const { language } = useLanguage();
   
-  // Sample blog posts focused on ChatPDF and document AI
+  // Sample blog posts focused on ChatPDF and document AI with improved SEO structure
   const blogPosts = [
     {
       id: 'chatpdf-vs-traditional',
@@ -18,7 +19,9 @@ const BlogSection = () => {
         : 'Discover how ChatPDF technology is changing the way we interact with documents and why it\'s more efficient than traditional reading methods.',
       date: '2023-10-15',
       readTime: language === 'ar' ? '5 دقائق للقراءة' : '5 min read',
-      image: 'https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+      image: 'https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+      category: language === 'ar' ? 'تكنولوجيا' : 'Technology',
+      tags: language === 'ar' ? ['PDF', 'تكنولوجيا', 'إنتاجية'] : ['PDF', 'Technology', 'Productivity']
     },
     {
       id: 'chatpdf-education',
@@ -28,7 +31,9 @@ const BlogSection = () => {
         : 'Explore how ChatPDF\'s innovative technology can improve student comprehension and save time for teachers by facilitating information extraction from academic documents.',
       date: '2023-11-02',
       readTime: language === 'ar' ? '7 دقائق للقراءة' : '7 min read',
-      image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+      image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+      category: language === 'ar' ? 'تعليم' : 'Education',
+      tags: language === 'ar' ? ['تعليم', 'طلاب', 'مدرسين'] : ['Education', 'Students', 'Teachers']
     },
     {
       id: 'chatpdf-business',
@@ -38,7 +43,9 @@ const BlogSection = () => {
         : 'Learn how businesses are using ChatPDF technology to analyze contracts and legal documents 10x faster than traditional methods.',
       date: '2023-12-08',
       readTime: language === 'ar' ? '6 دقائق للقراءة' : '6 min read',
-      image: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+      image: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+      category: language === 'ar' ? 'أعمال' : 'Business',
+      tags: language === 'ar' ? ['أعمال', 'كفاءة', 'تحليل'] : ['Business', 'Efficiency', 'Analysis']
     }
   ];
   
@@ -47,12 +54,12 @@ const BlogSection = () => {
       <div className="container mx-auto max-w-7xl">
         <div className="text-center mb-12">
           <h2 className="heading-2 mb-4">
-            {language === 'ar' ? 'آخر مدونات ChatPDF' : 'Latest from Our Blog'}
+            {language === 'ar' ? 'آخر مقالات المدونة' : 'Latest from Our Blog'}
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             {language === 'ar' 
-              ? 'اكتشف أحدث المقالات حول كيفية استخدام ChatPDF وجميع الميزات الجديدة'
-              : 'Discover the latest articles about how to use ChatPDF and all the new features'
+              ? 'اكتشف أحدث المقالات حول كيفية استخدام ChatPDF والميزات الجديدة وأفضل الممارسات'
+              : 'Discover the latest articles about how to use ChatPDF, new features, and best practices'
             }
           </p>
         </div>
@@ -62,7 +69,8 @@ const BlogSection = () => {
             <Link
               key={post.id}
               to={`/blog/${post.id}`}
-              className="group block cursor-pointer"
+              className="group block cursor-pointer h-full"
+              aria-label={post.title}
             >
               <Card className="overflow-hidden h-full hover:shadow-md transition-all duration-300 border-border/60 hover:border-primary/20 hover:-translate-y-1 relative">
                 <div className="aspect-video w-full overflow-hidden">
@@ -73,6 +81,18 @@ const BlogSection = () => {
                   />
                 </div>
                 <CardHeader>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <Badge variant="outline" className="bg-primary/5">
+                      {post.category}
+                    </Badge>
+                    {post.tags && post.tags.length > 0 && (
+                      post.tags.slice(0, 2).map(tag => (
+                        <Badge key={tag} variant="outline" className="bg-muted/50">
+                          {tag}
+                        </Badge>
+                      ))
+                    )}
+                  </div>
                   <div className="flex items-center text-sm text-muted-foreground mb-2">
                     <Calendar className="h-3.5 w-3.5 mr-1" />
                     <span>{post.date}</span>
@@ -80,8 +100,12 @@ const BlogSection = () => {
                     <Clock className="h-3.5 w-3.5 mr-1" />
                     <span>{post.readTime}</span>
                   </div>
-                  <CardTitle className="group-hover:text-primary transition-colors duration-300">{post.title}</CardTitle>
-                  <CardDescription className="line-clamp-3 text-foreground/70">{post.excerpt}</CardDescription>
+                  <CardTitle className="group-hover:text-primary transition-colors duration-300">
+                    {post.title}
+                  </CardTitle>
+                  <CardDescription className="line-clamp-3 text-foreground/70">
+                    {post.excerpt}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="text-sm font-medium flex items-center text-primary group-hover:underline">

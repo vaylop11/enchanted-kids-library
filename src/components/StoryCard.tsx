@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Story } from '@/data/stories';
 import { useState, useEffect } from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, BookOpen } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Badge } from '@/components/ui/badge';
 
 interface StoryCardProps {
   story: Story;
@@ -49,6 +50,7 @@ const StoryCard = ({ story, index }: StoryCardProps) => {
         isInView ? 'animate-fade-in opacity-100' : 'opacity-0'
       )}
       style={{ animationDelay }}
+      aria-label={t(story.title)}
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden">
         <div 
@@ -64,20 +66,28 @@ const StoryCard = ({ story, index }: StoryCardProps) => {
           onLoad={() => setIsLoaded(true)}
           loading="lazy"
         />
-        <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium">
-          {t(story.category)}
+        <div className="absolute top-0 left-0 w-full p-3 flex justify-between items-center">
+          <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
+            {t(story.category)}
+          </Badge>
+          <span className="bg-background/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium">
+            {t('ages')} {story.ageRange}
+          </span>
         </div>
       </div>
       
       <div className="flex flex-col flex-grow p-4">
-        <h3 className="font-display font-medium text-lg leading-tight mb-2 group-hover:text-foreground/80 transition-colors">
+        <h3 className="font-display font-medium text-lg leading-tight mb-2 group-hover:text-primary transition-colors">
           {t(story.title)}
         </h3>
-        <p className="text-sm text-muted-foreground mb-4 flex-grow">
+        <p className="text-sm text-muted-foreground mb-4 flex-grow line-clamp-3">
           {t(story.summary)}
         </p>
         <div className="flex justify-between items-center text-xs text-muted-foreground">
-          <span>{t('ages')} {story.ageRange}</span>
+          <span className="flex items-center gap-1">
+            <BookOpen className="h-3 w-3" />
+            <span>{t('pages')}: {story.pages || '5-10'}</span>
+          </span>
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {story.readingTime}
