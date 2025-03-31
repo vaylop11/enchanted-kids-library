@@ -162,6 +162,19 @@ const ChatPage = () => {
     return email.substring(0, 2).toUpperCase();
   };
 
+  // Mask email to protect privacy
+  const maskEmail = (email: string) => {
+    if (!email || email === 'Anonymous') return 'Anonymous';
+    
+    const parts = email.split('@');
+    if (parts.length !== 2) return email;
+    
+    const name = parts[0];
+    if (name.length <= 2) return email;
+    
+    return `${name.substring(0, 2)}***`;
+  };
+
   // Show loading state
   if (loading) {
     return (
@@ -180,22 +193,22 @@ const ChatPage = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="flex-1 pt-24 pb-20 px-4 md:px-6 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)]">
+      <main className="flex-1 pt-24 pb-32 px-4 md:px-6 max-w-7xl mx-auto w-full">
+        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-16rem)]">
           {/* Online Users Sidebar */}
           <Card className="lg:w-64 w-full p-4 h-full lg:h-auto">
             <h2 className="text-lg font-medium mb-4">{t('onlineUsers')}</h2>
             <ScrollArea className="h-[200px] lg:h-[calc(100%-3rem)]">
               <div className="space-y-3 pr-4">
-                {Object.values(onlineUsers).map((user) => (
-                  <div key={user.id} className="flex items-center gap-2">
+                {Object.values(onlineUsers).map((onlineUser) => (
+                  <div key={onlineUser.id} className="flex items-center gap-2">
                     <div className="relative">
                       <Avatar className="h-8 w-8 bg-primary/10">
-                        <AvatarFallback className="text-primary">{getInitials(user.email)}</AvatarFallback>
+                        <AvatarFallback className="text-primary">{getInitials(onlineUser.email)}</AvatarFallback>
                       </Avatar>
                       <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background"></div>
                     </div>
-                    <div className="truncate flex-1 text-sm">{user.email}</div>
+                    <div className="truncate flex-1 text-sm">{maskEmail(onlineUser.email)}</div>
                   </div>
                 ))}
                 {Object.keys(onlineUsers).length === 0 && (
@@ -237,7 +250,7 @@ const ChatPage = () => {
                       <div className={`max-w-[75%] ${message.user_id === user.id ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg p-3`}>
                         {message.user_id !== user.id && (
                           <p className="text-xs font-medium mb-1">
-                            {message.user_email}
+                            {maskEmail(message.user_email)}
                           </p>
                         )}
                         <p className="break-words">{message.content}</p>
