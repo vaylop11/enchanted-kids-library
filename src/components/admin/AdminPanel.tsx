@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,7 +46,6 @@ const AdminPanel = () => {
     },
   });
 
-  // Redirect if not admin
   if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -83,15 +81,12 @@ const AdminPanel = () => {
       }
 
       if (data?.generatedText) {
-        // Set the generated content in the form
         form.setValue('content', data.generatedText);
         
-        // Generate a placeholder image URL based on the title
         const imageKeyword = title.split(' ').slice(0, 2).join(' ');
         const placeholderImageUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(imageKeyword)}`;
         form.setValue('imageUrl', placeholderImageUrl);
         
-        // Set a default category
         if (!form.getValues('category')) {
           form.setValue('category', 'AI');
         }
@@ -123,17 +118,14 @@ const AdminPanel = () => {
     setIsSubmitting(true);
     
     try {
-      // Extract first 150 characters for excerpt
       const excerpt = values.content.split('\n')[0].substring(0, 150);
       
-      // Calculate read time (approx. 200 words per minute)
       const wordCount = values.content.split(/\s+/).length;
       const readTimeMinutes = Math.max(1, Math.ceil(wordCount / 200));
       const readTime = language === 'ar' 
         ? `${readTimeMinutes} دقائق للقراءة` 
         : `${readTimeMinutes} min read`;
       
-      // Save blog post to Supabase
       const { data, error } = await supabaseUntyped
         .from('blog_posts')
         .insert({
@@ -145,9 +137,7 @@ const AdminPanel = () => {
           read_time: readTime,
           author_id: user.id,
           published: true
-        })
-        .select('id')
-        .single();
+        });
       
       if (error) {
         throw error;
@@ -155,7 +145,6 @@ const AdminPanel = () => {
       
       toast.success(language === 'ar' ? 'تم نشر المقال بنجاح' : 'Blog post published successfully');
       
-      // Reset form
       form.reset();
       
     } catch (error) {
