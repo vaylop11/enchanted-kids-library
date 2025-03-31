@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -798,7 +799,6 @@ const PDFViewer = () => {
               
               {showChat && (
                 <>
-                  
                   <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: '60vh' }}>
                     {isAnalyzing && (
                       <PDFAnalysisProgress analysis={analysisProgress} />
@@ -844,4 +844,57 @@ const PDFViewer = () => {
                               {message.content}
                             </div>
                             <div className="flex justify-between items-center mt-2">
-                              <span className="text-xs
+                              <span className="text-xs opacity-70">
+                                {message.timestamp instanceof Date 
+                                  ? message.timestamp.toLocaleTimeString() 
+                                  : new Date(message.timestamp).toLocaleTimeString()
+                                }
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={chatEndRef} />
+                      </>
+                    )}
+                  </div>
+                  
+                  <form onSubmit={handleChatSubmit} className="p-4 border-t bg-muted/10">
+                    <div className="flex gap-2">
+                      <Textarea
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder={language === 'ar' ? 'اكتب سؤالك هنا...' : 'Type your question here...'}
+                        className="min-h-[60px] resize-none"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleChatSubmit(e);
+                          }
+                        }}
+                        disabled={isWaitingForResponse}
+                      />
+                      <Button 
+                        type="submit" 
+                        size="icon" 
+                        className="h-auto"
+                        disabled={!chatInput.trim() || isWaitingForResponse}
+                      >
+                        {isWaitingForResponse ? (
+                          <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/20 border-t-current animate-spin" />
+                        ) : (
+                          <Send className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default PDFViewer;
