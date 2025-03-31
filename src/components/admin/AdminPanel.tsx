@@ -9,11 +9,13 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { supabaseUntyped } from '@/integrations/supabase/client';
-import { Loader2, RefreshCw, Eye } from 'lucide-react';
+import { Loader2, RefreshCw, Eye, Image } from 'lucide-react';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import BlogManagement from './BlogManagement';
 
 const formSchema = z.object({
   title: z.string().min(5, {
@@ -37,6 +39,8 @@ const AdminPanel = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
+  const [activeTab, setActiveTab] = useState('create');
+  const [imageKeywords, setImageKeywords] = useState('');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -84,7 +88,7 @@ const AdminPanel = () => {
     formattedContent = formattedContent.replace(/<\/p><p><h([1-3])>/g, '</p><h$1>');
     formattedContent = formattedContent.replace(/<\/h([1-3])><p>/g, '</h$1><p>');
     
-    // Attempt to identify image descriptions to replace with actual images
+    // Replace image placeholders with actual images
     formattedContent = formattedContent.replace(/\[Image: (.+?)\]/g, (match, description) => {
       const imageUrl = form.getValues('imageUrl');
       if (imageUrl) {
@@ -115,8 +119,12 @@ const AdminPanel = () => {
       if (data?.generatedText) {
         form.setValue('content', data.generatedText);
         
-        const imageKeyword = title.split(' ').slice(0, 2).join(' ');
-        const placeholderImageUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(imageKeyword)}`;
+        // Extract keywords for image search from title and content
+        const keywords = title.split(' ').slice(0, 3).join(' ');
+        setImageKeywords(keywords);
+        
+        // Set a default image URL
+        const placeholderImageUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(keywords)}`;
         form.setValue('imageUrl', placeholderImageUrl);
         
         if (!form.getValues('category')) {
@@ -141,6 +149,17 @@ const AdminPanel = () => {
     }
   };
 
+  const generateNewImage = () => {
+    const keywords = imageKeywords || form.getValues('title').split(' ').slice(0, 3).join(' ');
+    if (keywords) {
+      const newImageUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(keywords)}&random=${Date.now()}`;
+      form.setValue('imageUrl', newImageUrl);
+      toast.success(language === 'ar' ? 'تم تحديث الصورة' : 'Image updated');
+    } else {
+      toast.error(language === 'ar' ? 'يرجى إدخال عنوان أولاً' : 'Please enter a title first');
+    }
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
       toast.error('You must be logged in to publish a blog post');
@@ -161,7 +180,6 @@ const AdminPanel = () => {
       // Format content with proper HTML tags
       const formattedContent = formatBlogContent(values.content);
       
-      // Removed .select('id').single() to avoid permission issues
       const { error } = await supabaseUntyped
         .from('blog_posts')
         .insert({
@@ -183,6 +201,7 @@ const AdminPanel = () => {
       
       form.reset();
       setPreviewMode(false);
+      setActiveTab('manage'); // Switch to manage tab after successful publish
       
     } catch (error) {
       console.error('Error saving blog post:', error);
@@ -206,158 +225,218 @@ const AdminPanel = () => {
         {language === 'ar' ? 'لوحة الإدارة' : 'Admin Panel'}
       </h1>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {language === 'ar' ? 'إنشاء مقال جديد' : 'Create New Blog Post'}
-          </CardTitle>
-          <CardDescription>
-            {language === 'ar' 
-              ? 'أضف مقالًا جديدًا إلى المدونة'
-              : 'Add a new post to the blog'}
-          </CardDescription>
-        </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {language === 'ar' ? 'العنوان' : 'Title'}
-                    </FormLabel>
-                    <div className="flex gap-2">
-                      <FormControl>
-                        <Input 
-                          placeholder={language === 'ar' ? 'عنوان المقال' : 'Blog post title'} 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => generateBlogPost(field.value)}
-                        disabled={isGenerating || !field.value}
-                      >
-                        {isGenerating ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                        )}
-                        {language === 'ar' ? 'توليد' : 'Generate'}
-                      </Button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {language === 'ar' ? 'التصنيف' : 'Category'}
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={language === 'ar' ? 'تصنيف المقال' : 'Blog category'}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="imageUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {language === 'ar' ? 'رابط الصورة' : 'Image URL'}
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={language === 'ar' ? 'رابط صورة المقال' : 'Blog image URL'}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {language === 'ar'
-                        ? 'يمكنك استخدام رابط صورة من Unsplash أو أي مصدر آخر'
-                        : 'You can use an image URL from Unsplash or any other source'}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="content"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>
-                        {language === 'ar' ? 'المحتوى' : 'Content'}
-                      </FormLabel>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={togglePreview}
-                        className="text-xs flex items-center gap-1"
-                      >
-                        <Eye className="h-3 w-3" />
-                        {previewMode 
-                          ? (language === 'ar' ? 'العودة للتحرير' : 'Edit Mode') 
-                          : (language === 'ar' ? 'معاينة' : 'Preview')}
-                      </Button>
-                    </div>
-                    
-                    {previewMode ? (
-                      <div 
-                        className="min-h-[300px] p-4 border rounded-md overflow-auto"
-                        dangerouslySetInnerHTML={{ 
-                          __html: formatBlogContent(field.value) 
-                        }}
-                      />
-                    ) : (
-                      <FormControl>
-                        <Textarea
-                          placeholder={language === 'ar' ? 'محتوى المقال...' : 'Blog post content...'}
-                          className="min-h-[300px]"
-                          {...field}
-                        />
-                      </FormControl>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="create">
+            {language === 'ar' ? 'إنشاء مقال' : 'Create Post'}
+          </TabsTrigger>
+          <TabsTrigger value="manage">
+            {language === 'ar' ? 'إدارة المقالات' : 'Manage Posts'}
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="create">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {language === 'ar' ? 'إنشاء مقال جديد' : 'Create New Blog Post'}
+              </CardTitle>
+              <CardDescription>
+                {language === 'ar' 
+                  ? 'أضف مقالًا جديدًا إلى المدونة'
+                  : 'Add a new post to the blog'}
+              </CardDescription>
+            </CardHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {language === 'ar' ? 'العنوان' : 'Title'}
+                        </FormLabel>
+                        <div className="flex gap-2">
+                          <FormControl>
+                            <Input 
+                              placeholder={language === 'ar' ? 'عنوان المقال' : 'Blog post title'} 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => generateBlogPost(field.value)}
+                            disabled={isGenerating || !field.value}
+                          >
+                            {isGenerating ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                            )}
+                            {language === 'ar' ? 'توليد' : 'Generate'}
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                    
-                    <FormDescription>
-                      {language === 'ar' 
-                        ? 'يمكنك استخدام علامات مثل # و ## و ### للعناوين، و[Image: وصف] لإضافة الصورة'
-                        : 'You can use # ## ### for headings, and [Image: description] to add the image'}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {language === 'ar' ? 'التصنيف' : 'Category'}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder={language === 'ar' ? 'تصنيف المقال' : 'Blog category'}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {language === 'ar' ? 'صورة المقال' : 'Post Image'}
+                        </FormLabel>
+                        <div className="space-y-4">
+                          <div className="flex gap-2">
+                            <FormControl>
+                              <Input
+                                placeholder={language === 'ar' ? 'رابط صورة المقال' : 'Blog image URL'}
+                                {...field}
+                              />
+                            </FormControl>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={generateNewImage}
+                            >
+                              <Image className="mr-2 h-4 w-4" />
+                              {language === 'ar' ? 'تحديث' : 'New Image'}
+                            </Button>
+                          </div>
+                          
+                          {field.value && (
+                            <div className="relative aspect-video w-full overflow-hidden rounded-md border">
+                              <img 
+                                src={field.value} 
+                                alt="Blog post image preview"
+                                className="h-full w-full object-cover"
+                                onError={() => {
+                                  toast.error(
+                                    language === 'ar' 
+                                      ? 'فشل في تحميل الصورة، يرجى تجربة صورة أخرى' 
+                                      : 'Failed to load image, please try another one'
+                                  );
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <FormDescription>
+                          {language === 'ar'
+                            ? 'يمكنك استخدام رابط صورة من Unsplash أو أي مصدر آخر'
+                            : 'You can use an image URL from Unsplash or any other source'}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="content"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex justify-between items-center">
+                          <FormLabel>
+                            {language === 'ar' ? 'المحتوى' : 'Content'}
+                          </FormLabel>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={togglePreview}
+                            className="text-xs flex items-center gap-1"
+                          >
+                            <Eye className="h-3 w-3" />
+                            {previewMode 
+                              ? (language === 'ar' ? 'العودة للتحرير' : 'Edit Mode') 
+                              : (language === 'ar' ? 'معاينة' : 'Preview')}
+                          </Button>
+                        </div>
+                        
+                        {previewMode ? (
+                          <div 
+                            className="min-h-[300px] p-4 border rounded-md overflow-auto prose max-w-none"
+                            dangerouslySetInnerHTML={{ 
+                              __html: formatBlogContent(field.value) 
+                            }}
+                          />
+                        ) : (
+                          <FormControl>
+                            <Textarea
+                              placeholder={language === 'ar' ? 'محتوى المقال...' : 'Blog post content...'}
+                              className="min-h-[300px]"
+                              {...field}
+                            />
+                          </FormControl>
+                        )}
+                        
+                        <FormDescription>
+                          {language === 'ar' 
+                            ? 'يمكنك استخدام علامات مثل # و ## و ### للعناوين، و[Image: وصف] لإضافة الصورة'
+                            : 'You can use # ## ### for headings, and [Image: description] to add the image'}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" disabled={isSubmitting || isGenerating} className="w-full">
+                    {isSubmitting && (
+                      <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent" />
+                    )}
+                    {language === 'ar' ? 'نشر المقال' : 'Publish Post'}
+                  </Button>
+                </CardFooter>
+              </form>
+            </Form>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="manage">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {language === 'ar' ? 'إدارة المقالات' : 'Manage Blog Posts'}
+              </CardTitle>
+              <CardDescription>
+                {language === 'ar' 
+                  ? 'استعرض وحرر وحذف المقالات الموجودة'
+                  : 'View, edit and delete existing blog posts'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BlogManagement />
             </CardContent>
-            <CardFooter>
-              <Button type="submit" disabled={isSubmitting || isGenerating} className="w-full">
-                {isSubmitting && (
-                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent" />
-                )}
-                {language === 'ar' ? 'نشر المقال' : 'Publish Post'}
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

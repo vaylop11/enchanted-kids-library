@@ -89,6 +89,32 @@ const BlogSection = () => {
   // Use database posts if available, otherwise use samples
   const displayPosts = blogPosts.length > 0 ? blogPosts : sampleBlogPosts;
   
+  if (loading) {
+    return (
+      <section className="py-20 px-4 md:px-6 bg-gradient-to-b from-background to-muted/30">
+        <div className="container mx-auto max-w-7xl">
+          <div className="text-center mb-12">
+            <h2 className="heading-2 mb-4">
+              {language === 'ar' ? 'آخر مدونات ChatPDF' : 'Latest from Our Blog'}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="overflow-hidden h-full border-border/60">
+                <div className="aspect-video w-full bg-muted animate-pulse"></div>
+                <CardHeader>
+                  <div className="h-4 bg-muted animate-pulse rounded w-24 mb-2"></div>
+                  <div className="h-6 bg-muted animate-pulse rounded w-full"></div>
+                  <div className="h-16 bg-muted animate-pulse rounded w-full"></div>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+  
   return (
     <section id="blog" className="py-20 px-4 md:px-6 bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto max-w-7xl">
@@ -117,6 +143,11 @@ const BlogSection = () => {
                     src={post.image_url} 
                     alt={post.title}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => {
+                      // Fallback image if the original fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.src = "https://images.unsplash.com/photo-1516383607781-913a19294fd1?ixlib=rb-4.0.3&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=1080&fit=max";
+                    }}
                   />
                 </div>
                 <CardHeader>
