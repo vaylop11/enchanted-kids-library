@@ -31,11 +31,12 @@ import {
   analyzePDFWithGemini
 } from '@/services/pdfAnalysisService';
 import { 
-  getSupabasePDFById,
+  getPDFById as getSupabasePDFById,
   updatePDFMetadata,
-  deleteSupabasePDF as deleteSupabasePDF,
+  deletePDF as deleteSupabasePDF,
   getChatMessagesForPDF,
-  addChatMessageToPDF as addSupabaseChatMessage
+  addChatMessageToPDF as addSupabaseChatMessage,
+  deleteAllChatMessagesForPDF
 } from '@/services/pdfSupabaseService';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
