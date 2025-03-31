@@ -74,7 +74,7 @@ const AdminPanel = () => {
 
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-blog-post', {
+      const { data, error } = await supabaseUntyped.functions.invoke('generate-blog-post', {
         body: { blogTitle: title, language },
       });
 
