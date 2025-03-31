@@ -32,6 +32,12 @@ const PDFGrid = () => {
     loadPDFs();
   }, [user]);
 
+  // Don't render anything if user is not signed in
+  if (!user) {
+    return null;
+  }
+
+  // Don't render if there are no PDFs
   if (allPDFs.length === 0) {
     return null;
   }
