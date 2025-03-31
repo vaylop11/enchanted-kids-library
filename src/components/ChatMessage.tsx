@@ -10,13 +10,16 @@ import { motion } from 'framer-motion';
 interface ChatMessageProps {
   message: ChatMessageType;
   onDelete?: (messageId: string) => void;
+  isPermanentlyDeleting?: boolean;
 }
 
-const ChatMessage = ({ message, onDelete }: ChatMessageProps) => {
+const ChatMessage = ({ message, onDelete, isPermanentlyDeleting = false }: ChatMessageProps) => {
   const [showDelete, setShowDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const handleDelete = () => {
     if (onDelete) {
+      setIsDeleting(true);
       onDelete(message.id);
     }
   };
@@ -51,8 +54,13 @@ const ChatMessage = ({ message, onDelete }: ChatMessageProps) => {
             size="icon"
             className="h-6 w-6 rounded-full opacity-70 hover:opacity-100 -mt-1 -mr-1"
             onClick={handleDelete}
+            disabled={isDeleting || isPermanentlyDeleting}
           >
-            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+            {isDeleting || isPermanentlyDeleting ? (
+              <div className="h-3 w-3 rounded-full border-2 border-current border-r-transparent animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
           </Button>
         )}
       </div>

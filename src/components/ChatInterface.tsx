@@ -25,6 +25,7 @@ interface ChatInterfaceProps {
   onGenerateSummary: () => void;
   onTranslate: () => void;
   onDeleteMessage?: (messageId: string) => void;
+  isDeletingMessage?: boolean;
 }
 
 const ChatInterface = ({
@@ -38,7 +39,8 @@ const ChatInterface = ({
   onClearMessages,
   onGenerateSummary,
   onTranslate,
-  onDeleteMessage
+  onDeleteMessage,
+  isDeletingMessage = false
 }: ChatInterfaceProps) => {
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -117,7 +119,7 @@ const ChatInterface = ({
             size="sm"
             onClick={onClearMessages}
             className="text-xs text-destructive hover:text-destructive px-2.5 py-1 h-7 rounded-full"
-            disabled={!messages.length}
+            disabled={!messages.length || isWaitingForResponse}
           >
             <Trash2 className="h-3 w-3 mr-1" />
             {language === 'ar' ? 'مسح' : 'Clear'}
@@ -150,6 +152,7 @@ const ChatInterface = ({
                     key={message.id} 
                     message={message} 
                     onDelete={onDeleteMessage}
+                    isPermanentlyDeleting={isDeletingMessage}
                   />
                 ))}
               </AnimatePresence>
