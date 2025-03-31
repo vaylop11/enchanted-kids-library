@@ -1,13 +1,42 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AdminPanel from '@/components/admin/AdminPanel';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminPage = () => {
   const { user, loading, isAdmin } = useAuth();
+
+  useEffect(() => {
+    // Check if user is authenticated
+    if (user && !isAdmin) {
+      toast.error("You don't have permission to access the admin panel");
+    }
+
+    // Test Supabase connection
+    const checkSupabaseConnection = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('blog_posts')
+          .select('count(*)')
+          .single();
+          
+        if (error) {
+          console.error('Supabase connection error:', error);
+        } else {
+          console.log('Supabase connection successful, blog posts count:', data);
+        }
+      } catch (error) {
+        console.error('Error checking Supabase connection:', error);
+      }
+    };
+    
+    checkSupabaseConnection();
+  }, [user, isAdmin]);
 
   // Show loading state
   if (loading) {

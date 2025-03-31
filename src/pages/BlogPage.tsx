@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -9,161 +8,151 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
+import Footer from '@/components/Footer';
 
-// Sample blog posts with enhanced SEO and formatting
-const blogPosts = [
-  {
-    id: 'chatpdf-vs-traditional',
-    title: {
-      en: 'ChatPDF vs Traditional PDF Reading: A Comprehensive Comparison',
-      ar: 'ChatPDF مقابل قراءة PDF التقليدية: مقارنة شاملة'
-    },
-    excerpt: {
-      en: 'Discover how ChatPDF technology is changing the way we interact with documents and why it\'s more efficient than traditional reading methods.',
-      ar: 'اكتشف كيف تغير تقنية ChatPDF الطريقة التي نتفاعل بها مع المستندات ولماذا هي أكثر كفاءة من أساليب القراءة التقليدية.'
-    },
-    date: '2023-10-15',
-    readTime: {
-      en: '5 min read',
-      ar: '5 دقائق للقراءة'
-    },
-    category: {
-      en: 'Technology',
-      ar: 'تكنولوجيا'
-    },
-    image: 'https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
-  },
-  {
-    id: 'chatpdf-education',
-    title: {
-      en: 'How ChatPDF is Transforming Education for Students and Teachers',
-      ar: 'كيف يغير ChatPDF مشهد التعليم للطلاب والمعلمين'
-    },
-    excerpt: {
-      en: 'Explore how ChatPDF\'s innovative technology can improve student comprehension and save time for teachers by facilitating information extraction from academic documents.',
-      ar: 'استكشف كيف يمكن لتقنية ChatPDF المبتكرة أن تحسن فهم الطلاب وتوفر الوقت للمعلمين من خلال تسهيل استخراج المعلومات من المستندات الأكاديمية.'
-    },
-    date: '2023-11-02',
-    readTime: {
-      en: '7 min read',
-      ar: '7 دقائق للقراءة'
-    },
-    category: {
-      en: 'Education',
-      ar: 'تعليم'
-    },
-    image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
-  },
-  {
-    id: 'chatpdf-business',
-    title: {
-      en: 'Accelerating Business Processes with ChatPDF: A Case Study',
-      ar: 'تسريع عمليات الأعمال باستخدام ChatPDF: دراسة حالة'
-    },
-    excerpt: {
-      en: 'Learn how businesses are using ChatPDF technology to analyze contracts and legal documents 10x faster than traditional methods.',
-      ar: 'تعرف على كيفية استخدام الشركات لتقنية ChatPDF لتحليل العقود والمستندات القانونية بسرعة أكبر بـ 10 مرات من الطرق التقليدية.'
-    },
-    date: '2023-12-08',
-    readTime: {
-      en: '6 min read',
-      ar: '6 دقائق للقراءة'
-    },
-    category: {
-      en: 'Business',
-      ar: 'أعمال'
-    },
-    image: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
-  },
-  {
-    id: 'chatpdf-research',
-    title: {
-      en: 'How Researchers Can Use ChatPDF to Accelerate Literature Reviews',
-      ar: 'كيف يمكن للباحثين استخدام ChatPDF لتسريع مراجعة الأدبيات العلمية'
-    },
-    excerpt: {
-      en: 'A comprehensive guide for researchers on how to use ChatPDF to summarize research papers and extract key findings efficiently.',
-      ar: 'دليل شامل للباحثين حول كيفية استخدام ChatPDF لتلخيص الأوراق البحثية واستخلاص النتائج الرئيسية بكفاءة.'
-    },
-    date: '2024-01-15',
-    readTime: {
-      en: '8 min read',
-      ar: '8 دقائق للقراءة'
-    },
-    category: {
-      en: 'Research',
-      ar: 'بحث علمي'
-    },
-    image: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
-  },
-  {
-    id: 'chatpdf-legal',
-    title: {
-      en: 'ChatPDF for Lawyers: How to Improve Legal Document Review',
-      ar: 'ChatPDF للمحامين: كيفية تحسين مراجعة المستندات القانونية'
-    },
-    excerpt: {
-      en: 'Discover how lawyers can use ChatPDF to analyze contracts, discover legal loopholes, and save hours of manual work.',
-      ar: 'اكتشف كيف يمكن للمحامين استخدام ChatPDF لتحليل العقود واكتشاف الثغرات القانونية وتوفير ساعات من العمل اليدوي.'
-    },
-    date: '2024-02-22',
-    readTime: {
-      en: '9 min read',
-      ar: '9 دقائق للقراءة'
-    },
-    category: {
-      en: 'Legal',
-      ar: 'قانون'
-    },
-    image: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
-  },
-  {
-    id: 'chatpdf-student',
-    title: {
-      en: 'The Student\'s Guide to Using ChatPDF for Effective Studying',
-      ar: 'دليل الطالب لاستخدام ChatPDF للدراسة الفعالة'
-    },
-    excerpt: {
-      en: 'Tips and tricks for students on how to use ChatPDF to understand complex textbooks, summarize lectures, and prepare for exams.',
-      ar: 'نصائح وحيل للطلاب حول كيفية استخدام ChatPDF لفهم الكتب المدرسية المعقدة وتلخيص المحاضرات والاستعداد للاختبارات.'
-    },
-    date: '2024-03-10',
-    readTime: {
-      en: '6 min read',
-      ar: '6 دقائق للقراءة'
-    },
-    category: {
-      en: 'Education',
-      ar: 'تعليم'
-    },
-    image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
-  }
-];
+interface BlogPost {
+  id: string;
+  title: string;
+  excerpt: string;
+  created_at: string;
+  read_time: string;
+  image_url: string;
+  category: string;
+  content: string;
+}
 
 const BlogPage = () => {
   const { language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  // Get localized blog posts based on the current language
-  const localizedPosts = blogPosts.map(post => ({
-    ...post,
-    title: post.title[language as 'en' | 'ar'] || post.title.en,
-    excerpt: post.excerpt[language as 'en' | 'ar'] || post.excerpt.en,
-    readTime: post.readTime[language as 'en' | 'ar'] || post.readTime.en,
-    category: post.category[language as 'en' | 'ar'] || post.category.en
-  }));
+  useEffect(() => {
+    const fetchBlogPosts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('blog_posts')
+          .select('*')
+          .eq('published', true)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data && data.length > 0) {
+          setBlogPosts(data as BlogPost[]);
+        } else {
+          setBlogPosts(sampleBlogPosts);
+        }
+      } catch (error) {
+        console.error('Error fetching blog posts:', error);
+        setBlogPosts(sampleBlogPosts);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchBlogPosts();
+  }, [language]);
   
-  // Get unique categories
-  const categories = Array.from(new Set(localizedPosts.map(post => post.category)));
+  const sampleBlogPosts: BlogPost[] = [
+    {
+      id: 'chatpdf-vs-traditional',
+      title: language === 'ar' 
+        ? 'ChatPDF مقابل قراءة PDF التقليدية: مقارنة شاملة' 
+        : 'ChatPDF vs Traditional PDF Reading: A Comprehensive Comparison',
+      excerpt: language === 'ar'
+        ? 'اكتشف كيف تغير تقنية ChatPDF الطريقة التي نتفاعل بها مع المستندات ولماذا هي أكثر كفاءة من أساليب القراءة التقليدية.'
+        : 'Discover how ChatPDF technology is changing the way we interact with documents and why it\'s more efficient than traditional reading methods.',
+      created_at: '2023-10-15',
+      read_time: language === 'ar' ? '5 دقائق للقراءة' : '5 min read',
+      category: language === 'ar' ? 'تكنولوجيا' : 'Technology',
+      image_url: 'https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+      content: ''
+    },
+    {
+      id: 'chatpdf-education',
+      title: language === 'ar' 
+        ? 'كيف يغير ChatPDF مشهد التعليم للطلاب والمعلمين'
+        : 'How ChatPDF is Transforming Education for Students and Teachers',
+      excerpt: language === 'ar'
+        ? 'استكشف كيف يمكن لتقنية ChatPDF المبتكرة أن تحسن فهم الطلاب وتوفر الوقت للمعلمين من خلال تسهيل استخراج المعلومات من المستندات الأكاديمية.'
+        : 'Explore how ChatPDF\'s innovative technology can improve student comprehension and save time for teachers by facilitating information extraction from academic documents.',
+      created_at: '2023-11-02',
+      read_time: language === 'ar' ? '7 دقائق للقراءة' : '7 min read',
+      category: language === 'ar' ? 'تعليم' : 'Education',
+      image_url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+      content: ''
+    },
+    {
+      id: 'chatpdf-business',
+      title: language === 'ar' 
+        ? 'تسريع عمليات الأعمال باستخدام ChatPDF: دراسة حالة'
+        : 'Accelerating Business Processes with ChatPDF: A Case Study',
+      excerpt: language === 'ar'
+        ? 'Learn how businesses are using ChatPDF technology to analyze contracts and legal documents 10x faster than traditional methods.'
+        : 'Learn how businesses are using ChatPDF technology to analyze contracts and legal documents 10x faster than traditional methods.',
+      created_at: '2023-12-08',
+      read_time: language === 'ar' ? '6 دقائق للقراءة' : '6 min read',
+      category: language === 'ar' ? 'أعمال' : 'Business',
+      image_url: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+      content: ''
+    },
+    {
+      id: 'chatpdf-research',
+      title: language === 'ar' 
+        ? 'كيف يمكن للباحثين استخدام ChatPDF لتسريع مراجعة الأدبيات العلمية'
+        : 'How Researchers Can Use ChatPDF to Accelerate Literature Reviews',
+      excerpt: language === 'ar'
+        ? 'A comprehensive guide for researchers on how to use ChatPDF to summarize research papers and extract key findings efficiently.'
+        : 'A comprehensive guide for researchers on how to use ChatPDF to summarize research papers and extract key findings efficiently.',
+      created_at: '2024-01-15',
+      read_time: language === 'ar' ? '8 دقائق للقراءة' : '8 min read',
+      category: language === 'ar' ? 'بحث علمي' : 'Research',
+      image_url: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+      content: ''
+    },
+    {
+      id: 'chatpdf-legal',
+      title: language === 'ar' 
+        ? 'ChatPDF for Lawyers: How to Improve Legal Document Review'
+        : 'ChatPDF for Lawyers: How to Improve Legal Document Review',
+      excerpt: language === 'ar'
+        ? 'Discover how lawyers can use ChatPDF to analyze contracts, discover legal loopholes, and save hours of manual work.'
+        : 'Discover how lawyers can use ChatPDF to analyze contracts, discover legal loopholes, and save hours of manual work.',
+      created_at: '2024-02-22',
+      read_time: language === 'ar' ? '9 دقائق للقراءة' : '9 min read',
+      category: language === 'ar' ? 'قانون' : 'Legal',
+      image_url: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+      content: ''
+    },
+    {
+      id: 'chatpdf-student',
+      title: language === 'ar' 
+        ? 'دليل الطالب لاستخدام ChatPDF للدراسة الفعالة'
+        : 'The Student\'s Guide to Using ChatPDF for Effective Studying',
+      excerpt: language === 'ar'
+        ? 'Tips and tricks for students on how to use ChatPDF to understand complex textbooks, summarize lectures, and prepare for exams.'
+        : 'Tips and tricks for students on how to use ChatPDF to understand complex textbooks, summarize lectures, and prepare for exams.',
+      created_at: '2024-03-10',
+      read_time: language === 'ar' ? '6 دقائق للقراءة' : '6 min read',
+      category: language === 'ar' ? 'تعليم' : 'Education',
+      image_url: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+      content: ''
+    }
+  ];
   
-  // Filter blog posts based on search term and category
-  const filteredPosts = localizedPosts.filter(post => {
+  const categories = Array.from(new Set(blogPosts.map(post => post.category)));
+  
+  const filteredPosts = blogPosts.filter(post => {
     const matchesSearch = !searchTerm || 
       post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.category.toLowerCase().includes(searchTerm.toLowerCase());
+      post.excerpt?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.category?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = !selectedCategory || post.category === selectedCategory;
     
@@ -177,7 +166,6 @@ const BlogPage = () => {
 
   const hasActiveFilters = searchTerm || selectedCategory;
   
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -262,91 +250,84 @@ const BlogPage = () => {
           </div>
         </div>
         
-        {filteredPosts.length > 0 ? (
-          <motion.div 
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {filteredPosts.map((post, index) => (
-              <motion.div key={post.id} variants={itemVariants}>
-                <Link
-                  to={`/blog/${post.id}`}
-                  className="group block h-full"
-                >
-                  <Card className="overflow-hidden h-full hover:shadow-md transition-all duration-300 border-border/60 hover:border-primary/20 hover:-translate-y-1">
-                    <div className="aspect-video w-full overflow-hidden">
-                      <img 
-                        src={post.image} 
-                        alt={post.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    </div>
-                    <CardHeader>
-                      <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-                        <Badge variant="outline" className="bg-primary/5">{post.category}</Badge>
-                        <div className="flex items-center">
-                          <Calendar className="h-3.5 w-3.5 mr-1" />
-                          <span>{post.date}</span>
-                        </div>
-                      </div>
-                      <CardTitle className="group-hover:text-primary transition-colors duration-300">{post.title}</CardTitle>
-                      <CardDescription className="line-clamp-3">{post.excerpt}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center text-xs text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5 mr-1" />
-                          <span>{post.readTime}</span>
-                        </div>
-                        <div className="text-sm font-medium flex items-center text-primary group-hover:underline">
-                          {language === 'ar' ? 'قراءة المزيد' : 'Read More'}
-                          <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </motion.div>
-            ))}
-          </motion.div>
-        ) : (
-          <div className="text-center py-20 bg-muted/20 rounded-lg">
-            <h3 className="text-xl font-semibold mb-2">
-              {language === 'ar' ? 'لم يتم العثور على مقالات' : 'No articles found'}
-            </h3>
-            <p className="text-muted-foreground">
-              {language === 'ar' 
-                ? 'حاول تعديل معايير البحث الخاصة بك'
-                : 'Try adjusting your search criteria'
-              }
-            </p>
-            {hasActiveFilters && (
-              <Button onClick={clearFilters} className="mt-4">
-                {language === 'ar' ? 'مسح التصفية' : 'Clear filters'}
-              </Button>
-            )}
+        {loading ? (
+          <div className="flex justify-center p-12">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-r-transparent rounded-full"></div>
           </div>
+        ) : (
+          <>
+            {filteredPosts.length > 0 ? (
+              <motion.div 
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                {filteredPosts.map((post, index) => (
+                  <motion.div key={post.id} variants={itemVariants}>
+                    <Link
+                      to={`/blog/${post.id}`}
+                      className="group block h-full"
+                    >
+                      <Card className="overflow-hidden h-full hover:shadow-md transition-all duration-300 border-border/60 hover:border-primary/20 hover:-translate-y-1">
+                        <div className="aspect-video w-full overflow-hidden">
+                          <img 
+                            src={post.image_url} 
+                            alt={post.title}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        </div>
+                        <CardHeader>
+                          <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
+                            <Badge variant="outline" className="bg-primary/5">{post.category}</Badge>
+                            <div className="flex items-center">
+                              <Calendar className="h-3.5 w-3.5 mr-1" />
+                              <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                          <CardTitle className="group-hover:text-primary transition-colors duration-300">{post.title}</CardTitle>
+                          <CardDescription className="line-clamp-3">{post.excerpt}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-xs text-muted-foreground">
+                              <Clock className="h-3.5 w-3.5 mr-1" />
+                              <span>{post.read_time}</span>
+                            </div>
+                            <div className="text-sm font-medium flex items-center text-primary group-hover:underline">
+                              {language === 'ar' ? 'قراءة المزيد' : 'Read More'}
+                              <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </motion.div>
+                ))}
+              </motion.div>
+            ) : (
+              <div className="text-center py-20 bg-muted/20 rounded-lg">
+                <h3 className="text-xl font-semibold mb-2">
+                  {language === 'ar' ? 'لم يتم العثور على مقالات' : 'No articles found'}
+                </h3>
+                <p className="text-muted-foreground">
+                  {language === 'ar' 
+                    ? 'حاول تعديل معايير البحث الخاصة بك'
+                    : 'Try adjusting your search criteria'
+                  }
+                </p>
+                {hasActiveFilters && (
+                  <Button onClick={clearFilters} className="mt-4">
+                    {language === 'ar' ? 'مسح التصفية' : 'Clear filters'}
+                  </Button>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
       
-      {/* Footer */}
-      <footer className="mt-auto py-10 bg-muted/30 border-t border-border">
-        <div className="container mx-auto px-4 md:px-6 text-center text-muted-foreground">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <span className="font-display text-lg font-medium">
-              {language === 'ar' ? 'ChatPDF' : 'ChatPDF'}
-            </span>
-          </div>
-          <p className="text-sm">
-            {language === 'ar' 
-              ? `© ${new Date().getFullYear()} ChatPDF. جميع الحقوق محفوظة.`
-              : `© ${new Date().getFullYear()} ChatPDF. All rights reserved.`
-            }
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

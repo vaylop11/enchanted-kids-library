@@ -31,7 +31,7 @@ const formSchema = z.object({
 });
 
 const AdminPanel = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const navigate = useNavigate();
   const { language } = useLanguage();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -115,15 +115,59 @@ const AdminPanel = () => {
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!user) {
+      toast.error('You must be logged in to publish a blog post');
+      return;
+    }
+    
     setIsSubmitting(true);
     
-    // Here we would typically save to a database
-    // For now, we'll just simulate success
-    setTimeout(() => {
-      toast.success(language === 'ar' ? 'تم إنشاء المقال بنجاح' : 'Blog post created successfully');
+    try {
+      // Extract first 150 characters for excerpt
+      const excerpt = values.content.split('\n')[0].substring(0, 150);
+      
+      // Calculate read time (approx. 200 words per minute)
+      const wordCount = values.content.split(/\s+/).length;
+      const readTimeMinutes = Math.max(1, Math.ceil(wordCount / 200));
+      const readTime = language === 'ar' 
+        ? `${readTimeMinutes} دقائق للقراءة` 
+        : `${readTimeMinutes} min read`;
+      
+      // Save blog post to Supabase
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .insert({
+          title: values.title,
+          content: values.content,
+          excerpt: excerpt,
+          image_url: values.imageUrl,
+          category: values.category,
+          read_time: readTime,
+          author_id: user.id,
+          published: true
+        })
+        .select('id')
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success(language === 'ar' ? 'تم نشر المقال بنجاح' : 'Blog post published successfully');
+      
+      // Reset form
       form.reset();
+      
+    } catch (error) {
+      console.error('Error saving blog post:', error);
+      toast.error(
+        language === 'ar'
+          ? 'حدث خطأ أثناء نشر المقال'
+          : 'Error publishing blog post'
+      );
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   return (
