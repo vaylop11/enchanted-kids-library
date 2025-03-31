@@ -4,7 +4,7 @@ import { Navigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
 import { Send, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -104,7 +104,8 @@ const ChatPage = () => {
     // Fetch initial messages
     const fetchMessages = async () => {
       try {
-        const { data, error } = await supabase
+        // Use the untyped client to avoid TypeScript errors
+        const { data, error } = await supabaseUntyped
           .from('messages')
           .select('*')
           .order('created_at', { ascending: true })
@@ -133,7 +134,8 @@ const ChatPage = () => {
     if (!user || !newMessage.trim()) return;
 
     try {
-      const { error } = await supabase.from('messages').insert({
+      // Use the untyped client to avoid TypeScript errors
+      const { error } = await supabaseUntyped.from('messages').insert({
         content: newMessage.trim(),
         user_id: user.id,
         user_email: user.email || 'Anonymous',
@@ -265,7 +267,7 @@ const ChatPage = () => {
                 placeholder={t('typeMessage')}
                 className="flex-1"
               />
-              <Button type="submit" variant="chat" disabled={!newMessage.trim()}>
+              <Button type="submit" disabled={!newMessage.trim()}>
                 <Send className="h-4 w-4 mr-2" />
                 {t('send')}
               </Button>
