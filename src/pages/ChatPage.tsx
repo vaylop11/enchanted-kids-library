@@ -78,7 +78,8 @@ const ChatPage = () => {
         const presentUsers: Record<string, OnlineUser> = {};
         
         Object.keys(state).forEach(key => {
-          const presences = state[key] as Array<{ online_at: string, email: string }>;
+          // Cast the presence data to the expected structure
+          const presences = state[key] as unknown as Array<{ online_at: string, email: string }>;
           if (presences.length > 0) {
             presentUsers[key] = {
               id: key,
@@ -95,7 +96,7 @@ const ChatPage = () => {
           // When subscribed, track our own presence
           await presenceChannel.track({
             online_at: new Date().toISOString(),
-            email: user.email,
+            email: user.email || 'Anonymous',
           });
         }
       });
@@ -110,7 +111,7 @@ const ChatPage = () => {
           .limit(50);
 
         if (error) throw error;
-        if (data) setMessages(data);
+        if (data) setMessages(data as Message[]);
       } catch (error) {
         console.error('Error fetching messages:', error);
         toast.error('Failed to load messages');
@@ -264,7 +265,7 @@ const ChatPage = () => {
                 placeholder={t('typeMessage')}
                 className="flex-1"
               />
-              <Button type="submit" disabled={!newMessage.trim()}>
+              <Button type="submit" variant="chat" disabled={!newMessage.trim()}>
                 <Send className="h-4 w-4 mr-2" />
                 {t('send')}
               </Button>
