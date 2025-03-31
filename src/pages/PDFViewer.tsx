@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -916,3 +917,294 @@ const PDFViewer = () => {
                       <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/30">
                         {language === 'ar' ? 'مؤقت' : 'Temporary'}
                       </Badge>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleDownload}
+                    className="gap-1"
+                  >
+                    <DownloadCloud className="h-4 w-4" />
+                    {language === 'ar' ? 'تنزيل' : 'Download'}
+                  </Button>
+                  
+                  {showPdfControls ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPdfControls(false)}
+                      className="p-2"
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPdfControls(true)}
+                      className="p-2"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              
+              {showPdfControls && (
+                <div className="flex items-center justify-between border-b p-2 bg-muted/30 gap-4">
+                  <div className="flex items-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handlePrevPage}
+                      disabled={pageNumber <= 1}
+                      className="text-xs gap-1"
+                    >
+                      <ChevronUp className="h-3 w-3 -rotate-90" />
+                      {language === 'ar' ? 'السابق' : 'Prev'}
+                    </Button>
+                    
+                    <span className="text-xs mx-2">
+                      {language === 'ar' 
+                        ? `صفحة ${pageNumber} من ${numPages || '?'}`
+                        : `Page ${pageNumber} of ${numPages || '?'}`}
+                    </span>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleNextPage}
+                      disabled={!numPages || pageNumber >= numPages}
+                      className="text-xs gap-1"
+                    >
+                      {language === 'ar' ? 'التالي' : 'Next'}
+                      <ChevronUp className="h-3 w-3 rotate-90" />
+                    </Button>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleZoomOut}
+                      disabled={pdfScale <= 0.5}
+                      className="text-xs p-1 h-6 w-6"
+                    >
+                      -
+                    </Button>
+                    
+                    <span className="text-xs mx-1">
+                      {Math.round(pdfScale * 100)}%
+                    </span>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleZoomIn}
+                      disabled={pdfScale >= 2.0}
+                      className="text-xs p-1 h-6 w-6"
+                    >
+                      +
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="relative min-h-[500px]">
+                {isLoadingPdf && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                    <div className="flex flex-col items-center">
+                      <FileText className="h-16 w-16 text-muted-foreground animate-pulse mb-4" />
+                      <p className="text-sm text-muted-foreground">
+                        {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {pdfError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/95">
+                    <div className="flex flex-col items-center text-center max-w-md p-6">
+                      <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+                      <h3 className="text-lg font-medium mb-2">
+                        {language === 'ar' ? 'خطأ في تحميل الملف' : 'Error Loading PDF'}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {pdfError}
+                      </p>
+                      <Button onClick={handleRetryLoading}>
+                        {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {pdf.dataUrl && !pdfError && (
+                  <Document
+                    file={pdf.dataUrl}
+                    onLoadSuccess={handleDocumentLoadSuccess}
+                    onLoadError={handleDocumentLoadError}
+                    className="mx-auto overflow-hidden"
+                  >
+                    <Page
+                      pageNumber={pageNumber}
+                      scale={pdfScale}
+                      className="shadow-none mx-auto py-4"
+                      renderAnnotationLayer={true}
+                      renderTextLayer={true}
+                    />
+                  </Document>
+                )}
+              </div>
+            </div>
+            
+            <div className="lg:w-1/3 flex flex-col">
+              <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden flex flex-col h-full">
+                <div className="flex justify-between items-center p-4 border-b">
+                  <div className="flex items-center gap-2">
+                    {showChat ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowChat(false)}
+                        className="p-2 md:hidden"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowChat(true)}
+                        className="p-2 md:hidden"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <h2 className="font-medium">
+                      {language === 'ar' ? 'محادثة حول الملف' : 'Chat with PDF'}
+                    </h2>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={generateSummary}
+                      className="text-xs"
+                      disabled={isWaitingForResponse}
+                    >
+                      <FileText className="h-3 w-3 mr-1" />
+                      {language === 'ar' ? 'ملخص' : 'Summary'}
+                    </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={translatePDF}
+                      className="text-xs"
+                      disabled={isWaitingForResponse}
+                    >
+                      <Languages className="h-3 w-3 mr-1" />
+                      {language === 'ar' ? 'ترجمة' : 'Translate'}
+                    </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearChatMessages}
+                      className="text-xs"
+                      disabled={!chatMessages.length}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      {language === 'ar' ? 'مسح' : 'Clear'}
+                    </Button>
+                  </div>
+                </div>
+                
+                {showChat && (
+                  <>
+                    <ScrollArea className="flex-1 p-4">
+                      {isLoadingMessages ? (
+                        <>
+                          <ChatMessageSkeleton isUser={false} />
+                          <div className="h-3"></div>
+                          <ChatMessageSkeleton isUser={true} />
+                        </>
+                      ) : chatMessages.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-40 p-4 text-center text-muted-foreground">
+                          <Brain className="h-8 w-8 mb-3 opacity-50" />
+                          <p className="text-sm">
+                            {language === 'ar'
+                              ? 'اسأل أي سؤال حول محتوى هذا المستند'
+                              : 'Ask any question about the content of this document'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {chatMessages.map((message) => (
+                            <div
+                              key={message.id}
+                              className={cn(
+                                "flex flex-col space-y-2 p-3 rounded-lg max-w-[90%]",
+                                message.isUser
+                                  ? "bg-primary/10 ml-auto rounded-br-none"
+                                  : "bg-muted mr-auto rounded-bl-none"
+                              )}
+                            >
+                              <div className="whitespace-pre-wrap text-sm">
+                                {message.content}
+                              </div>
+                              <div className="text-xs text-muted-foreground self-end">
+                                {new Date(message.timestamp).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                          <div ref={chatEndRef} />
+                        </div>
+                      )}
+                      
+                      {isAnalyzing && (
+                        <PDFAnalysisProgress analysis={analysisProgress} />
+                      )}
+                    </ScrollArea>
+                    
+                    <div className="p-4 border-t mt-auto">
+                      <form onSubmit={handleChatSubmit} className="flex gap-2">
+                        <Textarea
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          placeholder={language === 'ar' 
+                            ? 'اكتب سؤالك حول هذا المستند...' 
+                            : 'Type your question about this document...'}
+                          className="min-h-10 resize-none"
+                          disabled={isWaitingForResponse}
+                        />
+                        <Button 
+                          type="submit" 
+                          size="icon"
+                          disabled={!chatInput.trim() || isWaitingForResponse}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </form>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default PDFViewer;
