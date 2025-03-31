@@ -9,9 +9,23 @@ import { useAuth } from '@/contexts/AuthContext';
 const AdminPage = () => {
   const { user, loading, isAdmin } = useAuth();
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-r-transparent rounded-full"></div>
+      </div>
+    );
+  }
+  
   // Redirect to login if not authenticated
-  if (!loading && !user) {
+  if (!user) {
     return <Navigate to="/signin" replace />;
+  }
+  
+  // Redirect to home if not admin
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
   }
   
   return (
