@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -38,18 +37,15 @@ const ChatPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
-  // Set up real-time messaging and presence
   useEffect(() => {
     if (!user) return;
 
-    // Listen for new messages
     const messageChannel = supabase
       .channel('public:messages')
       .on(
@@ -70,7 +66,6 @@ const ChatPage = () => {
       )
       .subscribe();
 
-    // Set up presence channel for online users
     const presenceChannel = supabase.channel('online-users', {
       config: {
         presence: {
@@ -79,14 +74,12 @@ const ChatPage = () => {
       },
     });
 
-    // Track user presence
     presenceChannel
       .on('presence', { event: 'sync' }, () => {
         const state = presenceChannel.presenceState();
         const presentUsers: Record<string, OnlineUser> = {};
         
         Object.keys(state).forEach(key => {
-          // Cast the presence data to the expected structure
           const presences = state[key] as unknown as Array<{ online_at: string, email: string }>;
           if (presences.length > 0) {
             presentUsers[key] = {
@@ -101,7 +94,6 @@ const ChatPage = () => {
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED' && user) {
-          // When subscribed, track our own presence
           await presenceChannel.track({
             online_at: new Date().toISOString(),
             email: user.email || 'Anonymous',
@@ -109,10 +101,8 @@ const ChatPage = () => {
         }
       });
 
-    // Fetch initial messages
     const fetchMessages = async () => {
       try {
-        // Use the untyped client to avoid TypeScript errors
         const { data, error } = await supabaseUntyped
           .from('messages')
           .select('*')
@@ -129,7 +119,6 @@ const ChatPage = () => {
 
     fetchMessages();
 
-    // Cleanup function
     return () => {
       supabase.removeChannel(messageChannel);
       supabase.removeChannel(presenceChannel);
@@ -142,7 +131,6 @@ const ChatPage = () => {
     if (!user || !newMessage.trim()) return;
 
     try {
-      // Use the untyped client to avoid TypeScript errors
       const { error } = await supabaseUntyped.from('messages').insert({
         content: newMessage.trim(),
         user_id: user.id,
@@ -181,7 +169,7 @@ const ChatPage = () => {
       const { error } = await supabaseUntyped
         .from('messages')
         .delete()
-        .neq('id', '0'); // Delete all messages (using a condition that's always true)
+        .gte('created_at', '1970-01-01');
         
       if (error) throw error;
       toast.success('All messages cleared');
@@ -191,7 +179,6 @@ const ChatPage = () => {
     }
   };
 
-  // Format timestamp to readable time
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString([], { 
       hour: '2-digit', 
@@ -199,12 +186,10 @@ const ChatPage = () => {
     });
   };
 
-  // Get initials from email
   const getInitials = (email: string) => {
     return email.substring(0, 2).toUpperCase();
   };
 
-  // Mask email to protect privacy
   const maskEmail = (email: string) => {
     if (!email || email === 'Anonymous') return 'Anonymous';
     
@@ -217,12 +202,10 @@ const ChatPage = () => {
     return `${name.substring(0, 2)}***`;
   };
 
-  // Check if email is admin
   const isAdminEmail = (email: string) => {
     return email === 'cherifhoucine83@gmail.com';
   };
 
-  // Show loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -231,7 +214,6 @@ const ChatPage = () => {
     );
   }
   
-  // Redirect to login if not authenticated
   if (!user) {
     return <Navigate to="/signin" replace />;
   }
@@ -254,7 +236,6 @@ const ChatPage = () => {
         </div>
         
         <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)]">
-          {/* Online Users Sidebar */}
           <Card className="lg:w-64 w-full p-5 h-full lg:h-auto">
             <h2 className="text-lg font-medium mb-4">{t('onlineUsers')}</h2>
             <ScrollArea className="h-[200px] lg:h-[calc(100%-3rem)]">
@@ -288,7 +269,6 @@ const ChatPage = () => {
             </ScrollArea>
           </Card>
           
-          {/* Chat Area */}
           <Card className="flex-1 flex flex-col p-5 h-full">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-medium">{t('chatRoom')}</h2>
@@ -312,7 +292,6 @@ const ChatPage = () => {
               </div>
             </div>
             
-            {/* Messages */}
             <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4 mb-4">
               <div className="space-y-4">
                 {messages.length === 0 ? (
@@ -376,7 +355,6 @@ const ChatPage = () => {
               </div>
             </ScrollArea>
             
-            {/* Message Input */}
             <form onSubmit={sendMessage} className="flex gap-2">
               <Input
                 value={newMessage}
