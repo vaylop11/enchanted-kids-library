@@ -16,7 +16,8 @@ import {
   ChatMessage, 
   getPDFById as getLocalPDFById, 
   addChatMessageToPDF,
-  savePDF 
+  savePDF,
+  UploadedPDF 
 } from '@/services/pdfStorage';
 import { 
   getSupabasePDFById, 
@@ -38,7 +39,7 @@ const PDFViewer = () => {
   const { language } = useLanguage();
   const { user } = useAuth();
   
-  const [pdf, setPdf] = useState<SupabasePDF | any>(null);
+  const [pdf, setPdf] = useState<SupabasePDF | UploadedPDF | null>(null);
   const [isSupabasePDF, setIsSupabasePDF] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -93,6 +94,7 @@ const PDFViewer = () => {
             setNumPages(localPdf.pageCount || 0);
             setPdfTitle(localPdf.title);
             setIsLoadingMessages(false);
+            setMessages(localPdf.chatMessages || []);
           } else {
             toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'File not found');
             navigate('/pdfs');
@@ -125,15 +127,15 @@ const PDFViewer = () => {
     if (debouncedPdfTitle && pdf && debouncedPdfTitle !== pdf.title) {
       const updateTitle = async () => {
         try {
-          if (isSupabasePDF) {
+          if (isSupabasePDF && pdf) {
             const updated = await updateSupabasePDF(pdfId!, {
               title: debouncedPdfTitle
             });
             if (updated) {
-              setPdf((prevPdf: any) => ({
+              setPdf((prevPdf) => prevPdf ? {
                 ...prevPdf,
                 title: debouncedPdfTitle
-              }));
+              } : null);
               toast.success(language === 'ar' ? 'تم تحديث العنوان' : 'Title updated');
               refetchSupabasePdf();
             } else {
@@ -154,7 +156,9 @@ const PDFViewer = () => {
   };
 
   const changePage = (offset: number) => {
-    setPageNumber((prevPageNumber) => Math.max(1, Math.min(prevPageNumber + offset, numPages || 1)));
+    setPageNumber((prevPageNumber) => 
+      Math.max(1, Math.min(prevPageNumber + offset, numPages || 1))
+    );
   };
 
   const zoomIn = () => {
@@ -179,7 +183,8 @@ const PDFViewer = () => {
         });
         
         if (newChat) {
-          setMessages((prevMessages) => [...prevMessages, newChat] as SupabaseChat[]);
+          // TypeScript knows the current messages are SupabaseChat[] in this branch
+          setMessages(prevMessages => [...prevMessages, newChat] as SupabaseChat[]);
           refetchSupabaseChats();
         } else {
           throw new Error('Failed to create chat message');
@@ -192,7 +197,8 @@ const PDFViewer = () => {
         });
         
         if (newMessage) {
-          setMessages((prevMessages) => [...prevMessages, newMessage] as ChatMessage[]);
+          // TypeScript knows the current messages are ChatMessage[] in this branch
+          setMessages(prevMessages => [...prevMessages, newMessage] as ChatMessage[]);
         } else {
           throw new Error('Failed to create chat message');
         }
@@ -211,7 +217,8 @@ const PDFViewer = () => {
             userId: 'ai'
           }).then((aiChat) => {
             if (aiChat) {
-              setMessages((prevMessages) => [...prevMessages, aiChat] as SupabaseChat[]);
+              // Use type assertion to help TypeScript understand the correct type
+              setMessages(prevMessages => [...prevMessages, aiChat] as SupabaseChat[]);
               refetchSupabaseChats();
             } else {
               throw new Error('Failed to create AI chat message');
@@ -225,7 +232,8 @@ const PDFViewer = () => {
           });
           
           if (aiMessage) {
-            setMessages((prevMessages) => [...prevMessages, aiMessage] as ChatMessage[]);
+            // Use type assertion to help TypeScript understand the correct type
+            setMessages(prevMessages => [...prevMessages, aiMessage] as ChatMessage[]);
           }
         }
         
@@ -259,7 +267,7 @@ const PDFViewer = () => {
           chatMessages: updatedMessages
         };
         // Save the updated PDF back to storage
-        savePDF(updatedPdf);
+        savePDF(updatedPdf as UploadedPDF);
         // Update state
         setMessages(updatedMessages);
         toast.success(language === 'ar' ? 'تم حذف الرسالة بنجاح' : 'Message deleted successfully');
@@ -319,7 +327,7 @@ const PDFViewer = () => {
         <section className="lg:w-2/3 flex flex-col">
           <div className="relative">
             <Document
-              file={isSupabasePDF && pdf ? pdf.fileUrl : pdf?.dataUrl}
+              file={isSupabasePDF && 'fileUrl' in pdf ? pdf.fileUrl : 'dataUrl' in pdf ? pdf.dataUrl : ''}
               onLoadSuccess={onDocumentLoadSuccess}
               className="max-w-full"
             >

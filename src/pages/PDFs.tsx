@@ -1,274 +1,329 @@
-import { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import PDFCard from '@/components/PDFCard';
-import Navbar from '@/components/Navbar';
-import { Search, X, Upload } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserPDFs, uploadPDFToSupabase, SupabasePDF } from '@/services/pdfSupabaseService';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { toast } from 'sonner';
+import { Plus, Loader2, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { PDFCard, PDF } from '@/components/PDFCard';
+import PDFPreview from '@/components/PDFPreview';
+import { 
+  getSavedPDFs, 
+  createPDFFromFile, 
+  deletePDFById,
+  UploadedPDF
+} from '@/services/pdfStorage';
+import { 
+  getUserPDFs, 
+  uploadPDFToSupabase, 
+  deletePDF, 
+  SupabasePDF 
+} from '@/services/pdfSupabaseService';
+import { useQuery } from '@tanstack/react-query';
+import { useDebounce } from '@/hooks/use-debounce';
+import { useToast } from "@/components/ui/use-toast"
 
 const PDFs = () => {
-  const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { language } = useLanguage();
-  const { user, loading: authLoading } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [pdfs, setPdfs] = useState<SupabasePDF[]>([]);
-  const [filteredPDFs, setFilteredPDFs] = useState<SupabasePDF[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isSupabaseStorage, setIsSupabaseStorage] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   
-  const handlePDFDelete = (deletedPdfId: string) => {
-    setPdfs(prevPdfs => prevPdfs.filter(pdf => pdf.id !== deletedPdfId));
-  };
+  const { data: supabasePDFs, refetch: refetchSupabasePDFs, isLoading: isLoadingSupabasePDFs } = useQuery({
+    queryKey: ['supabasePDFs', user?.id],
+    queryFn: () => getUserPDFs(user!.id),
+    enabled: !!user?.id,
+    retry: false
+  });
+  
+  const [localPDFs, setLocalPDFs] = useState<UploadedPDF[]>([]);
+  const [isLoadingLocalPDFs, setIsLoadingLocalPDFs] = useState(true);
 
   useEffect(() => {
-    const loadPDFs = async () => {
-      if (authLoading) return;
-      
-      if (!user) {
-        navigate('/signin');
-        return;
-      }
-      
-      setIsLoading(true);
-      try {
-        const loadedPDFs = await getUserPDFs(user.id);
-        setPdfs(loadedPDFs);
-      } catch (error) {
-        console.error('Error loading PDFs:', error);
-        toast.error(language === 'ar' ? 'فشل في تحميل الملفات' : 'Failed to load PDFs');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadPDFs();
-  }, [user, authLoading, navigate, language]);
-  
-  useEffect(() => {
-    if (searchTerm) {
-      const lowercaseSearch = searchTerm.toLowerCase();
-      const results = pdfs.filter(
-        pdf => 
-          pdf.title.toLowerCase().includes(lowercaseSearch) || 
-          (pdf.summary && pdf.summary.toLowerCase().includes(lowercaseSearch))
-      );
-      setFilteredPDFs(results);
-    } else {
-      setFilteredPDFs(pdfs);
-    }
-  }, [searchTerm, pdfs]);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      await handleFileUpload(files[0]);
-    }
-  };
-
-  const handleFileUpload = async (file: File) => {
     if (!user) {
-      toast.error(language === 'ar' ? 'يرجى تسجيل الدخول لتحميل الملفات' : 'Please sign in to upload files');
       navigate('/signin');
       return;
     }
     
-    if (file.type !== 'application/pdf') {
-      toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
-      return;
+    const loadLocalPDFs = () => {
+      setIsLoadingLocalPDFs(true);
+      try {
+        const savedPDFs = getSavedPDFs();
+        setLocalPDFs(savedPDFs);
+      } catch (error) {
+        console.error('Error loading local PDFs:', error);
+        toast({
+          title: language === 'ar' ? 'فشل في تحميل الملفات' : 'Failed to load PDFs',
+          description: language === 'ar' ? 'حدث خطأ أثناء تحميل الملفات المحفوظة محليًا.' : 'An error occurred while loading locally saved PDFs.'
+        });
+      } finally {
+        setIsLoadingLocalPDFs(false);
+      }
+    };
+    
+    if (!isSupabaseStorage) {
+      loadLocalPDFs();
     }
+  }, [navigate, user, language, isSupabaseStorage, toast]);
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
-      return;
+  useEffect(() => {
+    if (isSupabaseStorage) {
+      refetchSupabasePDFs();
     }
+  }, [isSupabaseStorage, refetchSupabasePDFs]);
 
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploading(true);
+    setUploadProgress(0);
+    
     try {
-      setIsUploading(true);
+      const reader = new FileReader();
       
-      const pdf = await uploadPDFToSupabase(file, user.id);
-      
-      if (pdf) {
-        toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-        setPdfs(prevPDFs => [pdf, ...prevPDFs]);
-        setIsUploading(false);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+      reader.onload = async (e) => {
+        const dataUrl = e.target?.result as string;
+        
+        if (isSupabaseStorage) {
+          const newPDF = await uploadPDFToSupabase(file, user!.id, {
+            onUploadProgress: (progressEvent) => {
+              const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+              setUploadProgress(progress);
+            }
+          });
+          
+          if (newPDF) {
+            toast({
+              title: language === 'ar' ? 'تم رفع الملف بنجاح' : 'File uploaded successfully',
+              description: language === 'ar' ? 'تمت إضافة الملف إلى قائمة ملفاتك.' : 'The file has been added to your file list.'
+            });
+            refetchSupabasePDFs();
+          } else {
+            toast({
+              variant: 'destructive',
+              title: language === 'ar' ? 'فشل في رفع الملف' : 'Failed to upload file',
+              description: language === 'ar' ? 'حدث خطأ أثناء رفع الملف.' : 'An error occurred while uploading the file.'
+            });
+          }
+        } else {
+          createPDFFromFile(file, dataUrl);
+          const savedPDFs = getSavedPDFs();
+          setLocalPDFs(savedPDFs);
+          toast({
+            title: language === 'ar' ? 'تم حفظ الملف بنجاح' : 'File saved successfully',
+            description: language === 'ar' ? 'تم حفظ الملف محليًا.' : 'The file has been saved locally.'
+          });
         }
-        navigate(`/pdf/${pdf.id}`);
+        
+        setIsUploading(false);
+        setUploadProgress(0);
+      };
+      
+      reader.onprogress = (event) => {
+        const progress = Math.round((event.loaded / event.total) * 100);
+        setUploadProgress(progress);
+      };
+      
+      reader.onerror = () => {
+        toast({
+          variant: 'destructive',
+          title: language === 'ar' ? 'فشل في قراءة الملف' : 'Failed to read file',
+          description: language === 'ar' ? 'حدث خطأ أثناء قراءة الملف.' : 'An error occurred while reading the file.'
+        });
+        setIsUploading(false);
+        setUploadProgress(0);
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error uploading PDF:', error);
+      toast({
+        variant: 'destructive',
+        title: language === 'ar' ? 'فشل في رفع الملف' : 'Failed to upload file',
+        description: language === 'ar' ? 'حدث خطأ غير متوقع أثناء رفع الملف.' : 'An unexpected error occurred while uploading the file.'
+      });
+      setIsUploading(false);
+      setUploadProgress(0);
+    } finally {
+      event.target.value = ''; // Reset the input
+    }
+  };
+
+  const handleDeletePDF = async (pdfId: string) => {
+    try {
+      if (isSupabaseStorage) {
+        const success = await deletePDF(pdfId);
+        if (success) {
+          toast({
+            title: language === 'ar' ? 'تم حذف الملف بنجاح' : 'File deleted successfully',
+            description: language === 'ar' ? 'تم حذف الملف من قائمة ملفاتك.' : 'The file has been removed from your file list.'
+          });
+          refetchSupabasePDFs();
+        } else {
+          toast({
+            variant: 'destructive',
+            title: language === 'ar' ? 'فشل في حذف الملف' : 'Failed to delete file',
+            description: language === 'ar' ? 'حدث خطأ أثناء حذف الملف.' : 'An error occurred while deleting the file.'
+          });
+        }
       } else {
-        throw new Error('Upload failed');
+        const success = deletePDFById(pdfId);
+        if (success) {
+          const savedPDFs = getSavedPDFs();
+          setLocalPDFs(savedPDFs);
+          toast({
+            title: language === 'ar' ? 'تم حذف الملف بنجاح' : 'File deleted successfully',
+            description: language === 'ar' ? 'تم حذف الملف من التخزين المحلي.' : 'The file has been removed from local storage.'
+          });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: language === 'ar' ? 'فشل في حذف الملف' : 'Failed to delete file',
+            description: language === 'ar' ? 'حدث خطأ أثناء حذف الملف من التخزين المحلي.' : 'An error occurred while deleting the file from local storage.'
+          });
+        }
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      setIsUploading(false);
-      toast.error(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
+      console.error('Error deleting PDF:', error);
+      toast({
+        variant: 'destructive',
+        title: language === 'ar' ? 'فشل في حذف الملف' : 'Failed to delete file',
+        description: language === 'ar' ? 'حدث خطأ غير متوقع أثناء حذف الملف.' : 'An unexpected error occurred while deleting the file.'
+      });
     }
   };
 
-  const handleUploadClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+  const handleViewPDF = (pdfId: string) => {
+    navigate(`/pdf/${pdfId}`);
   };
-  
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 pt-24 pb-20 px-4 md:px-6 container mx-auto max-w-7xl flex items-center justify-center">
-          <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
-        </main>
-      </div>
-    );
-  }
-  
-  if (!user) {
-    navigate('/signin');
-    return null;
-  }
-  
+
+  const handlePreviewPDF = (pdfUrl: string) => {
+    setPreviewPdfUrl(pdfUrl);
+    setShowPreviewModal(true);
+  };
+
+  const handleClosePreview = () => {
+    setShowPreviewModal(false);
+    setPreviewPdfUrl(null);
+  };
+
+  const filteredPDFs = isSupabaseStorage
+    ? supabasePDFs?.filter(pdf => pdf.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) || []
+    : localPDFs.filter(pdf => pdf.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
+
+  // Find the specific part where the SupabasePDF type is causing an issue with the PDF type
+  // and add a type conversion function or adapter
+
+const convertSupabasePDFtoPDF = (pdf: SupabasePDF): PDF => {
+  return {
+    id: pdf.id,
+    title: pdf.title,
+    summary: pdf.summary || '',  // Ensure summary is always a string
+    uploadDate: pdf.uploadDate,
+    pageCount: pdf.pageCount,
+    fileSize: pdf.fileSize,
+    thumbnail: pdf.thumbnail
+  };
+};
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1 pt-24 pb-20 px-4 md:px-6 container mx-auto max-w-7xl animate-fade-in">
-        <div className="mb-10">
-          <h1 className="heading-2 mb-4">{language === 'ar' ? 'ملفات PDF الخاصة بي' : 'My PDFs'}</h1>
-          <p className="paragraph max-w-3xl">
-            {language === 'ar' 
-              ? 'استعرض جميع ملفات PDF التي قمت بتحميلها. يمكنك البحث عن ملف معين أو تحميل ملف جديد.'
-              : 'Browse all PDFs you have uploaded. You can search for a specific file or upload a new one.'
-            }
-          </p>
-        </div>
+    <div className="container mx-auto py-8">
+      <header className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">
+          {language === 'ar' ? 'ملفاتي' : 'My PDFs'}
+        </h1>
         
-        <div className="flex flex-col md:flex-row gap-6 mb-8 items-start">
-          <div className="relative flex-grow">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={language === 'ar' ? 'البحث عن ملفات...' : 'Search for PDFs...'}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full h-11 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
-            {searchTerm && (
-              <button 
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 h-6 w-6 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
-                aria-label={language === 'ar' ? 'مسح البحث' : 'Clear search'}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-          
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept=".pdf"
-            onChange={handleFileChange}
+        <div className="flex items-center space-x-4">
+          <Input
+            type="search"
+            placeholder={language === 'ar' ? 'ابحث عن ملف PDF...' : 'Search for a PDF...'}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
           />
           
-          <Button 
-            onClick={handleUploadClick}
-            className="md:w-auto w-full bg-primary text-primary-foreground hover:bg-primary/90"
-            disabled={isUploading}
-          >
-            {isUploading ? (
-              <>
-                <div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin mr-2" />
-                <span className="text-primary-foreground font-medium">
-                  {language === 'ar' ? 'جارٍ التحميل...' : 'Uploading...'}
-                </span>
-              </>
-            ) : (
-              <>
-                <Upload className="h-4 w-4 mr-2" />
-                <span className="font-medium">{language === 'ar' ? 'تحميل ملف PDF' : 'Upload PDF'}</span>
-              </>
-            )}
-          </Button>
-        </div>
-        
-        <div>
-          {isLoading ? (
-            <div className="text-center py-20 bg-muted/10 rounded-lg border border-border/40">
-              <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4 mx-auto" />
-              <p className="text-muted-foreground">
-                {language === 'ar' ? 'جارٍ تحميل الملفات...' : 'Loading PDFs...'}
-              </p>
-            </div>
-          ) : filteredPDFs.length > 0 ? (
-            <>
-              <div className="text-sm text-muted-foreground mb-6">
-                {language === 'ar' 
-                  ? `عرض ${filteredPDFs.length} ${filteredPDFs.length === 1 ? 'ملف' : 'ملفات'}`
-                  : `Showing ${filteredPDFs.length} ${filteredPDFs.length === 1 ? 'PDF' : 'PDFs'}`
-                }
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredPDFs.map((pdf, index) => (
-                  <PDFCard 
-                    key={pdf.id} 
-                    pdf={pdf} 
-                    index={index} 
-                    onDelete={handlePDFDelete}
-                  />
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-20 bg-muted/10 rounded-lg border border-border/40">
-              <h3 className="heading-3 mb-2 text-foreground">
-                {language === 'ar' ? 'لم يتم العثور على ملفات' : 'No PDFs found'}
-              </h3>
-              <p className="text-foreground/80 mb-6">
-                {language === 'ar' 
-                  ? 'حاول تعديل البحث أو قم بتحميل ملف جديد.'
-                  : 'Try adjusting your search or upload a new PDF.'
-                }
-              </p>
-              <Button
-                onClick={handleUploadClick}
-                variant="default"
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-                disabled={isUploading}
-              >
+          <input
+            type="file"
+            id="upload-pdf"
+            accept="application/pdf"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          
+          <label htmlFor="upload-pdf">
+            <Button asChild disabled={isUploading}>
+              <a className="flex items-center">
                 {isUploading ? (
                   <>
-                    <div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin mr-2" />
-                    {language === 'ar' ? 'جارٍ التحميل...' : 'Uploading...'}
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {language === 'ar' ? 'جارٍ الرفع...' : 'Uploading...'} ({uploadProgress}%)
                   </>
                 ) : (
                   <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    {language === 'ar' ? 'تحميل ملف' : 'Upload PDF'}
+                    <Plus className="mr-2 h-4 w-4" />
+                    {language === 'ar' ? 'رفع ملف PDF' : 'Upload PDF'}
                   </>
                 )}
-              </Button>
-            </div>
-          )}
+              </a>
+            </Button>
+          </label>
         </div>
+      </header>
+      
+      <main>
+        {isLoadingSupabasePDFs || isLoadingLocalPDFs ? (
+          <div className="flex justify-center items-center p-4">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : filteredPDFs.length === 0 ? (
+          <div className="text-center p-4 text-muted-foreground">
+            {language === 'ar' 
+              ? 'لا توجد ملفات PDF. ابدأ برفع ملف!' 
+              : 'No PDFs found. Start by uploading a file!'}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filteredPDFs.map(pdf => (
+              <PDFCard 
+                key={pdf.id} 
+                pdf={isSupabaseStorage ? convertSupabasePDFtoPDF(pdf as SupabasePDF) : pdf} 
+                onView={handleViewPDF} 
+                onDelete={handleDeletePDF} 
+                onPreview={() => handlePreviewPDF(isSupabaseStorage ? (pdf as SupabasePDF).fileUrl : (pdf as UploadedPDF).dataUrl)}
+              />
+            ))}
+          </div>
+        )}
       </main>
       
-      <footer className="mt-auto py-10 bg-muted/30 border-t border-border">
-        <div className="container mx-auto px-4 md:px-6 text-center text-muted-foreground">
-          <p className="text-sm">
-            {language === 'ar' 
-              ? `© ${new Date().getFullYear()} أداة دردشة PDF. جميع الحقوق محفوظة.`
-              : `© ${new Date().getFullYear()} PDF Chat Tool. All rights reserved.`
-            }
-          </p>
+      {previewPdfUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-3xl max-h-[90vh] overflow-auto relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClosePreview}
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            >
+              <XCircle className="h-6 w-6" />
+              <span className="sr-only">{language === 'ar' ? 'إغلاق المعاينة' : 'Close Preview'}</span>
+            </Button>
+            <div className="p-4">
+              <PDFPreview pdfUrl={previewPdfUrl} maxHeight={700} />
+            </div>
+          </div>
         </div>
-      </footer>
+      )}
     </div>
   );
 };

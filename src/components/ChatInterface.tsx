@@ -53,6 +53,15 @@ const ChatInterface = ({
     }
   };
 
+  // Helper function to get common message properties regardless of message type
+  const getMessageContent = (message: ChatMessage | SupabaseChat) => {
+    return {
+      id: message.id,
+      content: message.content,
+      isUser: message.isUser
+    };
+  };
+
   return (
     <div className="flex flex-col h-full border rounded-lg overflow-hidden">
       <div className="p-3 border-b bg-muted/20 flex justify-between items-center">
@@ -74,36 +83,40 @@ const ChatInterface = ({
                 : 'Ask a question about the document'}
             </div>
           ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`group flex flex-col p-3 rounded-lg max-w-[80%] relative ${
-                  message.isUser 
-                    ? 'ml-auto bg-primary text-primary-foreground' 
-                    : 'mr-auto bg-muted'
-                }`}
-              >
-                <div className="whitespace-pre-wrap break-words">{message.content}</div>
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-xs opacity-70">
-                    {message.isUser 
-                      ? language === 'ar' ? 'أنت' : 'You' 
-                      : 'AI'}
-                  </span>
+            messages.map((message) => {
+              const { id, content, isUser } = getMessageContent(message);
+              
+              return (
+                <div
+                  key={id}
+                  className={`group flex flex-col p-3 rounded-lg max-w-[80%] relative ${
+                    isUser 
+                      ? 'ml-auto bg-primary text-primary-foreground' 
+                      : 'mr-auto bg-muted'
+                  }`}
+                >
+                  <div className="whitespace-pre-wrap break-words">{content}</div>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-xs opacity-70">
+                      {isUser 
+                        ? language === 'ar' ? 'أنت' : 'You' 
+                        : 'AI'}
+                    </span>
+                  </div>
+                  
+                  {onDeleteMessage && isUser && (
+                    <button
+                      onClick={() => onDeleteMessage(id)}
+                      disabled={isDeletingMessage}
+                      className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 bg-background rounded-full p-1 hover:bg-muted transition-opacity"
+                      aria-label={language === 'ar' ? 'حذف الرسالة' : 'Delete message'}
+                    >
+                      <XCircle className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  )}
                 </div>
-                
-                {onDeleteMessage && message.isUser && (
-                  <button
-                    onClick={() => onDeleteMessage(message.id)}
-                    disabled={isDeletingMessage}
-                    className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 bg-background rounded-full p-1 hover:bg-muted transition-opacity"
-                    aria-label={language === 'ar' ? 'حذف الرسالة' : 'Delete message'}
-                  >
-                    <XCircle className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                )}
-              </div>
-            ))
+              );
+            })
           )}
           
           {isWaitingForResponse && (
