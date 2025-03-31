@@ -31,10 +31,31 @@ serve(async (req) => {
 
     console.log(`Generating blog post for title: "${blogTitle}" in language: ${language}`);
 
-    // Create the prompt based on language
+    // Create the prompt based on language, with added formatting instructions
     const systemPrompt = language === 'ar' 
-      ? `أنت مساعد لكتابة المدونات المتخصصة في ChatPDF وتقنيات الذكاء الاصطناعي. قم بإنشاء مقال مدونة كامل بناءً على العنوان التالي: "${blogTitle}". يجب أن يتضمن المقال مقدمة، وعدة عناوين فرعية مع فقرات، وخاتمة. اجعل المحتوى معلوماتيًا وجذابًا.`
-      : `You are a blog writing assistant specialized in ChatPDF and AI technologies. Create a complete blog post based on the following title: "${blogTitle}". The post should include an introduction, several subheadings with paragraphs, and a conclusion. Make the content informative and engaging.`;
+      ? `أنت مساعد لكتابة المدونات المتخصصة في ChatPDF وتقنيات الذكاء الاصطناعي. قم بإنشاء مقال مدونة كامل بناءً على العنوان التالي: "${blogTitle}". 
+      
+      يجب أن يتضمن المقال:
+      1. عنوان رئيسي باستخدام # في بداية السطر
+      2. مقدمة تشرح الموضوع
+      3. عدة عناوين فرعية باستخدام ## و ### في بداية الأسطر
+      4. فقرات تحت كل عنوان
+      5. فقرة تسمى [Image: وصف الصورة] حيث سيتم إضافة صورة
+      6. خاتمة تلخص النقاط الرئيسية
+      
+      اجعل المحتوى معلوماتيًا وجذابًا ومنظمًا جيدًا.`
+      
+      : `You are a blog writing assistant specialized in ChatPDF and AI technologies. Create a complete blog post based on the following title: "${blogTitle}".
+      
+      The post should include:
+      1. A main heading using # at the start of the line
+      2. An introduction that explains the topic
+      3. Several subheadings using ## and ### at the start of the lines
+      4. Paragraphs under each heading
+      5. A paragraph called [Image: description of image] where an image will be inserted
+      6. A conclusion that summarizes the key points
+      
+      Make the content informative, engaging, and well-structured.`;
 
     // Call Gemini API
     const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent', {

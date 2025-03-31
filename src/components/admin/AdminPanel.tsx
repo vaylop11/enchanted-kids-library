@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { supabaseUntyped } from '@/integrations/supabase/client';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, Eye } from 'lucide-react';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -36,6 +36,7 @@ const AdminPanel = () => {
   const { language } = useLanguage();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -64,6 +65,36 @@ const AdminPanel = () => {
       </div>
     );
   }
+
+  const formatBlogContent = (content: string) => {
+    if (!content) return '';
+    
+    // Ensure paragraphs have proper spacing
+    let formattedContent = content.replace(/\n{3,}/g, '\n\n');
+    
+    // Convert markdown-style headings to HTML
+    formattedContent = formattedContent.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    formattedContent = formattedContent.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    formattedContent = formattedContent.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    
+    // Convert paragraphs to HTML
+    formattedContent = '<p>' + formattedContent.replace(/\n\n/g, '</p><p>') + '</p>';
+    
+    // Fix any double paragraph tags
+    formattedContent = formattedContent.replace(/<\/p><p><h([1-3])>/g, '</p><h$1>');
+    formattedContent = formattedContent.replace(/<\/h([1-3])><p>/g, '</h$1><p>');
+    
+    // Attempt to identify image descriptions to replace with actual images
+    formattedContent = formattedContent.replace(/\[Image: (.+?)\]/g, (match, description) => {
+      const imageUrl = form.getValues('imageUrl');
+      if (imageUrl) {
+        return `<img src="${imageUrl}" alt="${description}" class="w-full h-auto rounded-lg my-4" />`;
+      }
+      return match;
+    });
+    
+    return formattedContent;
+  };
 
   const generateBlogPost = async (title: string) => {
     if (!title) {
@@ -127,12 +158,15 @@ const AdminPanel = () => {
         ? `${readTimeMinutes} دقائق للقراءة` 
         : `${readTimeMinutes} min read`;
       
+      // Format content with proper HTML tags
+      const formattedContent = formatBlogContent(values.content);
+      
       // Removed .select('id').single() to avoid permission issues
       const { error } = await supabaseUntyped
         .from('blog_posts')
         .insert({
           title: values.title,
-          content: values.content,
+          content: formattedContent,
           excerpt: excerpt,
           image_url: values.imageUrl,
           category: values.category,
@@ -148,6 +182,7 @@ const AdminPanel = () => {
       toast.success(language === 'ar' ? 'تم نشر المقال بنجاح' : 'Blog post published successfully');
       
       form.reset();
+      setPreviewMode(false);
       
     } catch (error) {
       console.error('Error saving blog post:', error);
@@ -159,6 +194,10 @@ const AdminPanel = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const togglePreview = () => {
+    setPreviewMode(!previewMode);
   };
 
   return (
@@ -263,20 +302,45 @@ const AdminPanel = () => {
                 name="content"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      {language === 'ar' ? 'المحتوى' : 'Content'}
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder={language === 'ar' ? 'محتوى المقال...' : 'Blog post content...'}
-                        className="min-h-[300px]"
-                        {...field}
+                    <div className="flex justify-between items-center">
+                      <FormLabel>
+                        {language === 'ar' ? 'المحتوى' : 'Content'}
+                      </FormLabel>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={togglePreview}
+                        className="text-xs flex items-center gap-1"
+                      >
+                        <Eye className="h-3 w-3" />
+                        {previewMode 
+                          ? (language === 'ar' ? 'العودة للتحرير' : 'Edit Mode') 
+                          : (language === 'ar' ? 'معاينة' : 'Preview')}
+                      </Button>
+                    </div>
+                    
+                    {previewMode ? (
+                      <div 
+                        className="min-h-[300px] p-4 border rounded-md overflow-auto"
+                        dangerouslySetInnerHTML={{ 
+                          __html: formatBlogContent(field.value) 
+                        }}
                       />
-                    </FormControl>
+                    ) : (
+                      <FormControl>
+                        <Textarea
+                          placeholder={language === 'ar' ? 'محتوى المقال...' : 'Blog post content...'}
+                          className="min-h-[300px]"
+                          {...field}
+                        />
+                      </FormControl>
+                    )}
+                    
                     <FormDescription>
                       {language === 'ar' 
-                        ? 'يمكنك استخدام HTML لتنسيق المحتوى'
-                        : 'You can use HTML for formatting'}
+                        ? 'يمكنك استخدام علامات مثل # و ## و ### للعناوين، و[Image: وصف] لإضافة الصورة'
+                        : 'You can use # ## ### for headings, and [Image: description] to add the image'}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
