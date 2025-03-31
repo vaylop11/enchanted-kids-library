@@ -7,7 +7,7 @@ import FeaturesSection from '@/components/FeaturesSection';
 import BlogSection from '@/components/BlogSection';
 import FAQSection from '@/components/FAQSection';
 import UploadZone from '@/components/UploadZone';
-import RecentPDFs from '@/components/RecentPDFs';
+import PDFGrid from '@/components/PDFGrid';
 
 const Index = () => {
   const { language } = useLanguage();
@@ -38,8 +38,8 @@ const Index = () => {
           </div>
         </section>
         
-        {/* Recent PDFs section */}
-        <RecentPDFs />
+        {/* All PDFs grid section */}
+        <PDFGrid />
         
         <FeaturesSection />
         <BlogSection />
