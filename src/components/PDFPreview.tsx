@@ -75,8 +75,8 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
           >
             <Page 
               pageNumber={pageNumber} 
-              renderTextLayer={true}
-              renderAnnotationLayer={true}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
               scale={1.0}
               className="mx-auto"
             />
