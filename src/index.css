@@ -81,6 +81,24 @@
   .hover-lift {
     @apply transition-all duration-300 hover:-translate-y-1;
   }
+
+  /* Modern scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
 }
 
 @layer utilities {
@@ -97,6 +115,35 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+  
+  .glass-card {
+    @apply backdrop-blur-md bg-white/10 dark:bg-black/20 border border-white/20 dark:border-white/10 shadow-xl;
+  }
+  
+  .glass-effect {
+    @apply backdrop-blur-sm bg-white/90 dark:bg-gray-900/90 shadow-lg;
+  }
+  
+  .hover-scale {
+    @apply transition-transform hover:scale-105 duration-300;
+  }
+  
+  .pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400;
   }
 }
 
@@ -137,6 +184,27 @@
   @apply border-l-4 border-primary/20 pl-4 italic my-6;
 }
 
+/* PDF viewer specific styling */
+.pdf-container {
+  @apply rounded-xl overflow-hidden shadow-lg border border-border/50 transition-all duration-300;
+}
+
+.pdf-controls {
+  @apply bg-gradient-to-r from-background/80 to-background/90 backdrop-blur-sm border-b border-border/50;
+}
+
+.chat-message {
+  @apply rounded-2xl p-4 shadow-sm transition-all duration-300 hover:shadow-md;
+}
+
+.user-message {
+  @apply bg-primary/10 text-foreground;
+}
+
+.ai-message {
+  @apply bg-secondary text-secondary-foreground;
+}
+
 /* Add styling for Arabic content */
 [dir="rtl"] .prose {
   @apply text-right;
@@ -148,4 +216,56 @@
 
 [dir="rtl"] .prose blockquote {
   @apply border-r-4 border-l-0 pr-4 pl-0;
+}
+
+/* Cool custom animations */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.float-animation {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Card hover effects */
+.card-hover {
+  @apply transition-all duration-300;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.card-hover:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: translateY(-5px);
+}
+
+/* Button effects */
+.btn-glow {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.btn-glow::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(to bottom right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.25) 100%);
+  transform: rotate(30deg);
+  transition: transform 0.6s;
+  z-index: -1;
+}
+
+.btn-glow:hover::after {
+  transform: rotate(30deg) translate(10%, 10%);
 }
