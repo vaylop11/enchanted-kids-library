@@ -1,8 +1,10 @@
+
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { Clock, FileText, MessageSquare, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { deletePDF } from '@/services/pdfSupabaseService';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -19,13 +21,11 @@ export interface PDF {
 
 interface PDFCardProps {
   pdf: PDF;
-  index?: number;
+  index: number;
   onDelete?: (id: string) => void;
-  onView?: (id: string) => void;
-  onPreview?: (url: string) => void;
 }
 
-const PDFCard = ({ pdf, index = 0, onDelete, onView, onPreview }: PDFCardProps) => {
+const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
   const { language } = useLanguage();
@@ -51,35 +51,30 @@ const PDFCard = ({ pdf, index = 0, onDelete, onView, onPreview }: PDFCardProps) 
     };
   }, [pdf.id]);
 
+  // Add a staggered animation delay based on the index
   const animationDelay = `${index * 100}ms`;
 
+  // Check if this is an uploaded PDF with chat messages
   const hasChatMessages = 'chatMessages' in pdf && Array.isArray((pdf as any).chatMessages) && (pdf as any).chatMessages.length > 0;
 
+  // Handle PDF deletion
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
     if (confirm(language === 'ar' ? 'هل أنت متأكد أنك تريد حذف هذا الملف؟' : 'Are you sure you want to delete this PDF?')) {
-      if (onDelete) {
-        onDelete(pdf.id);
+      try {
+        const success = await deletePDF(pdf.id);
+        if (success) {
+          toast.success(language === 'ar' ? 'تم حذف الملف بنجاح' : 'PDF deleted successfully');
+          if (onDelete) {
+            onDelete(pdf.id);
+          }
+        }
+      } catch (error) {
+        console.error('Error deleting PDF:', error);
+        toast.error(language === 'ar' ? 'فشل في حذف الملف' : 'Failed to delete PDF');
       }
-    }
-  };
-
-  const handleView = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onView) {
-      onView(pdf.id);
-    }
-  };
-
-  const handlePreview = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (onPreview && 'fileUrl' in (pdf as any)) {
-      onPreview((pdf as any).fileUrl);
-    } else if (onPreview && 'dataUrl' in (pdf as any)) {
-      onPreview((pdf as any).dataUrl);
     }
   };
 
@@ -95,7 +90,6 @@ const PDFCard = ({ pdf, index = 0, onDelete, onView, onPreview }: PDFCardProps) 
       <Link 
         to={`/pdf/${pdf.id}`}
         className="flex-1 flex flex-col"
-        onClick={handleView}
         aria-label={`Open ChatPDF document: ${pdf.title}`}
       >
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/20">

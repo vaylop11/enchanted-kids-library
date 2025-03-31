@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,39 +10,20 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 export interface SupabasePDF {
   id: string;
   title: string;
-  summary?: string;
+  summary: string;
   uploadDate: string;
   pageCount: number;
   fileSize: string;
   thumbnail?: string;
   filePath: string;
-  fileUrl: string;
-  userId: string;
+  fileUrl?: string;
 }
 
-export interface SupabaseChat {
+export interface SupabaseChatMessage {
   id: string;
-  pdfId: string;
   content: string;
   isUser: boolean;
-  timestamp: string;
-  userId: string;
-}
-
-export type SupabaseChatInput = Omit<SupabaseChat, 'id'>;
-
-export enum AnalysisStage {
-  EXTRACTING = 'extracting',
-  ANALYZING = 'analyzing',
-  GENERATING = 'generating',
-  COMPLETE = 'complete',
-  ERROR = 'error'
-}
-
-export interface AnalysisProgress {
-  stage: AnalysisStage | string;
-  progress: number;
-  message: string;
+  timestamp: Date;
 }
 
 // Generate thumbnail from PDF
@@ -128,7 +108,7 @@ const uploadThumbnail = async (thumbnailDataUrl: string, userId: string, pdfId: 
 };
 
 // Upload a PDF file to Supabase Storage
-export const uploadPDFToSupabase = async (file: File, userId: string, metadata?: any): Promise<SupabasePDF | null> => {
+export const uploadPDFToSupabase = async (file: File, userId: string): Promise<SupabasePDF | null> => {
   try {
     console.log('Starting PDF upload for user:', userId);
     
@@ -172,11 +152,11 @@ export const uploadPDFToSupabase = async (file: File, userId: string, metadata?:
     const pdfData: any = {
       user_id: userId,
       title: file.name,
-      summary: metadata?.summary || `Uploaded on ${formattedDate}`,
+      summary: `Uploaded on ${formattedDate}`,
       file_path: filePath,
       file_size: formatFileSize(file.size),
       upload_date: formattedDate,
-      page_count: metadata?.pageCount || 0
+      page_count: 0 // Will be updated when loaded in the viewer
     };
     
     // Insert PDF record to get the ID
@@ -230,14 +210,13 @@ export const uploadPDFToSupabase = async (file: File, userId: string, metadata?:
     const newPDF: SupabasePDF = {
       id: newPdfRecord.id,
       title: file.name,
-      summary: metadata?.summary || `Uploaded on ${formattedDate}`,
+      summary: `Uploaded on ${formattedDate}`,
       uploadDate: formattedDate,
-      pageCount: metadata?.pageCount || 0,
+      pageCount: 0, // Will be updated when loaded in the viewer
       fileSize: formatFileSize(file.size),
       filePath: filePath,
       fileUrl: publicURL,
-      thumbnail: thumbnailUrl || undefined,
-      userId: userId
+      thumbnail: thumbnailUrl || undefined
     };
     
     return newPDF;
@@ -272,8 +251,8 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
       fileSize: pdf.file_size || '0 B',
       filePath: pdf.file_path,
       thumbnail: pdf.thumbnail,
-      fileUrl: supabase.storage.from('pdfs').getPublicUrl(pdf.file_path).data.publicUrl,
-      userId: pdf.user_id
+      // Add file URL
+      fileUrl: supabase.storage.from('pdfs').getPublicUrl(pdf.file_path).data.publicUrl
     }));
   } catch (error) {
     console.error('Error in getUserPDFs:', error);
@@ -283,7 +262,7 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
 };
 
 // Get a PDF by ID
-export const getSupabasePDFById = async (pdfId: string): Promise<SupabasePDF | null> => {
+export const getPDFById = async (pdfId: string): Promise<SupabasePDF | null> => {
   try {
     const { data, error } = await supabase
       .from('pdfs')
@@ -311,8 +290,7 @@ export const getSupabasePDFById = async (pdfId: string): Promise<SupabasePDF | n
       fileSize: data.file_size || '0 B',
       filePath: data.file_path,
       thumbnail: data.thumbnail,
-      fileUrl: publicURLData.publicUrl,
-      userId: data.user_id
+      fileUrl: publicURLData.publicUrl
     };
   } catch (error) {
     console.error('Error in getPDFById:', error);
@@ -322,7 +300,7 @@ export const getSupabasePDFById = async (pdfId: string): Promise<SupabasePDF | n
 };
 
 // Update PDF metadata
-export const updateSupabasePDF = async (pdfId: string, updates: Partial<SupabasePDF>): Promise<boolean> => {
+export const updatePDFMetadata = async (pdfId: string, updates: Partial<SupabasePDF>): Promise<boolean> => {
   try {
     console.log('Updating PDF metadata for ID:', pdfId, 'with updates:', updates);
     
@@ -360,7 +338,7 @@ export const updateSupabasePDF = async (pdfId: string, updates: Partial<Supabase
 export const deletePDF = async (pdfId: string): Promise<boolean> => {
   try {
     // First get the PDF to get the file path
-    const pdf = await getSupabasePDFById(pdfId);
+    const pdf = await getPDFById(pdfId);
     if (!pdf) return false;
     
     // Delete the file from storage
@@ -396,27 +374,22 @@ export const deletePDF = async (pdfId: string): Promise<boolean> => {
 };
 
 // Add a chat message to a PDF
-export const createSupabaseChat = async (chatData: {
-  pdfId: string;
-  content: string;
-  isUser: boolean;
-  timestamp: string;
-  userId: string;
-}): Promise<SupabaseChat | null> => {
+export const addChatMessageToPDF = async (
+  pdfId: string, 
+  content: string, 
+  isUser: boolean
+): Promise<SupabaseChatMessage | null> => {
   try {
-    const { pdfId, content, isUser, timestamp, userId } = chatData;
-    
     const messageData = {
       pdf_id: pdfId,
       content: content,
-      is_user: isUser,
-      timestamp: timestamp
+      is_user: isUser
     };
     
     const { data, error } = await supabase
       .from('pdf_chats')
       .insert(messageData)
-      .select('id, content, is_user, pdf_id, timestamp')
+      .select('id, content, is_user, timestamp')
       .single();
       
     if (error) {
@@ -429,9 +402,7 @@ export const createSupabaseChat = async (chatData: {
       id: data.id,
       content: data.content,
       isUser: data.is_user,
-      pdfId: data.pdf_id,
-      timestamp: data.timestamp,
-      userId: userId
+      timestamp: new Date(data.timestamp)
     };
   } catch (error) {
     console.error('Error in addChatMessageToPDF:', error);
@@ -441,7 +412,7 @@ export const createSupabaseChat = async (chatData: {
 };
 
 // Get chat messages for a PDF
-export const getSupabaseChatsByPdfId = async (pdfId: string): Promise<SupabaseChat[]> => {
+export const getChatMessagesForPDF = async (pdfId: string): Promise<SupabaseChatMessage[]> => {
   try {
     const { data, error } = await supabase
       .from('pdf_chats')
@@ -459,57 +430,11 @@ export const getSupabaseChatsByPdfId = async (pdfId: string): Promise<SupabaseCh
       id: message.id,
       content: message.content,
       isUser: message.is_user,
-      pdfId: message.pdf_id,
-      timestamp: message.timestamp,
-      userId: message.is_user ? 'user' : 'ai' // Default value if user_id is not in db schema
+      timestamp: new Date(message.timestamp)
     }));
   } catch (error) {
     console.error('Error in getChatMessagesForPDF:', error);
     toast.error('Failed to fetch chat messages');
     return [];
-  }
-};
-
-// Delete a specific chat message
-export const deleteSupabaseChatMessage = async (messageId: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('pdf_chats')
-      .delete()
-      .eq('id', messageId);
-      
-    if (error) {
-      console.error('Error deleting chat message:', error);
-      toast.error('Failed to delete message');
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error in deleteSupabaseChatMessage:', error);
-    toast.error('Failed to delete message');
-    return false;
-  }
-};
-
-// Delete all chat messages for a PDF
-export const deleteAllChatMessagesForPDF = async (pdfId: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('pdf_chats')
-      .delete()
-      .eq('pdf_id', pdfId);
-      
-    if (error) {
-      console.error('Error deleting chat messages:', error);
-      toast.error('Failed to delete chat messages');
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error in deleteAllChatMessagesForPDF:', error);
-    toast.error('Failed to delete chat messages');
-    return false;
   }
 };
