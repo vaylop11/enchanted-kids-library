@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -703,7 +702,7 @@ const PDFViewer = () => {
       }
       
       const translatePrompt = language === 'ar' 
-        ? `ترجم هذا المستند إلى اللغة ${targetLanguage}` 
+        ? `ترجم هذا المستند إلى ال��غة ${targetLanguage}` 
         : `Translate this document to ${targetLanguage}`;
         
       setAnalysisProgress({
@@ -1128,7 +1127,7 @@ const PDFViewer = () => {
                 
                 {showChat && (
                   <>
-                    <ScrollArea className="flex-1 p-4">
+                    <ScrollArea className="flex-1 p-4 overflow-y-auto">
                       {isLoadingMessages ? (
                         <>
                           <ChatMessageSkeleton isUser={false} />
@@ -1176,7 +1175,7 @@ const PDFViewer = () => {
                       )}
                     </ScrollArea>
                     
-                    <div className="p-4 border-t mt-auto">
+                    <div className="p-4 border-t mt-auto sticky bottom-0 bg-card z-10 shadow-md">
                       <form onSubmit={handleChatSubmit} className="flex gap-2">
                         <Textarea
                           value={chatInput}
