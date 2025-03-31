@@ -108,6 +108,8 @@ serve(async (req) => {
       throw new Error('Failed to generate blog content');
     }
 
+    console.log('Blog post generated successfully');
+
     // Return the generated blog post
     return new Response(
       JSON.stringify({ generatedText }),

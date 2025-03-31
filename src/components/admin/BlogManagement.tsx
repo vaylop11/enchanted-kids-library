@@ -45,9 +45,11 @@ const BlogManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
+        console.error('Error fetching blog posts:', error);
         throw error;
       }
 
+      console.log('Fetched blog posts:', data);
       setBlogPosts(data || []);
     } catch (error) {
       console.error('Error fetching blog posts:', error);
@@ -62,15 +64,19 @@ const BlogManagement = () => {
     
     try {
       setIsDeleting(true);
+      console.log('Deleting post with ID:', deleteId);
+      
       const { error } = await supabaseUntyped
         .from('blog_posts')
         .delete()
         .eq('id', deleteId);
 
       if (error) {
+        console.error('Error deleting post:', error);
         throw error;
       }
 
+      console.log('Post deleted successfully');
       toast.success(language === 'ar' ? 'تم حذف المقال بنجاح' : 'Post deleted successfully');
       fetchBlogPosts(); // Refresh the list
     } catch (error) {

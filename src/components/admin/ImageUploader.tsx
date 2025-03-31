@@ -51,6 +51,8 @@ const ImageUploader = ({ onImageUploaded, existingImageUrl }: ImageUploaderProps
       const fileName = `${uuidv4()}.${fileExt}`;
       const filePath = `blog/${fileName}`;
 
+      console.log('Uploading to bucket: images, path:', filePath);
+      
       // Upload the file to Supabase Storage
       const { data, error } = await supabaseUntyped.storage
         .from('images')
@@ -60,8 +62,11 @@ const ImageUploader = ({ onImageUploaded, existingImageUrl }: ImageUploaderProps
         });
 
       if (error) {
+        console.error('Upload error:', error);
         throw error;
       }
+
+      console.log('Upload successful:', data);
 
       // Get the public URL
       const { data: urlData } = supabaseUntyped.storage
@@ -69,6 +74,8 @@ const ImageUploader = ({ onImageUploaded, existingImageUrl }: ImageUploaderProps
         .getPublicUrl(filePath);
 
       const publicUrl = urlData.publicUrl;
+      console.log('Public URL:', publicUrl);
+      
       setImageUrl(publicUrl);
       onImageUploaded(publicUrl);
       
