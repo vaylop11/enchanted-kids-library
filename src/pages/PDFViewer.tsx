@@ -13,28 +13,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import {
-  getPDFById,
-  addChatMessageToPDF,
-  savePDF,
-  deletePDFById,
-  ChatMessage,
-  UploadedPDF
-} from '@/services/pdfStorage';
-import {
-  getPDFById as getSupabasePDFById,
-  getChatMessagesForPDF,
-  addChatMessageToPDF as addSupabaseChatMessage,
-  updatePDFMetadata,
-  deletePDF as deleteSupabasePDF,
-  deleteAllChatMessagesForPDF
-} from '@/services/pdfSupabaseService';
-import {
-  extractTextFromPDF,
-  analyzePDFWithGemini,
-  AnalysisProgress,
-  AnalysisStage
-} from '@/services/pdfAnalysisService';
+import ChatInterface from '@/components/ChatInterface';
+import { v4 as uuidv4 } from 'uuid';
+import { deleteAllChatMessagesForPDF as deleteLocalStorageChatMessages } from '@/services/pdfStorage';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
@@ -67,6 +48,7 @@ const PDFViewer = () => {
     message: 'Preparing to analyze PDF...'
   });
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
+  const [isAddingMessage, setIsAddingMessage] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -355,12 +337,10 @@ const PDFViewer = () => {
     }
   };
 
-  const handleChatSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || !id || !pdf) return;
-
-    const userMessageContent = chatInput.trim();
-    setChatInput('');
+  const handleChatSubmit = async (userMessageContent: string) => {
+    if (!id || !pdf) return;
+    
+    setIsAddingMessage(true);
     
     try {
       let savedUserMessage: ChatMessage | null = null;
@@ -843,12 +823,17 @@ const PDFViewer = () => {
           
           deleteAllMessages();
         } else {
-          const updatedPdf = { ...pdf, chatMessages: [] };
-          savePDF(updatedPdf);
-          setChatMessages([]);
-          toast.success(language === 'ar' 
-            ? 'تم حذف جميع الرسائل بنجاح' 
-            : 'All messages deleted successfully');
+          const success = deleteLocalStorageChatMessages(id);
+          if (success) {
+            setChatMessages([]);
+            toast.success(language === 'ar' 
+              ? 'تم حذف جميع الرسائل بنجاح' 
+              : 'All messages deleted successfully');
+          } else {
+            toast.error(language === 'ar' 
+              ? 'فشل في حذف الرسائل' 
+              : 'Failed to delete messages');
+          }
         }
       } catch (error) {
         console.error('Error clearing chat messages:', error);
@@ -856,6 +841,50 @@ const PDFViewer = () => {
           ? 'فشل في حذف الرسائل' 
           : 'Failed to delete messages');
       }
+    }
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    const messageToDelete = chatMessages.find(m => m.id === messageId);
+    if (!messageToDelete || !messageToDelete.isUser) return;
+    
+    try {
+      if (isTempPdf) {
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          try {
+            const parsedData = JSON.parse(tempPdfData);
+            if (parsedData.fileData.chatMessages) {
+              parsedData.fileData.chatMessages = parsedData.fileData.chatMessages.filter(
+                (msg: ChatMessage) => msg.id !== messageId
+              );
+              sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+              setChatMessages(prev => prev.filter(msg => msg.id !== messageId));
+              toast.success(language === 'ar' ? 'تم حذف الرسالة' : 'Message deleted');
+            }
+          } catch (error) {
+            console.error('Error deleting message from temporary PDF:', error);
+            toast.error(language === 'ar' ? 'فشل في حذف الرسالة' : 'Failed to delete message');
+          }
+        }
+      } else if (!user) {
+        const currentPdf = getPDFById(id as string);
+        if (currentPdf && currentPdf.chatMessages) {
+          const updatedMessages = currentPdf.chatMessages.filter(msg => msg.id !== messageId);
+          
+          const updatedPdf = {
+            ...currentPdf,
+            chatMessages: updatedMessages
+          };
+          
+          savePDF(updatedPdf);
+          setChatMessages(updatedMessages);
+          toast.success(language === 'ar' ? 'تم حذف الرسالة' : 'Message deleted');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast.error(language === 'ar' ? 'فشل في حذف الرسالة' : 'Failed to delete message');
     }
   };
 
@@ -1047,167 +1076,19 @@ const PDFViewer = () => {
             </div>
             
             <div className="lg:w-1/3 flex flex-col">
-              <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden flex flex-col h-full">
-                <div className="flex justify-between items-center p-4 border-b">
-                  <div className="flex items-center gap-2">
-                    {showChat ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowChat(false)}
-                        className="p-2 md:hidden"
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowChat(true)}
-                        className="p-2 md:hidden"
-                      >
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <h2 className="font-medium">
-                      {language === 'ar' ? 'محادثة حول الملف' : 'Chat with PDF'}
-                    </h2>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={generateSummary}
-                      className="text-xs"
-                      disabled={isWaitingForResponse}
-                    >
-                      <FileText className="h-3 w-3 mr-1" />
-                      {language === 'ar' ? 'ملخص' : 'Summary'}
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={translatePDF}
-                      className="text-xs"
-                      disabled={isWaitingForResponse}
-                    >
-                      <Languages className="h-3 w-3 mr-1" />
-                      {language === 'ar' ? 'ترجمة' : 'Translate'}
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearChatMessages}
-                      className="text-xs text-destructive hover:text-destructive"
-                      disabled={!chatMessages.length}
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      {language === 'ar' ? 'مسح' : 'Clear'}
-                    </Button>
-                  </div>
-                </div>
-                
-                {showChat && (
-                  <>
-                    <div className="relative flex-1">
-                      <ScrollArea className="h-[400px] p-4" ref={scrollAreaRef}>
-                        {isLoadingMessages ? (
-                          <>
-                            <ChatMessageSkeleton isUser={false} />
-                            <div className="h-3"></div>
-                            <ChatMessageSkeleton isUser={true} />
-                          </>
-                        ) : chatMessages.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center h-40 p-4 text-center text-muted-foreground">
-                            <Brain className="h-8 w-8 mb-3 opacity-50" />
-                            <p className="text-sm">
-                              {language === 'ar'
-                                ? 'اسأل أي سؤال حول محتوى هذا المستند'
-                                : 'Ask any question about the content of this document'}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            {chatMessages.map((message) => (
-                              <div
-                                key={message.id}
-                                className={cn(
-                                  "flex flex-col space-y-2 p-3 rounded-lg max-w-[90%]",
-                                  message.isUser
-                                    ? "bg-primary/10 ml-auto rounded-br-none"
-                                    : "bg-muted mr-auto rounded-bl-none"
-                                )}
-                              >
-                                <div className="whitespace-pre-wrap text-sm">
-                                  {message.content}
-                                </div>
-                                <div className="text-xs text-muted-foreground self-end">
-                                  {new Date(message.timestamp).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </div>
-                              </div>
-                            ))}
-                            <div ref={chatEndRef} />
-                          </div>
-                        )}
-                        
-                        {isAnalyzing && (
-                          <PDFAnalysisProgress analysis={analysisProgress} />
-                        )}
-                      </ScrollArea>
-                      
-                      {chatMessages.length > 5 && (
-                        <div className="absolute right-2 bottom-20 flex flex-col gap-2">
-                          <Button
-                            variant="secondary"
-                            size="icon"
-                            onClick={scrollToTop}
-                            className="h-8 w-8 rounded-full shadow-md"
-                            title={language === 'ar' ? 'التمرير لأعلى' : 'Scroll to top'}
-                          >
-                            <ArrowUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="icon"
-                            onClick={scrollToBottom}
-                            className="h-8 w-8 rounded-full shadow-md"
-                            title={language === 'ar' ? 'التمرير لأسفل' : 'Scroll to bottom'}
-                          >
-                            <ArrowDown className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="p-4 border-t mt-auto">
-                      <form onSubmit={handleChatSubmit} className="flex gap-2">
-                        <Textarea
-                          value={chatInput}
-                          onChange={(e) => setChatInput(e.target.value)}
-                          placeholder={language === 'ar' 
-                            ? 'اكتب سؤالك حول هذا المستند...' 
-                            : 'Type your question about this document...'}
-                          className="min-h-10 resize-none"
-                          disabled={isWaitingForResponse}
-                        />
-                        <Button 
-                          type="submit" 
-                          size="icon"
-                          disabled={!chatInput.trim() || isWaitingForResponse}
-                        >
-                          <Send className="h-4 w-4" />
-                        </Button>
-                      </form>
-                    </div>
-                  </>
-                )}
-              </div>
+              <ChatInterface 
+                messages={chatMessages}
+                isLoadingMessages={isLoadingMessages}
+                isAnalyzing={isAnalyzing}
+                isWaitingForResponse={isWaitingForResponse}
+                analysisProgress={analysisProgress}
+                language={language}
+                onSendMessage={handleChatSubmit}
+                onClearMessages={clearChatMessages}
+                onGenerateSummary={generateSummary}
+                onTranslate={translatePDF}
+                onDeleteMessage={handleDeleteMessage}
+              />
             </div>
           </div>
         </div>
