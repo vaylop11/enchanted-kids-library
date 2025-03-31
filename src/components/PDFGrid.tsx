@@ -60,7 +60,7 @@ const PDFGrid = () => {
         </div>
 
         <div className="relative">
-          <ScrollArea className="w-full pb-4" orientation="horizontal">
+          <ScrollArea className="w-full pb-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 min-w-max pr-4">
               {allPDFs.map((pdf, index) => (
                 <div key={pdf.id} className="w-[280px]">
