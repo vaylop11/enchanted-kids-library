@@ -129,7 +129,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
         </div>
       )}
       
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .react-pdf__Page {
           margin: 0 auto;
           padding: 1.5rem;
@@ -155,7 +155,7 @@ const PDFPreview = ({ pdfUrl, maxHeight = 500 }: PDFPreviewProps) => {
             border: 1px solid rgba(255, 255, 255, 0.1);
           }
         }
-      `}</style>
+      ` }} />
     </div>
   );
 };
