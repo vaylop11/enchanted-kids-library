@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -814,7 +813,7 @@ const PDFViewer = () => {
               if (success) {
                 setChatMessages([]);
                 toast.success(language === 'ar' 
-                  ? 'تم حذف جميع الرسائل بنجاح' 
+                  ? 'تم حذف جمي�� الرسائل بنجاح' 
                   : 'All messages deleted successfully');
               } else {
                 toast.error(language === 'ar' 
@@ -1015,34 +1014,6 @@ const PDFViewer = () => {
               )}
               
               <div className="relative min-h-[500px]">
-                {isLoadingPdf && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                    <div className="flex flex-col items-center">
-                      <FileText className="h-16 w-16 text-muted-foreground animate-pulse mb-4" />
-                      <p className="text-sm text-muted-foreground">
-                        {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {pdfError && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/95">
-                    <div className="flex flex-col items-center text-center max-w-md p-6">
-                      <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-                      <h3 className="text-lg font-medium mb-2">
-                        {language === 'ar' ? 'خطأ في تحميل الملف' : 'Error Loading PDF'}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        {pdfError}
-                      </p>
-                      <Button onClick={handleRetryLoading}>
-                        {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                
                 {pdf.dataUrl && !pdfError && (
                   <Document
                     file={pdf.dataUrl}
@@ -1054,8 +1025,8 @@ const PDFViewer = () => {
                       pageNumber={pageNumber}
                       scale={pdfScale}
                       className="shadow-none mx-auto py-4"
-                      renderAnnotationLayer={true}
-                      renderTextLayer={true}
+                      renderAnnotationLayer={false}
+                      renderTextLayer={false}
                     />
                   </Document>
                 )}
