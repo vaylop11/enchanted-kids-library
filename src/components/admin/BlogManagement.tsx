@@ -12,10 +12,9 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Trash2, Eye, PlusCircle, RefreshCw } from 'lucide-react';
+import { Trash2, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface BlogPost {
   id: string;
@@ -32,7 +31,6 @@ const BlogManagement = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchBlogPosts();
@@ -103,68 +101,12 @@ const BlogManagement = () => {
     return date.toLocaleDateString();
   };
 
-  const renderMobileView = () => (
-    <div className="space-y-4">
-      {blogPosts.map((post) => (
-        <div key={post.id} className="bg-card p-4 rounded-lg border shadow-sm">
-          <h4 className="font-medium text-base mb-2 truncate">{post.title}</h4>
-          <div className="flex flex-col space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{language === 'ar' ? 'التاريخ' : 'Date'}:</span>
-              <span>{formatDate(post.created_at)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{language === 'ar' ? 'التصنيف' : 'Category'}:</span>
-              <span>{post.category}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{language === 'ar' ? 'الحالة' : 'Status'}:</span>
-              <span className={`px-2 py-0.5 rounded-full text-xs ${post.published ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                {post.published ? 
-                  (language === 'ar' ? 'منشور' : 'Published') : 
-                  (language === 'ar' ? 'مسودة' : 'Draft')}
-              </span>
-            </div>
-          </div>
-          <div className="flex justify-between mt-4">
-            <Button variant="ghost" size="sm" onClick={() => viewPost(post.id)}>
-              <Eye className="mr-1 h-4 w-4" />
-              {language === 'ar' ? 'عرض' : 'View'}
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(post.id)}>
-              <Trash2 className="mr-1 h-4 w-4" />
-              {language === 'ar' ? 'حذف' : 'Delete'}
-            </Button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center justify-between">
         <h3 className="text-xl font-medium">
           {language === 'ar' ? 'إدارة المقالات' : 'Manage Blog Posts'}
         </h3>
-        <div className="flex space-x-2">
-          <Button 
-            variant="outline" 
-            size={isMobile ? "sm" : "default"} 
-            onClick={fetchBlogPosts}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            {!isMobile && (language === 'ar' ? ' تحديث' : ' Refresh')}
-          </Button>
-          <Button 
-            variant="accent" 
-            size={isMobile ? "sm" : "default"}
-          >
-            <PlusCircle className="h-4 w-4" />
-            {!isMobile && (language === 'ar' ? ' إضافة مقال' : ' New Post')}
-          </Button>
-        </div>
       </div>
 
       {loading ? (
@@ -175,8 +117,6 @@ const BlogManagement = () => {
         <div className="text-center p-4 border rounded-md">
           {language === 'ar' ? 'لا توجد مقالات' : 'No blog posts found'}
         </div>
-      ) : isMobile ? (
-        renderMobileView()
       ) : (
         <div className="border rounded-md overflow-hidden">
           <Table>
@@ -204,13 +144,11 @@ const BlogManagement = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => viewPost(post.id)}>
-                        <Eye className="mr-1 h-4 w-4" />
-                        {language === 'ar' ? 'عرض' : 'View'}
+                      <Button variant="ghost" size="icon" onClick={() => viewPost(post.id)}>
+                        <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(post.id)}>
-                        <Trash2 className="mr-1 h-4 w-4" />
-                        {language === 'ar' ? 'حذف' : 'Delete'}
+                      <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(post.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </TableCell>
