@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -15,7 +16,27 @@ import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import ChatInterface from '@/components/ChatInterface';
 import { v4 as uuidv4 } from 'uuid';
-import { deleteAllChatMessagesForPDF as deleteLocalStorageChatMessages } from '@/services/pdfStorage';
+import { 
+  deleteAllChatMessagesForPDF as deleteLocalStorageChatMessages,
+  UploadedPDF,
+  ChatMessage,
+  getPDFById,
+  savePDF,
+  addChatMessageToPDF,
+  deletePDFById
+} from '@/services/pdfStorage';
+import { 
+  AnalysisProgress,
+  extractTextFromPDF,
+  analyzePDFWithGemini
+} from '@/services/pdfAnalysisService';
+import { 
+  getSupabasePDFById,
+  updatePDFMetadata,
+  deleteSupabasePDF as deleteSupabasePDF,
+  getChatMessagesForPDF,
+  addChatMessageToPDF as addSupabaseChatMessage
+} from '@/services/pdfSupabaseService';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
