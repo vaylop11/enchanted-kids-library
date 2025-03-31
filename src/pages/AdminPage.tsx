@@ -7,9 +7,12 @@ import AdminPanel from '@/components/admin/AdminPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabaseUntyped } from '@/integrations/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const AdminPage = () => {
   const { user, loading, isAdmin } = useAuth();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     // Check if user is authenticated
@@ -61,8 +64,32 @@ const AdminPage = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="flex-1 pt-24 pb-20 px-4 md:px-6">
-        <AdminPanel />
+      <main className={`flex-1 pt-24 pb-20 ${isMobile ? 'px-3' : 'px-4 md:px-6'}`}>
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+          
+          {isMobile ? (
+            <Tabs defaultValue="admin">
+              <TabsList className="w-full mb-6 grid grid-cols-2 h-auto">
+                <TabsTrigger value="admin" className="py-3">Admin Panel</TabsTrigger>
+                <TabsTrigger value="advanced" className="py-3">Advanced Settings</TabsTrigger>
+              </TabsList>
+              <TabsContent value="admin" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+                <AdminPanel />
+              </TabsContent>
+              <TabsContent value="advanced" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+                <div className="p-4 bg-muted rounded-lg">
+                  <h3 className="font-medium mb-2">Advanced Settings</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Advanced configuration settings will be available here.
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <AdminPanel />
+          )}
+        </div>
       </main>
       
       <Footer />
