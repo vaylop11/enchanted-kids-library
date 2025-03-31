@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import * as pdfjs from "pdfjs-dist";
 import { toast } from "sonner";
@@ -15,9 +14,12 @@ export type AnalysisStage =
   | 'error';
 
 export interface AnalysisProgress {
-  stage: AnalysisStage;
-  progress: number; // 0-100
+  stage: string;
+  progress: number;
   message: string;
+  summary?: number;
+  keywords?: number;
+  questions?: number;
 }
 
 /**
@@ -131,4 +133,17 @@ export const analyzePDFWithGemini = async (
     });
     throw new Error('Failed to analyze PDF content');
   }
+};
+
+// Export the analyzePDF function
+export const analyzePDF = async (pdfId: string, fileData: any): Promise<AnalysisProgress> => {
+  // Mock function that will be implemented with real PDF analysis later
+  return {
+    stage: "preparing",
+    progress: 0,
+    message: "Preparing to analyze PDF...",
+    summary: 0,
+    keywords: 0,
+    questions: 0
+  };
 };

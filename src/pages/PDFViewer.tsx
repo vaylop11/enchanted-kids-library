@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -16,6 +17,7 @@ import {
   getPDFById as getLocalPDFById,
   UploadedPDF,
   addChatMessageToPDF,
+  savePDF,
 } from '@/services/pdfStorage';
 import {
   getSupabasePDFById,
@@ -23,10 +25,11 @@ import {
   createSupabaseChat,
   getSupabaseChatsByPdfId,
   deleteSupabaseChatMessage,
+  deleteAllChatMessagesForPDF,
   SupabasePDF,
   SupabaseChat,
 } from '@/services/pdfSupabaseService';
-import { analyzePDF } from '@/services/pdfAnalysisService';
+import { analyzePDF, AnalysisProgress } from '@/services/pdfAnalysisService';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/hooks/use-debounce';
 
@@ -40,7 +43,7 @@ const PDFViewer = () => {
   
   const [pdf, setPdf] = useState<UploadedPDF | SupabasePDF | null>(null);
   const [isSupabasePDF, setIsSupabasePDF] = useState(false);
-  const [numPages, setNumPages] = useState<number>(null);
+  const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.0);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,37 +55,38 @@ const PDFViewer = () => {
   const [pdfTitle, setPdfTitle] = useState('');
   const debouncedPdfTitle = useDebounce(pdfTitle, 500);
   
-  const analysisProgress = {
+  const initialAnalysisProgress: AnalysisProgress = {
+    stage: "waiting",
+    progress: 0,
+    message: "Waiting to start analysis...",
     summary: 0,
     keywords: 0,
     questions: 0
   };
   
-  const { data: supabasePdf, refetch: refetchSupabasePdf } = useQuery(
-    ['supabasePdf', pdfId],
-    () => getSupabasePDFById(pdfId as string),
-    {
-      enabled: !!pdfId,
-      retry: false,
-    }
-  );
+  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>(initialAnalysisProgress);
   
-  const { data: supabaseChats, refetch: refetchSupabaseChats } = useQuery(
-    ['supabaseChats', pdfId],
-    () => getSupabaseChatsByPdfId(pdfId as string),
-    {
-      enabled: !!pdfId && isSupabasePDF,
-      retry: false,
-      onSuccess: (data) => {
-        setIsLoadingMessages(false);
-        setMessages(data);
-      },
-      onError: () => {
-        setIsLoadingMessages(false);
-        toast.error(language === 'ar' ? 'فشل في تحميل الرسائل' : 'Failed to load messages');
-      }
+  const { data: supabasePdf, refetch: refetchSupabasePdf } = useQuery({
+    queryKey: ['supabasePdf', pdfId],
+    queryFn: () => getSupabasePDFById(pdfId as string),
+    enabled: !!pdfId,
+    retry: false,
+  });
+  
+  const { data: supabaseChats, refetch: refetchSupabaseChats } = useQuery({
+    queryKey: ['supabaseChats', pdfId],
+    queryFn: () => getSupabaseChatsByPdfId(pdfId as string),
+    enabled: !!pdfId && isSupabasePDF,
+    retry: false,
+    onSuccess: (data) => {
+      setIsLoadingMessages(false);
+      setMessages(data);
+    },
+    onError: () => {
+      setIsLoadingMessages(false);
+      toast.error(language === 'ar' ? 'فشل في تحميل الرسائل' : 'Failed to load messages');
     }
-  );
+  });
   
   useEffect(() => {
     if (!user) {
@@ -138,7 +142,7 @@ const PDFViewer = () => {
           if (isSupabasePDF) {
             const updated = await updateSupabasePDF(pdfId as string, { title: debouncedPdfTitle });
             if (updated) {
-              setPdf(prevPdf => ({ ...prevPdf, title: debouncedPdfTitle }));
+              setPdf(prevPdf => ({ ...prevPdf as SupabasePDF, title: debouncedPdfTitle }));
               toast.success(language === 'ar' ? 'تم تحديث العنوان' : 'Title updated');
               refetchSupabasePdf();
             } else {
@@ -155,12 +159,12 @@ const PDFViewer = () => {
     }
   }, [debouncedPdfTitle, pdf, pdfId, isSupabasePDF, language, refetchSupabasePdf]);
   
-  const onDocumentLoadSuccess = ({ numPages }) => {
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
   };
   
-  const changePage = (offset) => {
-    setPageNumber(prevPageNumber => Math.max(1, Math.min(prevPageNumber + offset, numPages)));
+  const changePage = (offset: number) => {
+    setPageNumber(prevPageNumber => Math.max(1, Math.min(prevPageNumber + offset, numPages || 1)));
   };
   
   const zoomIn = () => {
@@ -200,7 +204,16 @@ const PDFViewer = () => {
         });
         
         if (newMessage) {
-          setMessages(prevMessages => [...prevMessages, newMessage]);
+          // Cast the local message to match SupabaseChat structure
+          const convertedMessage: SupabaseChat = {
+            id: newMessage.id,
+            pdfId: pdfId,
+            content: newMessage.content,
+            isUser: newMessage.isUser,
+            timestamp: newMessage.timestamp,
+            userId: user.id
+          };
+          setMessages(prevMessages => [...prevMessages, convertedMessage]);
         } else {
           throw new Error('Failed to create chat message');
         }
@@ -228,17 +241,24 @@ const PDFViewer = () => {
             }
           });
         } else {
-          addChatMessageToPDF(pdfId, {
+          const aiMessage = addChatMessageToPDF(pdfId, {
             content: aiResponse,
             isUser: false,
             timestamp: new Date()
           });
-          setMessages(prevMessages => [...prevMessages, {
-            id: 'ai-' + Date.now(),
-            content: aiResponse,
-            isUser: false,
-            timestamp: new Date()
-          }]);
+          
+          // Convert local message to SupabaseChat format
+          if (aiMessage) {
+            const convertedAiMessage: SupabaseChat = {
+              id: 'ai-' + Date.now(),
+              pdfId: pdfId,
+              content: aiResponse,
+              isUser: false,
+              timestamp: new Date(),
+              userId: 'ai'
+            };
+            setMessages(prevMessages => [...prevMessages, convertedAiMessage]);
+          }
         }
         
         setIsWaitingForResponse(false);
@@ -283,7 +303,7 @@ const PDFViewer = () => {
         
         // Update the PDF with filtered messages
         const updatedPdf = {
-          ...pdf,
+          ...pdf as UploadedPDF,
           chatMessages: updatedMessages
         };
         
@@ -352,7 +372,7 @@ const PDFViewer = () => {
         <section className="lg:w-2/3 flex flex-col">
           <div className="relative">
             <Document
-              file={isSupabasePDF ? supabasePdf.fileUrl : pdf.dataUrl}
+              file={isSupabasePDF ? (pdf as SupabasePDF).fileUrl : (pdf as UploadedPDF).dataUrl}
               onLoadSuccess={onDocumentLoadSuccess}
               className="max-w-full"
             >
@@ -372,7 +392,7 @@ const PDFViewer = () => {
             <Button onClick={() => changePage(-1)} disabled={pageNumber <= 1}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <Button onClick={() => changePage(1)} disabled={pageNumber >= numPages}>
+            <Button onClick={() => changePage(1)} disabled={pageNumber >= (numPages || 0)}>
               <ArrowRight className="h-4 w-4" />
             </Button>
             <Button onClick={zoomIn}>
