@@ -1,11 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
-import { Send, User } from 'lucide-react';
+import { Send, User, ArrowLeft, Crown, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -30,8 +29,9 @@ type OnlineUser = {
 };
 
 const ChatPage = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [onlineUsers, setOnlineUsers] = useState<Record<string, OnlineUser>>({});
@@ -58,6 +58,14 @@ const ChatPage = () => {
         (payload) => {
           const newMessage = payload.new as Message;
           setMessages((prev) => [...prev, newMessage]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'messages' },
+        (payload) => {
+          const deletedMessageId = payload.old.id;
+          setMessages((prev) => prev.filter(msg => msg.id !== deletedMessageId));
         }
       )
       .subscribe();
@@ -149,6 +157,23 @@ const ChatPage = () => {
     }
   };
 
+  const deleteMessage = async (messageId: string) => {
+    if (!isAdmin) return;
+    
+    try {
+      const { error } = await supabaseUntyped
+        .from('messages')
+        .delete()
+        .match({ id: messageId });
+        
+      if (error) throw error;
+      toast.success('Message deleted');
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast.error('Failed to delete message');
+    }
+  };
+
   // Format timestamp to readable time
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString([], { 
@@ -175,6 +200,11 @@ const ChatPage = () => {
     return `${name.substring(0, 2)}***`;
   };
 
+  // Check if email is admin
+  const isAdminEmail = (email: string) => {
+    return email === 'cherifhoucine83@gmail.com';
+  };
+
   // Show loading state
   if (loading) {
     return (
@@ -193,8 +223,20 @@ const ChatPage = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="flex-1 pt-24 pb-32 px-4 md:px-6 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-16rem)]">
+      <main className="flex-1 pt-24 pb-8 px-4 md:px-6 max-w-7xl mx-auto w-full">
+        <div className="mb-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {t('home')}
+          </Button>
+        </div>
+        
+        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)]">
           {/* Online Users Sidebar */}
           <Card className="lg:w-64 w-full p-4 h-full lg:h-auto">
             <h2 className="text-lg font-medium mb-4">{t('onlineUsers')}</h2>
@@ -203,12 +245,23 @@ const ChatPage = () => {
                 {Object.values(onlineUsers).map((onlineUser) => (
                   <div key={onlineUser.id} className="flex items-center gap-2">
                     <div className="relative">
-                      <Avatar className="h-8 w-8 bg-primary/10">
-                        <AvatarFallback className="text-primary">{getInitials(onlineUser.email)}</AvatarFallback>
+                      <Avatar className={`h-8 w-8 ${isAdminEmail(onlineUser.email) ? 'bg-amber-100' : 'bg-primary/10'}`}>
+                        <AvatarFallback className={isAdminEmail(onlineUser.email) ? 'text-amber-600' : 'text-primary'}>
+                          {getInitials(onlineUser.email)}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background"></div>
                     </div>
-                    <div className="truncate flex-1 text-sm">{maskEmail(onlineUser.email)}</div>
+                    <div className="truncate flex-1 text-sm">
+                      {isAdminEmail(onlineUser.email) ? (
+                        <div className="flex items-center gap-1">
+                          <Crown className="h-3 w-3 text-amber-500" />
+                          <span className="font-medium text-amber-600">Admin</span>
+                        </div>
+                      ) : (
+                        <span>User {getInitials(onlineUser.email)}</span>
+                      )}
+                    </div>
                   </div>
                 ))}
                 {Object.keys(onlineUsers).length === 0 && (
@@ -241,22 +294,41 @@ const ChatPage = () => {
                       className={`flex gap-3 ${message.user_id === user.id ? 'justify-end' : 'justify-start'}`}
                     >
                       {message.user_id !== user.id && (
-                        <Avatar className="h-8 w-8 bg-primary/10">
-                          <AvatarFallback className="text-primary">
+                        <Avatar className={`h-8 w-8 ${isAdminEmail(message.user_email) ? 'bg-amber-100' : 'bg-primary/10'}`}>
+                          <AvatarFallback className={isAdminEmail(message.user_email) ? 'text-amber-600' : 'text-primary'}>
                             {getInitials(message.user_email)}
                           </AvatarFallback>
                         </Avatar>
                       )}
-                      <div className={`max-w-[75%] ${message.user_id === user.id ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg p-3`}>
+                      <div className={`max-w-[75%] ${message.user_id === user.id ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg p-3 group relative`}>
                         {message.user_id !== user.id && (
-                          <p className="text-xs font-medium mb-1">
-                            {maskEmail(message.user_email)}
-                          </p>
+                          <div className="flex items-center gap-1 text-xs font-medium mb-1">
+                            {isAdminEmail(message.user_email) ? (
+                              <>
+                                <Crown className="h-3 w-3 text-amber-500" />
+                                <span className="font-medium text-amber-600">Admin</span>
+                              </>
+                            ) : (
+                              <span>{maskEmail(message.user_email)}</span>
+                            )}
+                          </div>
                         )}
                         <p className="break-words">{message.content}</p>
                         <p className="text-xs opacity-70 text-right mt-1">
                           {formatTime(message.created_at)}
                         </p>
+                        
+                        {isAdmin && message.user_id !== user.id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute -right-2 -top-2 h-6 w-6 bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => deleteMessage(message.id)}
+                            title="Delete message"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                       {message.user_id === user.id && (
                         <Avatar className="h-8 w-8 bg-primary/10">
@@ -288,8 +360,6 @@ const ChatPage = () => {
           </Card>
         </div>
       </main>
-      
-      <Footer />
     </div>
   );
 };
