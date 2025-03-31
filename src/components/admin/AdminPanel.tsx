@@ -17,6 +17,7 @@ import * as z from 'zod';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BlogManagement from './BlogManagement';
 import ImageUploader from './ImageUploader';
+import UserManagement from './UserManagement';
 
 const formSchema = z.object({
   title: z.string().min(5, {
@@ -225,6 +226,9 @@ const AdminPanel = () => {
           <TabsTrigger value="manage">
             {language === 'ar' ? 'إدارة المقالات' : 'Manage Posts'}
           </TabsTrigger>
+          <TabsTrigger value="users">
+            {language === 'ar' ? 'إدارة المستخدمين' : 'Manage Users'}
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="create">
@@ -387,6 +391,24 @@ const AdminPanel = () => {
             </CardHeader>
             <CardContent>
               <BlogManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="users">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {language === 'ar' ? 'إدارة المستخدمين' : 'Manage Users'}
+              </CardTitle>
+              <CardDescription>
+                {language === 'ar' 
+                  ? 'استعرض وحظر وحذف المستخدمين'
+                  : 'View, ban and delete users'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <UserManagement />
             </CardContent>
           </Card>
         </TabsContent>
