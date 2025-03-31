@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
-import { Send, User, Crown } from 'lucide-react';
+import { Send, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -30,7 +30,7 @@ type OnlineUser = {
 };
 
 const ChatPage = () => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading } = useAuth();
   const { t } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -162,31 +162,6 @@ const ChatPage = () => {
     return email.substring(0, 2).toUpperCase();
   };
 
-  // Get a display name for users, hiding their full email
-  const getDisplayName = (email: string, userId: string) => {
-    // If no email is provided, return Anonymous
-    if (!email) return 'Anonymous';
-    
-    // Check if user is admin
-    const userIsAdmin = email === 'cherifhoucine83@gmail.com';
-    
-    // For email addresses, show only first part and hide domain
-    const username = email.split('@')[0];
-    
-    // Return a shortened version with asterisks if longer than 5 characters
-    let displayName = username;
-    if (username.length > 5) {
-      displayName = username.substring(0, 3) + '***';
-    }
-    
-    // Add admin badge if needed
-    if (userIsAdmin) {
-      return `${displayName} 👑`;
-    }
-    
-    return displayName;
-  };
-
   // Show loading state
   if (loading) {
     return (
@@ -215,22 +190,12 @@ const ChatPage = () => {
                 {Object.values(onlineUsers).map((user) => (
                   <div key={user.id} className="flex items-center gap-2">
                     <div className="relative">
-                      <Avatar className={`h-8 w-8 ${user.email === 'cherifhoucine83@gmail.com' ? 'bg-amber-100' : 'bg-primary/10'}`}>
-                        <AvatarFallback className={`${user.email === 'cherifhoucine83@gmail.com' ? 'text-amber-600' : 'text-primary'}`}>
-                          {getInitials(user.email)}
-                          {user.email === 'cherifhoucine83@gmail.com' && <span className="absolute -top-1 -right-1 text-amber-500"><Crown className="h-3 w-3" /></span>}
-                        </AvatarFallback>
+                      <Avatar className="h-8 w-8 bg-primary/10">
+                        <AvatarFallback className="text-primary">{getInitials(user.email)}</AvatarFallback>
                       </Avatar>
                       <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background"></div>
                     </div>
-                    <div className="truncate flex-1 text-sm flex items-center gap-1">
-                      {getDisplayName(user.email, user.id)}
-                      {user.email === 'cherifhoucine83@gmail.com' && (
-                        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
-                          Admin
-                        </Badge>
-                      )}
-                    </div>
+                    <div className="truncate flex-1 text-sm">{user.email}</div>
                   </div>
                 ))}
                 {Object.keys(onlineUsers).length === 0 && (
@@ -263,17 +228,16 @@ const ChatPage = () => {
                       className={`flex gap-3 ${message.user_id === user.id ? 'justify-end' : 'justify-start'}`}
                     >
                       {message.user_id !== user.id && (
-                        <Avatar className={`h-8 w-8 ${message.user_email === 'cherifhoucine83@gmail.com' ? 'bg-amber-100' : 'bg-primary/10'}`}>
-                          <AvatarFallback className={`${message.user_email === 'cherifhoucine83@gmail.com' ? 'text-amber-600' : 'text-primary'}`}>
+                        <Avatar className="h-8 w-8 bg-primary/10">
+                          <AvatarFallback className="text-primary">
                             {getInitials(message.user_email)}
                           </AvatarFallback>
                         </Avatar>
                       )}
-                      <div className={`max-w-[75%] ${message.user_id === user.id ? 'bg-primary text-primary-foreground' : message.user_email === 'cherifhoucine83@gmail.com' ? 'bg-amber-50 text-amber-900' : 'bg-muted'} rounded-lg p-3`}>
+                      <div className={`max-w-[75%] ${message.user_id === user.id ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg p-3`}>
                         {message.user_id !== user.id && (
-                          <p className="text-xs font-medium mb-1 flex items-center gap-1">
-                            {getDisplayName(message.user_email, message.user_id)}
-                            {message.user_email === 'cherifhoucine83@gmail.com' && <Crown className="h-3 w-3" />}
+                          <p className="text-xs font-medium mb-1">
+                            {message.user_email}
                           </p>
                         )}
                         <p className="break-words">{message.content}</p>
