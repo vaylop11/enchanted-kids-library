@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -126,7 +127,8 @@ const AdminPanel = () => {
         ? `${readTimeMinutes} دقائق للقراءة` 
         : `${readTimeMinutes} min read`;
       
-      const { data, error } = await supabaseUntyped
+      // Removed .select('id').single() to avoid permission issues
+      const { error } = await supabaseUntyped
         .from('blog_posts')
         .insert({
           title: values.title,
