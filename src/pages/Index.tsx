@@ -4,10 +4,12 @@ import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import HeroSection from '@/components/HeroSection';
 import FeaturesSection from '@/components/FeaturesSection';
+import BlogSection from '@/components/BlogSection';
 import FAQSection from '@/components/FAQSection';
 import UploadZone from '@/components/UploadZone';
+import RecentPDFs from '@/components/RecentPDFs';
+import FeaturedPDF from '@/components/FeaturedPDF';
 import { useAuth } from '@/contexts/AuthContext';
-import PDFGrid from '@/components/PDFGrid';
 
 const Index = () => {
   const { language } = useLanguage();
@@ -39,10 +41,14 @@ const Index = () => {
           </div>
         </section>
         
-        {/* All PDFs Section */}
-        <PDFGrid />
+        {/* Featured PDF section (only shown if user is logged in) */}
+        {user && <FeaturedPDF />}
+        
+        {/* Recent PDFs section */}
+        <RecentPDFs />
         
         <FeaturesSection />
+        <BlogSection />
         <FAQSection />
       </main>
 
