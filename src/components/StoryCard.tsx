@@ -86,7 +86,7 @@ const StoryCard = ({ story, index }: StoryCardProps) => {
         <div className="flex justify-between items-center text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <BookOpen className="h-3 w-3" />
-            <span>{t('pages')}: {story.pages || '5-10'}</span>
+            <span>{t('pages')}: {story.content ? Math.ceil(story.content.length / 2000) : '5-10'}</span>
           </span>
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
