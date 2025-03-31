@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Brain, Languages } from 'lucide-react';
+import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Brain, Languages, ArrowUp, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -67,6 +67,7 @@ const PDFViewer = () => {
     message: 'Preparing to analyze PDF...'
   });
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) {
@@ -259,8 +260,20 @@ const PDFViewer = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(() => {
+  const scrollToTop = () => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const scrollToBottom = () => {
     scrollToLatestMessage();
+  };
+
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      scrollToLatestMessage();
+    }
   }, [chatMessages]);
 
   const handleShare = () => {
@@ -1088,7 +1101,7 @@ const PDFViewer = () => {
                       variant="ghost"
                       size="sm"
                       onClick={clearChatMessages}
-                      className="text-xs"
+                      className="text-xs text-destructive hover:text-destructive"
                       disabled={!chatMessages.length}
                     >
                       <Trash2 className="h-3 w-3 mr-1" />
@@ -1099,53 +1112,78 @@ const PDFViewer = () => {
                 
                 {showChat && (
                   <>
-                    <ScrollArea className="flex-1 p-4">
-                      {isLoadingMessages ? (
-                        <>
-                          <ChatMessageSkeleton isUser={false} />
-                          <div className="h-3"></div>
-                          <ChatMessageSkeleton isUser={true} />
-                        </>
-                      ) : chatMessages.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-40 p-4 text-center text-muted-foreground">
-                          <Brain className="h-8 w-8 mb-3 opacity-50" />
-                          <p className="text-sm">
-                            {language === 'ar'
-                              ? 'اسأل أي سؤال حول محتوى هذا المستند'
-                              : 'Ask any question about the content of this document'}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {chatMessages.map((message) => (
-                            <div
-                              key={message.id}
-                              className={cn(
-                                "flex flex-col space-y-2 p-3 rounded-lg max-w-[90%]",
-                                message.isUser
-                                  ? "bg-primary/10 ml-auto rounded-br-none"
-                                  : "bg-muted mr-auto rounded-bl-none"
-                              )}
-                            >
-                              <div className="whitespace-pre-wrap text-sm">
-                                {message.content}
+                    <div className="relative flex-1">
+                      <ScrollArea className="h-[400px] p-4" ref={scrollAreaRef}>
+                        {isLoadingMessages ? (
+                          <>
+                            <ChatMessageSkeleton isUser={false} />
+                            <div className="h-3"></div>
+                            <ChatMessageSkeleton isUser={true} />
+                          </>
+                        ) : chatMessages.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center h-40 p-4 text-center text-muted-foreground">
+                            <Brain className="h-8 w-8 mb-3 opacity-50" />
+                            <p className="text-sm">
+                              {language === 'ar'
+                                ? 'اسأل أي سؤال حول محتوى هذا المستند'
+                                : 'Ask any question about the content of this document'}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {chatMessages.map((message) => (
+                              <div
+                                key={message.id}
+                                className={cn(
+                                  "flex flex-col space-y-2 p-3 rounded-lg max-w-[90%]",
+                                  message.isUser
+                                    ? "bg-primary/10 ml-auto rounded-br-none"
+                                    : "bg-muted mr-auto rounded-bl-none"
+                                )}
+                              >
+                                <div className="whitespace-pre-wrap text-sm">
+                                  {message.content}
+                                </div>
+                                <div className="text-xs text-muted-foreground self-end">
+                                  {new Date(message.timestamp).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </div>
                               </div>
-                              <div className="text-xs text-muted-foreground self-end">
-                                {new Date(message.timestamp).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                          <div ref={chatEndRef} />
-                        </div>
-                      )}
+                            ))}
+                            <div ref={chatEndRef} />
+                          </div>
+                        )}
+                        
+                        {isAnalyzing && (
+                          <PDFAnalysisProgress analysis={analysisProgress} />
+                        )}
+                      </ScrollArea>
                       
-                      {isAnalyzing && (
-                        <PDFAnalysisProgress analysis={analysisProgress} />
+                      {chatMessages.length > 5 && (
+                        <div className="absolute right-2 bottom-20 flex flex-col gap-2">
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            onClick={scrollToTop}
+                            className="h-8 w-8 rounded-full shadow-md"
+                            title={language === 'ar' ? 'التمرير لأعلى' : 'Scroll to top'}
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            onClick={scrollToBottom}
+                            className="h-8 w-8 rounded-full shadow-md"
+                            title={language === 'ar' ? 'التمرير لأسفل' : 'Scroll to bottom'}
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </Button>
+                        </div>
                       )}
-                    </ScrollArea>
+                    </div>
                     
                     <div className="p-4 border-t mt-auto">
                       <form onSubmit={handleChatSubmit} className="flex gap-2">
