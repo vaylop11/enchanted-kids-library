@@ -4,7 +4,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
-import { Send, User, ArrowLeft, Crown, Trash2 } from 'lucide-react';
+import { Send, User, ArrowLeft, Crown, Trash2, Eraser } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -174,6 +174,23 @@ const ChatPage = () => {
     }
   };
 
+  const deleteAllMessages = async () => {
+    if (!isAdmin) return;
+    
+    try {
+      const { error } = await supabaseUntyped
+        .from('messages')
+        .delete()
+        .neq('id', '0'); // Delete all messages (using a condition that's always true)
+        
+      if (error) throw error;
+      toast.success('All messages cleared');
+    } catch (error) {
+      console.error('Error clearing messages:', error);
+      toast.error('Failed to clear all messages');
+    }
+  };
+
   // Format timestamp to readable time
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString([], { 
@@ -223,13 +240,13 @@ const ChatPage = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="flex-1 pt-24 pb-8 px-4 md:px-6 max-w-7xl mx-auto w-full">
-        <div className="mb-4">
+      <main className="flex-1 pt-24 pb-16 px-6 md:px-8 max-w-7xl mx-auto w-full">
+        <div className="mb-6">
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => navigate('/')}
-            className="flex items-center gap-1"
+            className="flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
             {t('home')}
@@ -238,7 +255,7 @@ const ChatPage = () => {
         
         <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)]">
           {/* Online Users Sidebar */}
-          <Card className="lg:w-64 w-full p-4 h-full lg:h-auto">
+          <Card className="lg:w-64 w-full p-5 h-full lg:h-auto">
             <h2 className="text-lg font-medium mb-4">{t('onlineUsers')}</h2>
             <ScrollArea className="h-[200px] lg:h-[calc(100%-3rem)]">
               <div className="space-y-3 pr-4">
@@ -259,7 +276,7 @@ const ChatPage = () => {
                           <span className="font-medium text-amber-600">Admin</span>
                         </div>
                       ) : (
-                        <span>User {getInitials(onlineUser.email)}</span>
+                        <span>User {onlineUser.id.substring(0, 4)}</span>
                       )}
                     </div>
                   </div>
@@ -272,12 +289,27 @@ const ChatPage = () => {
           </Card>
           
           {/* Chat Area */}
-          <Card className="flex-1 flex flex-col p-4 h-full">
+          <Card className="flex-1 flex flex-col p-5 h-full">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-medium">{t('chatRoom')}</h2>
-              <Badge variant="outline" className="text-xs">
-                {Object.keys(onlineUsers).length} {t('online')}
-              </Badge>
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="text-xs">
+                  {Object.keys(onlineUsers).length} {t('online')}
+                </Badge>
+                
+                {isAdmin && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={deleteAllMessages}
+                    title="Clear all messages"
+                    className="flex items-center gap-1"
+                  >
+                    <Eraser className="h-4 w-4" />
+                    {t('clearAll')}
+                  </Button>
+                )}
+              </div>
             </div>
             
             {/* Messages */}
@@ -309,7 +341,7 @@ const ChatPage = () => {
                                 <span className="font-medium text-amber-600">Admin</span>
                               </>
                             ) : (
-                              <span>{maskEmail(message.user_email)}</span>
+                              <span>User {message.user_id.substring(0, 4)}</span>
                             )}
                           </div>
                         )}
