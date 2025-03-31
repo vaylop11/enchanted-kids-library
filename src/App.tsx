@@ -19,6 +19,7 @@ import SignIn from "./components/auth/SignIn";
 import SignUp from "./components/auth/SignUp";
 import AuthPage from "./pages/AuthPage";
 import AdminPage from "./pages/AdminPage";
+import ChatPage from "./pages/ChatPage";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/signin" element={<AuthPage><SignIn /></AuthPage>} />
               <Route path="/signup" element={<AuthPage><SignUp /></AuthPage>} />
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/chat" element={<ChatPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

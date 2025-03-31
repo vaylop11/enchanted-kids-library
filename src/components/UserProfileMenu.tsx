@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, LogOut, File, Settings } from 'lucide-react';
+import { User, LogOut, File, Settings, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/authService';
 import { Button } from '@/components/ui/button';
@@ -61,6 +61,17 @@ const UserProfileMenu = () => {
         >
           <File className="mr-2 h-4 w-4" />
           {language === 'ar' ? 'ملفات PDF الخاصة بي' : 'My PDFs'}
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem 
+          className="cursor-pointer"
+          onClick={() => {
+            setIsOpen(false);
+            navigate('/chat');
+          }}
+        >
+          <MessageCircle className="mr-2 h-4 w-4" />
+          {language === 'ar' ? 'الدردشة' : 'Chat'}
         </DropdownMenuItem>
         
         {isAdmin && (
