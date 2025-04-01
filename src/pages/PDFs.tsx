@@ -1,8 +1,9 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PDFCard from '@/components/PDFCard';
 import Navbar from '@/components/Navbar';
-import { Search, X, Upload } from 'lucide-react';
+import { Search, X, Upload, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -78,6 +79,16 @@ const PDFs = () => {
       return;
     }
     
+    // Check if user has reached the maximum PDFs limit (4)
+    if (pdfs.length >= 4) {
+      toast.error(
+        language === 'ar' 
+          ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4)' 
+          : 'You have reached the maximum number of PDFs (4)'
+      );
+      return;
+    }
+    
     if (file.type !== 'application/pdf') {
       toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       return;
@@ -112,6 +123,16 @@ const PDFs = () => {
   };
 
   const handleUploadClick = () => {
+    // Check if user has reached the maximum PDFs limit before opening file selector
+    if (pdfs.length >= 4) {
+      toast.error(
+        language === 'ar' 
+          ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4)' 
+          : 'You have reached the maximum number of PDFs (4)'
+      );
+      return;
+    }
+    
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
@@ -133,6 +154,9 @@ const PDFs = () => {
     return null;
   }
   
+  // Calculate if the user has reached the maximum upload limit
+  const hasReachedMaxPDFs = pdfs.length >= 4;
+  
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -146,6 +170,17 @@ const PDFs = () => {
               : 'Browse all PDFs you have uploaded. You can search for a specific file or upload a new one.'
             }
           </p>
+          {hasReachedMaxPDFs && (
+            <div className="mt-4 flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-950/20 p-3 rounded-md border border-amber-200 dark:border-amber-800">
+              <AlertTriangle className="h-4 w-4" />
+              <p className="text-sm">
+                {language === 'ar' 
+                  ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
+                  : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.'
+                }
+              </p>
+            </div>
+          )}
         </div>
         
         <div className="flex flex-col md:flex-row gap-6 mb-8 items-start">
@@ -180,7 +215,7 @@ const PDFs = () => {
           <Button 
             onClick={handleUploadClick}
             className="md:w-auto w-full bg-primary text-primary-foreground hover:bg-primary/90"
-            disabled={isUploading}
+            disabled={isUploading || hasReachedMaxPDFs}
           >
             {isUploading ? (
               <>
@@ -240,7 +275,7 @@ const PDFs = () => {
                 onClick={handleUploadClick}
                 variant="default"
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
-                disabled={isUploading}
+                disabled={isUploading || hasReachedMaxPDFs}
               >
                 {isUploading ? (
                   <>

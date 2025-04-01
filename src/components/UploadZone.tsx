@@ -1,12 +1,12 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { File, Upload, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { uploadPDFToSupabase } from '@/services/pdfSupabaseService';
+import { uploadPDFToSupabase, getUserPDFs } from '@/services/pdfSupabaseService';
 
 const UploadZone = () => {
   const { language } = useLanguage();
@@ -17,6 +17,23 @@ const UploadZone = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [userPDFCount, setUserPDFCount] = useState(0);
+  
+  // Check how many PDFs the user has already uploaded
+  useEffect(() => {
+    if (user) {
+      const checkUserPDFs = async () => {
+        try {
+          const pdfs = await getUserPDFs(user.id);
+          setUserPDFCount(pdfs.length);
+        } catch (error) {
+          console.error('Error checking user PDFs:', error);
+        }
+      };
+      
+      checkUserPDFs();
+    }
+  }, [user]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -28,6 +45,16 @@ const UploadZone = () => {
   const handleFileUpload = async (file: File) => {
     // Reset error state
     setUploadError(null);
+    
+    // Check if user has reached the maximum PDFs limit (4)
+    if (user && userPDFCount >= 4) {
+      const errorMsg = language === 'ar' 
+        ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
+        : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.';
+      toast.error(errorMsg);
+      setUploadError(errorMsg);
+      return;
+    }
     
     // Check if file is PDF
     if (file.type !== 'application/pdf') {
@@ -69,6 +96,9 @@ const UploadZone = () => {
         if (pdf) {
           // Show success message
           toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
+          
+          // Update user PDF count
+          setUserPDFCount(prev => prev + 1);
           
           // Reset state
           setTimeout(() => {
@@ -183,6 +213,16 @@ const UploadZone = () => {
   };
 
   const triggerFileInput = () => {
+    // Check if user has reached the maximum PDFs limit before opening file selector
+    if (user && userPDFCount >= 4) {
+      const errorMsg = language === 'ar' 
+        ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
+        : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.';
+      toast.error(errorMsg);
+      setUploadError(errorMsg);
+      return;
+    }
+    
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
@@ -202,6 +242,9 @@ const UploadZone = () => {
   const handleSignIn = () => {
     navigate('/signin');
   };
+
+  // Check if user has reached maximum uploads
+  const hasReachedMaxPDFs = user && userPDFCount >= 4;
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -242,19 +285,41 @@ const UploadZone = () => {
         <div
           className={`relative p-8 border-2 border-dashed rounded-xl transition-colors duration-200 ${
             isDragging ? 'border-primary bg-primary/5' : 'border-border'
-          } hover:border-primary/50 hover:bg-muted/30`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={isUploading ? undefined : triggerFileInput}
+          } hover:border-primary/50 hover:bg-muted/30 ${hasReachedMaxPDFs ? 'opacity-70 pointer-events-none' : ''}`}
+          onDragOver={hasReachedMaxPDFs ? undefined : handleDragOver}
+          onDragLeave={hasReachedMaxPDFs ? undefined : handleDragLeave}
+          onDrop={hasReachedMaxPDFs ? undefined : handleDrop}
+          onClick={isUploading || hasReachedMaxPDFs ? undefined : triggerFileInput}
         >
+          {hasReachedMaxPDFs && (
+            <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10 rounded-xl">
+              <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800 max-w-sm text-center">
+                <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-500 mx-auto mb-2" />
+                <p className="text-sm text-amber-800 dark:text-amber-300">
+                  {language === 'ar' 
+                    ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
+                    : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.'
+                  }
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2"
+                  onClick={handleNavigateToPDFs}
+                >
+                  {language === 'ar' ? 'إدارة ملفاتي' : 'Manage My Files'}
+                </Button>
+              </div>
+            </div>
+          )}
+          
           <input
             ref={fileInputRef}
             type="file"
             className="hidden"
             accept=".pdf"
             onChange={handleFileChange}
-            disabled={isUploading}
+            disabled={isUploading || hasReachedMaxPDFs}
           />
           
           <div className="flex flex-col items-center justify-center text-center space-y-4">
@@ -276,7 +341,14 @@ const UploadZone = () => {
                   : 'Drag and drop or click to select a file (max 10MB)'
                 }
               </p>
-              {!user && (
+              {user ? (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {language === 'ar'
+                    ? `${userPDFCount}/4 ملفات تم تحميلها`
+                    : `${userPDFCount}/4 PDFs uploaded`
+                  }
+                </p>
+              ) : (
                 <p className="text-xs text-amber-600 mt-2">
                   {language === 'ar'
                     ? 'ملاحظة: يمكنك التحدث مع الملف مؤقتًا. سجل الدخول لحفظ الملفات'
@@ -306,7 +378,7 @@ const UploadZone = () => {
                   e.stopPropagation();
                   triggerFileInput();
                 }}
-                disabled={isUploading}
+                disabled={isUploading || hasReachedMaxPDFs}
               >
                 <File className="mr-2 h-4 w-4" />
                 {language === 'ar' ? 'اختر ملف' : 'Select File'}
