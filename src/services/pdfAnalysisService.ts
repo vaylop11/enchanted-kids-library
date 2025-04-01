@@ -22,6 +22,7 @@ export interface AnalysisProgress {
 
 /**
  * Extracts text content from a PDF file
+ * Enhanced to ensure all pages are processed with accurate progress tracking
  */
 export const extractTextFromPDF = async (
   pdfUrl: string, 
@@ -34,28 +35,55 @@ export const extractTextFromPDF = async (
       message: 'Initializing PDF extraction...'
     });
     
-    const pdf = await pdfjs.getDocument(pdfUrl).promise;
+    // Load the PDF document
+    const loadingTask = pdfjs.getDocument(pdfUrl);
+    
+    // Add progress tracking for document loading
+    loadingTask.onProgress = (progressData) => {
+      if (progressData.total > 0) {
+        const loadProgress = Math.round((progressData.loaded / progressData.total) * 20); // 20% of progress for loading
+        updateProgress?.({
+          stage: 'extracting',
+          progress: loadProgress,
+          message: 'Loading PDF document...'
+        });
+      }
+    };
+    
+    const pdf = await loadingTask.promise;
     let fullText = '';
     
     // Total pages for progress calculation
     const totalPages = pdf.numPages;
+    console.log(`PDF has ${totalPages} pages to extract text from`);
     
+    updateProgress?.({
+      stage: 'extracting',
+      progress: 20,
+      message: `Starting text extraction from ${totalPages} pages...`
+    });
+    
+    // Extract text from each page with progress tracking
     for (let i = 1; i <= totalPages; i++) {
+      // Calculate progress: 20% for loading + 80% for extraction
+      const extractionProgress = Math.round(20 + ((i - 1) / totalPages * 80));
+      
       updateProgress?.({
         stage: 'extracting',
-        progress: Math.round((i - 1) / totalPages * 100),
+        progress: extractionProgress,
         message: `Extracting text from page ${i} of ${totalPages}...`
       });
       
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
       const pageText = textContent.items.map((item: any) => item.str).join(' ');
-      fullText += pageText + ' ';
+      fullText += `[Page ${i}]\n${pageText}\n\n`;
       
       // Update progress after each page
+      const completedProgress = Math.round(20 + (i / totalPages * 80));
       updateProgress?.({
         stage: 'extracting',
-        progress: Math.round(i / totalPages * 100),
+        progress: completedProgress,
         message: `Extracted page ${i} of ${totalPages}`
       });
     }
@@ -63,9 +91,10 @@ export const extractTextFromPDF = async (
     updateProgress?.({
       stage: 'analyzing',
       progress: 100,
-      message: 'Text extraction complete'
+      message: 'Text extraction complete from all pages'
     });
     
+    console.log(`Successfully extracted text from all ${totalPages} pages`);
     return fullText.trim();
   } catch (error) {
     console.error('Error extracting text from PDF:', error);
@@ -99,6 +128,7 @@ export const analyzePDFWithGemini = async (
     });
 
     if (error) {
+      console.error('Error from analyze-pdf-with-gemini function:', error);
       updateProgress?.({
         stage: 'error',
         progress: 0,

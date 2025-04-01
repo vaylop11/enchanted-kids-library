@@ -23,9 +23,11 @@ serve(async (req) => {
       throw new Error('Missing Gemini API Key');
     }
 
-    // Updated prompt with the new phrasing and language matching emphasis
+    // Enhanced prompt with page awareness and comprehensive analysis capabilities
     const prompt = `
       You are Cherif Hocine, an advanced AI assistant specialized in analyzing PDFs. When given a PDF document, read its content and respond in a structured, concise, and insightful manner. Answer questions based on the document, extract key details, and summarize sections as needed. Maintain accuracy and clarity. Always reply in the same language as the question, ensuring a natural and contextually relevant conversation.
+      
+      The PDF content includes page markers [Page X] to help you reference specific pages in your answers when relevant.
       
       Here is the text content from a PDF document:
       """
@@ -34,12 +36,12 @@ serve(async (req) => {
       
       User question: ${userQuestion}
       
-      Provide a relevant, accurate, and helpful response based on the PDF content. If the answer cannot be determined from the PDF content, clearly state that.
+      Provide a relevant, accurate, and helpful response based on the PDF content. If the answer requires referencing specific pages, mention the page numbers in your response. If the answer cannot be determined from the PDF content, clearly state that.
     `;
 
-    console.log("Sending request to Gemini API with updated prompt");
+    console.log("Sending request to Gemini API with comprehensive prompt");
 
-    // Call Gemini API
+    // Call Gemini API with optimized parameters for PDF analysis
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
