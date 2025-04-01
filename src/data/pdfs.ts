@@ -10,7 +10,7 @@ export const pdfs: PDF[] = [
     uploadDate: '2025-04-01',
     pageCount: 10,
     fileSize: '1.2 MB',
-    filePath: '/sample/path1.pdf'
+    thumbnail: undefined // Using thumbnail instead of filePath
   },
   {
     id: '2',
@@ -19,7 +19,7 @@ export const pdfs: PDF[] = [
     uploadDate: '2025-04-02',
     pageCount: 5,
     fileSize: '2.3 MB',
-    filePath: '/sample/path2.pdf'
+    thumbnail: undefined
   },
   {
     id: '3',
@@ -28,7 +28,7 @@ export const pdfs: PDF[] = [
     uploadDate: '2025-04-03',
     pageCount: 15,
     fileSize: '3.7 MB',
-    filePath: '/sample/path3.pdf'
+    thumbnail: undefined
   },
   {
     id: '4',
@@ -37,6 +37,6 @@ export const pdfs: PDF[] = [
     uploadDate: '2025-04-04',
     pageCount: 8,
     fileSize: '1.8 MB',
-    filePath: '/sample/path4.pdf'
+    thumbnail: undefined
   }
 ];
