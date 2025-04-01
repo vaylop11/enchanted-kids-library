@@ -66,7 +66,7 @@ export const signIn = async (email: string, password: string): Promise<User | nu
     }
     
     if (data.user) {
-      toast.success('Sign in successful');
+      // Don't show toast here - it will be handled by the Auth context
       return {
         id: data.user.id,
         email: data.user.email
@@ -90,7 +90,7 @@ export const signOut = async (): Promise<void> => {
       return;
     }
     
-    toast.success('Signed out successfully');
+    // Don't show toast here - it will be handled by the Auth context
   } catch (error) {
     console.error('Error signing out:', error);
     toast.error('Failed to sign out');
