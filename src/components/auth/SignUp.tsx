@@ -36,6 +36,38 @@ const SignUp = () => {
     return true;
   };
 
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    
+    // Only validate if both fields have values
+    if (newPassword && confirmPassword) {
+      if (newPassword !== confirmPassword) {
+        setPasswordError(language === 'ar' 
+          ? 'كلمات المرور غير متطابقة' 
+          : 'Passwords do not match');
+      } else {
+        setPasswordError('');
+      }
+    }
+  };
+  
+  const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newConfirmPassword = e.target.value;
+    setConfirmPassword(newConfirmPassword);
+    
+    // Only validate if both fields have values
+    if (password && newConfirmPassword) {
+      if (password !== newConfirmPassword) {
+        setPasswordError(language === 'ar' 
+          ? 'كلمات المرور غير متطابقة' 
+          : 'Passwords do not match');
+      } else {
+        setPasswordError('');
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -91,10 +123,7 @@ const SignUp = () => {
               type="password"
               placeholder={language === 'ar' ? 'كلمة المرور' : 'Password'}
               value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (confirmPassword) validatePasswords();
-              }}
+              onChange={handlePasswordChange}
               required
               minLength={6}
             />
@@ -108,10 +137,7 @@ const SignUp = () => {
               type="password"
               placeholder={language === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm Password'}
               value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                if (password) validatePasswords();
-              }}
+              onChange={handleConfirmPasswordChange}
               required
               minLength={6}
             />
