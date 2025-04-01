@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -853,7 +854,7 @@ const PDFViewer = () => {
     );
   };
 
-  // Update the return JSX to use the new renderChatMessages function
+  // Complete the JSX structure properly with all closing tags
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -881,4 +882,217 @@ const PDFViewer = () => {
               </button>
               <button
                 onClick={handleDeletePDF}
-                className="inline
+                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
+                aria-label={language === 'ar' ? 'حذف الملف' : 'Delete file'}
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className={`lg:col-span-2 flex flex-col ${pdfError ? 'items-center justify-center' : ''}`}>
+              {isLoadingPdf ? (
+                <div className="flex flex-col items-center justify-center min-h-[600px] bg-muted/30 border border-muted/20 rounded-lg">
+                  <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
+                  <p className="text-muted-foreground">
+                    {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
+                  </p>
+                </div>
+              ) : pdfError ? (
+                <div className="flex flex-col items-center justify-center max-w-md mx-auto text-center p-6 bg-muted/30 border border-muted/20 rounded-lg">
+                  <AlertTriangle className="h-10 w-10 text-amber-500 mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    {language === 'ar' ? 'حدث خطأ' : 'Error Loading PDF'}
+                  </h3>
+                  <p className="text-muted-foreground mb-4">{pdfError}</p>
+                  <Button onClick={handleRetryLoading}>
+                    {language === 'ar' ? 'إعادة المحاولة' : 'Retry'}
+                  </Button>
+                </div>
+              ) : (
+                <div className="relative">
+                  {showPdfControls && (
+                    <div className="absolute top-2 left-0 right-0 z-10 flex justify-center">
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-background/80 border border-muted/30 rounded-full backdrop-blur-sm">
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-7 w-7" 
+                          onClick={handlePrevPage}
+                          disabled={pageNumber <= 1}
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <span className="text-xs font-medium min-w-12 text-center">
+                          {pageNumber} / {numPages || '?'}
+                        </span>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-7 w-7" 
+                          onClick={handleNextPage}
+                          disabled={numPages !== null && pageNumber >= numPages}
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                        <div className="mx-1 h-4 w-px bg-muted-foreground/20" />
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-7 w-7" 
+                          onClick={handleZoomOut}
+                          disabled={pdfScale <= 0.5}
+                        >
+                          <span className="text-xs font-bold">−</span>
+                        </Button>
+                        <span className="text-xs min-w-6 text-center">
+                          {Math.round(pdfScale * 100)}%
+                        </span>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-7 w-7" 
+                          onClick={handleZoomIn}
+                          disabled={pdfScale >= 2.0}
+                        >
+                          <span className="text-xs font-bold">+</span>
+                        </Button>
+                        <div className="mx-1 h-4 w-px bg-muted-foreground/20" />
+                        <a 
+                          href={pdf?.dataUrl} 
+                          download={pdf?.title}
+                          className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-muted hover:bg-muted/80"
+                        >
+                          <DownloadCloud className="h-3.5 w-3.5" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div 
+                    className="p-4 bg-muted/20 border border-muted/30 rounded-lg overflow-hidden flex justify-center"
+                    onClick={() => setShowPdfControls(prev => !prev)}
+                  >
+                    {pdf?.dataUrl && (
+                      <Document
+                        file={pdf.dataUrl}
+                        onLoadSuccess={handleDocumentLoadSuccess}
+                        onLoadError={handleDocumentLoadError}
+                        loading={
+                          <div className="flex flex-col items-center justify-center min-h-[600px]">
+                            <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
+                            <p className="text-muted-foreground">
+                              {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
+                            </p>
+                          </div>
+                        }
+                        error={
+                          <div className="flex flex-col items-center justify-center min-h-[600px]">
+                            <AlertTriangle className="h-10 w-10 text-amber-500 mb-4" />
+                            <p className="text-muted-foreground">
+                              {language === 'ar' ? 'فشل في تحميل الملف' : 'Failed to load PDF'}
+                            </p>
+                          </div>
+                        }
+                      >
+                        <div className="py-4">
+                          <Page
+                            pageNumber={pageNumber}
+                            scale={pdfScale}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                            loading={
+                              <div className="flex items-center justify-center min-h-[600px] min-w-[400px]">
+                                <div className="h-8 w-8 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                              </div>
+                            }
+                          />
+                        </div>
+                      </Document>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="bg-muted/10 border border-muted/20 rounded-lg p-4 flex flex-col h-[calc(100vh-12rem)] overflow-hidden">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-medium">
+                  {showChat 
+                    ? (language === 'ar' ? 'تحليل الملف' : 'PDF Chat') 
+                    : (language === 'ar' ? 'الملخص' : 'Summary')
+                  }
+                </h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowChat(!showChat)}
+                >
+                  {showChat 
+                    ? (language === 'ar' ? 'عرض الملخص' : 'Show Summary') 
+                    : (language === 'ar' ? 'عرض المحادثة' : 'Show Chat')
+                  }
+                </Button>
+              </div>
+              
+              {showChat ? (
+                <>
+                  <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-2">
+                    {isAnalyzing && (
+                      <PDFAnalysisProgress progress={analysisProgress} />
+                    )}
+                    {renderChatMessages()}
+                  </div>
+                  
+                  <form onSubmit={handleChatSubmit} className="mt-auto">
+                    <div className="relative">
+                      <Textarea
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder={language === 'ar' 
+                          ? 'اكتب سؤالاً حول هذا الملف...' 
+                          : 'Ask a question about this PDF...'
+                        }
+                        className="pr-14 resize-none"
+                        rows={3}
+                        disabled={isWaitingForResponse}
+                      />
+                      <Button 
+                        type="submit" 
+                        size="icon"
+                        className="absolute right-2 bottom-2"
+                        disabled={!chatInput.trim() || isWaitingForResponse}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </form>
+                </>
+              ) : (
+                <div className="flex-1 overflow-y-auto">
+                  {pdf?.summary ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <p>{pdf.summary}</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                      <p className="text-muted-foreground">
+                        {language === 'ar' 
+                          ? 'لا يوجد ملخص متاح. استخدم المحادثة لتحليل الملف وإنشاء ملخص.' 
+                          : 'No summary available. Use the chat to analyze the document and generate a summary.'
+                        }
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default PDFViewer;
