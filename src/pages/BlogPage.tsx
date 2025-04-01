@@ -44,14 +44,10 @@ const BlogPage = () => {
           throw error;
         }
         
-        if (data && data.length > 0) {
-          setBlogPosts(data as BlogPost[]);
-        } else {
-          setBlogPosts(sampleBlogPosts);
-        }
+        setBlogPosts(data || []);
       } catch (error) {
         console.error('Error fetching blog posts:', error);
-        setBlogPosts(sampleBlogPosts);
+        setBlogPosts([]);
       } finally {
         setLoading(false);
       }
@@ -59,93 +55,6 @@ const BlogPage = () => {
     
     fetchBlogPosts();
   }, [language]);
-  
-  const sampleBlogPosts: BlogPost[] = [
-    {
-      id: 'chatpdf-vs-traditional',
-      title: language === 'ar' 
-        ? 'ChatPDF مقابل قراءة PDF التقليدية: مقارنة شاملة' 
-        : 'ChatPDF vs Traditional PDF Reading: A Comprehensive Comparison',
-      excerpt: language === 'ar'
-        ? 'اكتشف كيف تغير تقنية ChatPDF الطريقة التي نتفاعل بها مع المستندات ولماذا هي أكثر كفاءة من أساليب القراءة التقليدية.'
-        : 'Discover how ChatPDF technology is changing the way we interact with documents and why it\'s more efficient than traditional reading methods.',
-      created_at: '2023-10-15',
-      read_time: language === 'ar' ? '5 دقائق للقراءة' : '5 min read',
-      category: language === 'ar' ? 'تكنولوجيا' : 'Technology',
-      image_url: 'https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-      content: ''
-    },
-    {
-      id: 'chatpdf-education',
-      title: language === 'ar' 
-        ? 'كيف يغير ChatPDF مشهد التعليم للطلاب والمعلمين'
-        : 'How ChatPDF is Transforming Education for Students and Teachers',
-      excerpt: language === 'ar'
-        ? 'استكشف كيف يمكن لتقنية ChatPDF المبتكرة أن تحسن فهم الطلاب وتوفر الوقت للمعلمين من خلال تسهيل استخراج المعلومات من المستندات الأكاديمية.'
-        : 'Explore how ChatPDF\'s innovative technology can improve student comprehension and save time for teachers by facilitating information extraction from academic documents.',
-      created_at: '2023-11-02',
-      read_time: language === 'ar' ? '7 دقائق للقراءة' : '7 min read',
-      category: language === 'ar' ? 'تعليم' : 'Education',
-      image_url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-      content: ''
-    },
-    {
-      id: 'chatpdf-business',
-      title: language === 'ar' 
-        ? 'تسريع عمليات الأعمال باستخدام ChatPDF: دراسة حالة'
-        : 'Accelerating Business Processes with ChatPDF: A Case Study',
-      excerpt: language === 'ar'
-        ? 'Learn how businesses are using ChatPDF technology to analyze contracts and legal documents 10x faster than traditional methods.'
-        : 'Learn how businesses are using ChatPDF technology to analyze contracts and legal documents 10x faster than traditional methods.',
-      created_at: '2023-12-08',
-      read_time: language === 'ar' ? '6 دقائق للقراءة' : '6 min read',
-      category: language === 'ar' ? 'أعمال' : 'Business',
-      image_url: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-      content: ''
-    },
-    {
-      id: 'chatpdf-research',
-      title: language === 'ar' 
-        ? 'كيف يمكن للباحثين استخدام ChatPDF لتسريع مراجعة الأدبيات العلمية'
-        : 'How Researchers Can Use ChatPDF to Accelerate Literature Reviews',
-      excerpt: language === 'ar'
-        ? 'A comprehensive guide for researchers on how to use ChatPDF to summarize research papers and extract key findings efficiently.'
-        : 'A comprehensive guide for researchers on how to use ChatPDF to summarize research papers and extract key findings efficiently.',
-      created_at: '2024-01-15',
-      read_time: language === 'ar' ? '8 دقائق للقراءة' : '8 min read',
-      category: language === 'ar' ? 'بحث علمي' : 'Research',
-      image_url: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-      content: ''
-    },
-    {
-      id: 'chatpdf-legal',
-      title: language === 'ar' 
-        ? 'ChatPDF for Lawyers: How to Improve Legal Document Review'
-        : 'ChatPDF for Lawyers: How to Improve Legal Document Review',
-      excerpt: language === 'ar'
-        ? 'Discover how lawyers can use ChatPDF to analyze contracts, discover legal loopholes, and save hours of manual work.'
-        : 'Discover how lawyers can use ChatPDF to analyze contracts, discover legal loopholes, and save hours of manual work.',
-      created_at: '2024-02-22',
-      read_time: language === 'ar' ? '9 دقائق للقراءة' : '9 min read',
-      category: language === 'ar' ? 'قانون' : 'Legal',
-      image_url: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-      content: ''
-    },
-    {
-      id: 'chatpdf-student',
-      title: language === 'ar' 
-        ? 'دليل الطالب لاستخدام ChatPDF للدراسة الفعالة'
-        : 'The Student\'s Guide to Using ChatPDF for Effective Studying',
-      excerpt: language === 'ar'
-        ? 'Tips and tricks for students on how to use ChatPDF to understand complex textbooks, summarize lectures, and prepare for exams.'
-        : 'Tips and tricks for students on how to use ChatPDF to understand complex textbooks, summarize lectures, and prepare for exams.',
-      created_at: '2024-03-10',
-      read_time: language === 'ar' ? '6 دقائق للقراءة' : '6 min read',
-      category: language === 'ar' ? 'تعليم' : 'Education',
-      image_url: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-      content: ''
-    }
-  ];
   
   const categories = Array.from(new Set(blogPosts.map(post => post.category)));
   
@@ -276,6 +185,11 @@ const BlogPage = () => {
                             src={post.image_url} 
                             alt={post.title}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            onError={(e) => {
+                              // Fallback image if the original fails to load
+                              const target = e.target as HTMLImageElement;
+                              target.src = "https://images.unsplash.com/photo-1516383607781-913a19294fd1?ixlib=rb-4.0.3&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=1080&fit=max";
+                            }}
                           />
                         </div>
                         <CardHeader>

@@ -49,46 +49,6 @@ const BlogSection = () => {
     fetchBlogPosts();
   }, []);
   
-  // Fallback to sample data if no posts are available from the database
-  const sampleBlogPosts = [
-    {
-      id: 'chatpdf-vs-traditional',
-      title: language === 'ar' ? 'ChatPDF مقابل قراءة PDF التقليدية: مقارنة شاملة' : 'ChatPDF vs Traditional PDF Reading: A Comprehensive Comparison',
-      excerpt: language === 'ar' 
-        ? 'اكتشف كيف تغير تقنية ChatPDF الطريقة التي نتفاعل بها مع المستندات ولماذا هي أكثر كفاءة من أساليب القراءة التقليدية.'
-        : 'Discover how ChatPDF technology is changing the way we interact with documents and why it\'s more efficient than traditional reading methods.',
-      created_at: '2023-10-15',
-      read_time: language === 'ar' ? '5 دقائق للقراءة' : '5 min read',
-      image_url: 'https://images.unsplash.com/photo-1527689368864-3a821dbccc34?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-      category: language === 'ar' ? 'تكنولوجيا' : 'Technology'
-    },
-    {
-      id: 'chatpdf-education',
-      title: language === 'ar' ? 'كيف يغير ChatPDF مشهد التعليم للطلاب والمعلمين' : 'How ChatPDF is Transforming Education for Students and Teachers',
-      excerpt: language === 'ar'
-        ? 'استكشف كيف يمكن لتقنية ChatPDF المبتكرة أن تحسن فهم الطلاب وتوفر الوقت للمعلمين من خلال تسهيل استخراج المعلومات من المستندات الأكاديمية.'
-        : 'Explore how ChatPDF\'s innovative technology can improve student comprehension and save time for teachers by facilitating information extraction from academic documents.',
-      created_at: '2023-11-02',
-      read_time: language === 'ar' ? '7 دقائق للقراءة' : '7 min read',
-      image_url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-      category: language === 'ar' ? 'تعليم' : 'Education'
-    },
-    {
-      id: 'chatpdf-business',
-      title: language === 'ar' ? 'تسريع عمليات الأعمال باستخدام ChatPDF: دراسة حالة' : 'Accelerating Business Processes with ChatPDF: A Case Study',
-      excerpt: language === 'ar'
-        ? 'تعرف على كيفية استخدام الشركات لتقنية ChatPDF لتحليل العقود والمستندات القانونية بسرعة أكبر بـ 10 مرات من الطرق التقليدية.'
-        : 'Learn how businesses are using ChatPDF technology to analyze contracts and legal documents 10x faster than traditional methods.',
-      created_at: '2023-12-08',
-      read_time: language === 'ar' ? '6 دقائق للقراءة' : '6 min read',
-      image_url: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-      category: language === 'ar' ? 'أعمال' : 'Business'
-    }
-  ];
-
-  // Use database posts if available, otherwise use samples
-  const displayPosts = blogPosts.length > 0 ? blogPosts : sampleBlogPosts;
-  
   if (loading) {
     return (
       <section className="py-20 px-4 md:px-6 bg-gradient-to-b from-background to-muted/30">
@@ -115,6 +75,11 @@ const BlogSection = () => {
     );
   }
   
+  // If no posts fetched from DB, show empty state instead of sample data
+  if (blogPosts.length === 0) {
+    return null; // Don't show the blog section if no posts
+  }
+  
   return (
     <section id="blog" className="py-20 px-4 md:px-6 bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto max-w-7xl">
@@ -131,7 +96,7 @@ const BlogSection = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {displayPosts.map((post) => (
+          {blogPosts.map((post) => (
             <Link
               key={post.id}
               to={`/blog/${post.id}`}
