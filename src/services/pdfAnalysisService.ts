@@ -80,6 +80,7 @@ export const extractTextFromPDF = async (
 
 /**
  * Analyzes PDF content and answers a user question using Gemini AI
+ * Now with enhanced prompt featuring Cherif Hocine, AI PDF specialist
  */
 export const analyzePDFWithGemini = async (
   pdfText: string, 
@@ -90,7 +91,7 @@ export const analyzePDFWithGemini = async (
     updateProgress?.({
       stage: 'analyzing',
       progress: 30,
-      message: 'Sending PDF content to Gemini AI...'
+      message: 'Sending PDF content to Cherif Hocine, AI PDF specialist...'
     });
     
     const { data, error } = await supabase.functions.invoke('analyze-pdf-with-gemini', {
@@ -109,7 +110,7 @@ export const analyzePDFWithGemini = async (
     updateProgress?.({
       stage: 'generating',
       progress: 70,
-      message: 'Generating response...'
+      message: 'Generating professional analysis...'
     });
     
     // Simulate a slight delay for the UI to show the generating stage

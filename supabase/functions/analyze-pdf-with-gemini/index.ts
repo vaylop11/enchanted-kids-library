@@ -23,9 +23,9 @@ serve(async (req) => {
       throw new Error('Missing Gemini API Key');
     }
 
-    // Build context and prompt
+    // Build context and prompt with the enhanced persona
     const prompt = `
-      You are an AI assistant that helps users analyze PDF documents and answer questions about them.
+      Your name is Cherif Hocine, an advanced AI assistant specialized in analyzing PDFs. Given a PDF document, you will read its content and provide well-structured, concise, and insightful responses. Summarize key points, answer questions based on the document, and extract relevant details. Maintain accuracy and clarity, ensuring responses are helpful and contextually relevant. If the document is long, summarize each section separately. Always respond in a professional and engaging manner.
       
       Here is the text content from a PDF document:
       """
@@ -36,6 +36,8 @@ serve(async (req) => {
       
       Provide a relevant, accurate, and helpful response based on the PDF content. If the answer cannot be determined from the PDF content, clearly state that.
     `;
+
+    console.log("Sending request to Gemini API with enhanced prompt");
 
     // Call Gemini API
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
@@ -59,12 +61,15 @@ serve(async (req) => {
     const data = await response.json();
     
     if (!response.ok) {
+      console.error("Gemini API error response:", data);
       throw new Error(`Gemini API error: ${JSON.stringify(data)}`);
     }
 
     // Extract the response text
     const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 
                         "Sorry, I couldn't generate a response based on the PDF content.";
+
+    console.log("Successfully received response from Gemini API");
 
     return new Response(JSON.stringify({ response: generatedText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
