@@ -20,15 +20,30 @@ export interface AnalysisProgress {
   message: string;
 }
 
+// Cache for storing PDF text content to avoid repeated extraction
+const pdfTextCache = new Map<string, string>();
+
 /**
- * Extracts text content from a PDF file
- * Enhanced to ensure all pages are processed with accurate progress tracking
+ * Extracts text content from a PDF file with caching support
  */
 export const extractTextFromPDF = async (
   pdfUrl: string, 
-  updateProgress?: (progress: AnalysisProgress) => void
+  updateProgress?: (progress: AnalysisProgress) => void,
+  forceReload = false
 ): Promise<string> => {
   try {
+    // Check cache first if not forcing reload
+    const cacheKey = pdfUrl;
+    if (!forceReload && pdfTextCache.has(cacheKey)) {
+      console.log("Using cached PDF text");
+      updateProgress?.({
+        stage: 'extracting',
+        progress: 100,
+        message: 'Using previously extracted text'
+      });
+      return pdfTextCache.get(cacheKey)!;
+    }
+
     updateProgress?.({
       stage: 'extracting',
       progress: 0,
@@ -95,7 +110,12 @@ export const extractTextFromPDF = async (
     });
     
     console.log(`Successfully extracted text from all ${totalPages} pages`);
-    return fullText.trim();
+    
+    // Store in cache
+    const extractedText = fullText.trim();
+    pdfTextCache.set(cacheKey, extractedText);
+    
+    return extractedText;
   } catch (error) {
     console.error('Error extracting text from PDF:', error);
     updateProgress?.({
@@ -109,7 +129,6 @@ export const extractTextFromPDF = async (
 
 /**
  * Analyzes PDF content and answers a user question using Gemini AI
- * Now with updated prompt to ensure language matching and natural responses
  */
 export const analyzePDFWithGemini = async (
   pdfText: string, 
@@ -123,18 +142,50 @@ export const analyzePDFWithGemini = async (
       message: 'Sending PDF content to Cherif Hocine, AI PDF specialist...'
     });
     
-    const { data, error } = await supabase.functions.invoke('analyze-pdf-with-gemini', {
-      body: { pdfText, userQuestion },
-    });
+    // Enhanced error handling for network or API issues
+    let retries = 0;
+    const maxRetries = 2;
+    let response = null;
+    
+    while (retries <= maxRetries) {
+      try {
+        const { data, error } = await supabase.functions.invoke('analyze-pdf-with-gemini', {
+          body: { pdfText, userQuestion },
+        });
 
-    if (error) {
-      console.error('Error from analyze-pdf-with-gemini function:', error);
-      updateProgress?.({
-        stage: 'error',
-        progress: 0,
-        message: 'Failed to analyze PDF content'
-      });
-      throw error;
+        if (error) {
+          console.error(`Error from Gemini API (attempt ${retries + 1}):`, error);
+          
+          if (retries < maxRetries) {
+            retries++;
+            updateProgress?.({
+              stage: 'analyzing',
+              progress: 30,
+              message: `Retrying analysis (attempt ${retries + 1})...`
+            });
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          } else {
+            throw error;
+          }
+        }
+        
+        response = data;
+        break;
+      } catch (err) {
+        if (retries < maxRetries) {
+          retries++;
+          console.log(`Retrying after error (attempt ${retries + 1})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          throw err;
+        }
+      }
+    }
+    
+    if (!response) {
+      throw new Error('Failed to get response from AI after multiple attempts');
     }
     
     updateProgress?.({
@@ -152,7 +203,7 @@ export const analyzePDFWithGemini = async (
       message: 'Analysis complete'
     });
     
-    return data.response;
+    return response.response;
   } catch (error) {
     console.error('Error analyzing PDF with Gemini:', error);
     updateProgress?.({
@@ -161,5 +212,14 @@ export const analyzePDFWithGemini = async (
       message: error instanceof Error ? error.message : 'Failed to analyze PDF content'
     });
     throw new Error('Failed to analyze PDF content');
+  }
+};
+
+// Clear cache for a specific PDF or all PDFs
+export const clearPDFTextCache = (pdfUrl?: string) => {
+  if (pdfUrl) {
+    pdfTextCache.delete(pdfUrl);
+  } else {
+    pdfTextCache.clear();
   }
 };

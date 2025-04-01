@@ -16,6 +16,10 @@ function Skeleton({
 function ChatMessageSkeleton() {
   return (
     <div className="flex flex-col space-y-3 mr-auto max-w-[80%] bg-muted/50 p-4 rounded-lg border border-muted/20 backdrop-blur-sm">
+      <div className="flex items-center space-x-2 mb-2">
+        <div className="h-8 w-8 rounded-full bg-muted/70"></div>
+        <Skeleton className="h-4 w-[100px]" />
+      </div>
       <Skeleton className="h-4 w-[250px]" />
       <Skeleton className="h-4 w-[200px]" />
       <Skeleton className="h-4 w-[230px]" />
@@ -48,11 +52,37 @@ function PDFPageSkeleton() {
       </div>
       <div className="flex items-center justify-center space-x-2 mt-2">
         <Skeleton className="h-8 w-20 rounded-md" />
-        <Skeleton className="h-8 w-14 rounded-md" />
+        <div className="text-sm text-muted-foreground">
+          <Skeleton className="h-5 w-14" />
+        </div>
         <Skeleton className="h-8 w-20 rounded-md" />
       </div>
     </div>
   )
 }
 
-export { Skeleton, ChatMessageSkeleton, PDFPageSkeleton }
+// Loading skeleton for the PDF analysis progress
+function PDFAnalysisLoadingSkeleton() {
+  return (
+    <div className="flex flex-col p-4 space-y-3 bg-muted/30 border border-muted/20 backdrop-blur-sm rounded-lg">
+      <div className="flex items-center space-x-3">
+        <div className="h-6 w-6 rounded-full border-2 border-primary/30 border-t-primary animate-spin"></div>
+        <Skeleton className="h-5 w-[200px]" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-2.5 w-full rounded-full" />
+        <div className="flex justify-between text-xs">
+          <Skeleton className="h-3 w-[50px]" />
+          <Skeleton className="h-3 w-[40px]" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export { 
+  Skeleton, 
+  ChatMessageSkeleton, 
+  PDFPageSkeleton,
+  PDFAnalysisLoadingSkeleton
+}
