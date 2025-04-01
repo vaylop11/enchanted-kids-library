@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -61,7 +62,15 @@ const ChatPage = () => {
         { event: 'DELETE', schema: 'public', table: 'messages' },
         (payload) => {
           const deletedMessageId = payload.old.id;
-          setMessages((prev) => prev.filter(msg => msg.id !== deletedMessageId));
+          // Handle single message deletion
+          if (deletedMessageId) {
+            setMessages((prev) => prev.filter(msg => msg.id !== deletedMessageId));
+          } 
+          // If we don't have a specific message ID, it might be a bulk delete
+          // We'll handle that by refreshing messages from the server
+          else {
+            fetchMessages();
+          }
         }
       )
       .subscribe();
@@ -166,12 +175,16 @@ const ChatPage = () => {
     if (!isAdmin) return;
     
     try {
+      // Delete all messages with a date greater than 1970-01-01
       const { error } = await supabaseUntyped
         .from('messages')
         .delete()
         .gte('created_at', '1970-01-01');
         
       if (error) throw error;
+      
+      // Clear the messages in the UI immediately
+      setMessages([]);
       toast.success('All messages cleared');
     } catch (error) {
       console.error('Error clearing messages:', error);
