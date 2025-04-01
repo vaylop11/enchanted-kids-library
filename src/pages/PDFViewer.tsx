@@ -1,11 +1,8 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { 
-  ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, 
-  AlertTriangle, Trash2, Lightbulb, BookOpen, List, Sparkles, Star,
-  Bookmark, CheckCircle, FileQuestion, ExternalLink, Copy
-} from 'lucide-react';
+import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -15,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
-import { Skeleton, ChatMessageSkeleton, KeyPointsSkeleton } from '@/components/ui/skeleton';
+import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -40,15 +37,6 @@ import {
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
-interface KeyPoint {
-  text: string;
-  type: 'insight' | 'action' | 'quote';
-}
-
-interface EnhancedChatMessage extends ChatMessage {
-  keyPoints?: KeyPoint[];
-}
-
 const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -62,7 +50,7 @@ const PDFViewer = () => {
   const [pdfScale, setPdfScale] = useState(1.0);
   const [showPdfControls, setShowPdfControls] = useState(true);
   const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState<EnhancedChatMessage[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [showChat, setShowChat] = useState(true);
   const [pdf, setPdf] = useState<UploadedPDF | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(true);
@@ -78,7 +66,6 @@ const PDFViewer = () => {
     message: 'Preparing to analyze PDF...'
   });
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
-  const [showKeyPoints, setShowKeyPoints] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!id) {
@@ -354,102 +341,6 @@ const PDFViewer = () => {
     }
   };
 
-  const extractKeyPoints = (content: string): KeyPoint[] => {
-    const points: KeyPoint[] = [];
-    
-    const insightPatterns = [
-      /important\s+(?:point|concept|idea)(?:s)?.*?:([^\.]+)/gi,
-      /key\s+(?:point|concept|takeaway|finding)(?:s)?.*?:([^\.]+)/gi,
-      /(?:major|main|critical)\s+(?:point|concept|idea)(?:s)?.*?:([^\.]+)/gi,
-      /(?:According to|The book states|The author notes|The text mentions)([^\.]+)/gi
-    ];
-    
-    const actionPatterns = [
-      /(?:recommend|suggest|advise)(?:s|ed)?(?:\s+that)?([^\.]+)/gi,
-      /(?:should|could|must|need to)([^\.]+)/gi,
-      /(?:action|step|task|todo)(?:s)?(?:\s+to\s+take)?.*?:([^\.]+)/gi
-    ];
-    
-    const quotePatterns = [
-      /"([^"]+)"/g,
-      /'([^']+)'/g,
-      /page\s+\d+(?:\s*-\s*\d+)?(?:\s*:|,)?([^\.]+)/gi
-    ];
-    
-    insightPatterns.forEach(pattern => {
-      let match;
-      while ((match = pattern.exec(content)) !== null) {
-        const text = match[1].trim();
-        if (text.length > 10 && !points.some(p => p.text === text)) {
-          points.push({ text, type: 'insight' });
-        }
-      }
-    });
-    
-    actionPatterns.forEach(pattern => {
-      let match;
-      while ((match = pattern.exec(content)) !== null) {
-        const text = match[1].trim();
-        if (text.length > 10 && !points.some(p => p.text === text)) {
-          points.push({ text, type: 'action' });
-        }
-      }
-    });
-    
-    quotePatterns.forEach(pattern => {
-      let match;
-      while ((match = pattern.exec(content)) !== null) {
-        const text = match[1].trim();
-        if (text.length > 10 && !points.some(p => p.text === text)) {
-          points.push({ text, type: 'quote' });
-        }
-      }
-    });
-    
-    if (points.length === 0) {
-      const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-      if (paragraphs.length > 1) {
-        const useParagraphs = paragraphs.slice(0, Math.min(3, paragraphs.length));
-        useParagraphs.forEach(p => {
-          const firstSentence = p.split(/\.\s+/)[0].trim();
-          if (firstSentence.length > 15 && firstSentence.length < 150) {
-            points.push({ text: firstSentence, type: 'insight' });
-          }
-        });
-      }
-    }
-    
-    return points.slice(0, 3);
-  };
-
-  const toggleKeyPoints = (messageId: string) => {
-    setShowKeyPoints(prev => ({
-      ...prev,
-      [messageId]: !prev[messageId]
-    }));
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(language === 'ar' ? 'تم النسخ إلى الحافظة' : 'Copied to clipboard');
-  };
-
-  const handleActionClick = (action: string, messageContent: string) => {
-    switch (action) {
-      case 'summarize':
-        setChatInput(`Can you summarize the main points of the document?`);
-        break;
-      case 'keyPoints':
-        setChatInput(`What are the key takeaways from this document?`);
-        break;
-      case 'explain':
-        setChatInput(`Can you explain the concept of "${messageContent.split(' ').slice(0, 3).join(' ')}..." in simpler terms?`);
-        break;
-      default:
-        break;
-    }
-  };
-
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim() || !id || !pdf) return;
@@ -458,7 +349,7 @@ const PDFViewer = () => {
     setChatInput('');
     
     try {
-      let savedUserMessage: EnhancedChatMessage | null = null;
+      let savedUserMessage: ChatMessage | null = null;
       
       if (isTempPdf) {
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
@@ -545,9 +436,7 @@ const PDFViewer = () => {
         
         const aiContent = await analyzePDFWithGemini(textContent, userMessageContent, updateAnalysisProgress);
         
-        const keyPoints = extractKeyPoints(aiContent);
-        
-        let savedAiMessage: EnhancedChatMessage | null = null;
+        let savedAiMessage: ChatMessage | null = null;
         
         if (isTempPdf) {
           const tempPdfData = sessionStorage.getItem('tempPdfFile');
@@ -562,8 +451,7 @@ const PDFViewer = () => {
                 id: `temp-msg-${Date.now()}`,
                 content: aiContent,
                 isUser: false,
-                timestamp: new Date(),
-                keyPoints: keyPoints
+                timestamp: new Date()
               };
               
               parsedData.fileData.chatMessages.push(savedAiMessage);
@@ -580,31 +468,19 @@ const PDFViewer = () => {
               id: result.id,
               content: result.content,
               isUser: result.isUser,
-              timestamp: result.timestamp,
-              keyPoints: keyPoints
+              timestamp: result.timestamp
             };
           }
         } else {
-          const baseMessage = addChatMessageToPDF(id, {
+          savedAiMessage = addChatMessageToPDF(id, {
             content: aiContent,
             isUser: false,
             timestamp: new Date()
           });
-          
-          if (baseMessage) {
-            savedAiMessage = {
-              ...baseMessage,
-              keyPoints: keyPoints
-            };
-          }
         }
         
         if (savedAiMessage) {
           setChatMessages(prev => [...prev, savedAiMessage!]);
-          setShowKeyPoints(prev => ({
-            ...prev,
-            [savedAiMessage!.id]: true
-          }));
         }
       } catch (error) {
         console.error('Error in AI analysis:', error);
@@ -620,7 +496,7 @@ const PDFViewer = () => {
           ? "عذرًا، حدث خطأ أثناء تحليل الملف. يرجى المحاولة مرة أخرى لاحقًا."
           : "Sorry, there was an error analyzing the PDF. Please try again later.";
           
-        let savedFallbackMessage: EnhancedChatMessage | null = null;
+        let savedFallbackMessage: ChatMessage | null = null;
         
         if (isTempPdf) {
           const tempPdfData = sessionStorage.getItem('tempPdfFile');
@@ -697,144 +573,6 @@ const PDFViewer = () => {
     );
   }
 
-  const renderChatMessages = () => {
-    if (isLoadingMessages) {
-      return (
-        <div className="flex justify-center items-center h-full">
-          <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
-        </div>
-      );
-    }
-    
-    if (chatMessages.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-center p-4">
-          <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <p className="font-medium mb-2">
-            {language === 'ar' ? 'اطرح سؤالاً حول هذا الملف' : 'Ask a question about this PDF'}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {language === 'ar' 
-              ? 'يمكنك طرح أسئلة حول محتوى الملف والحصول على إجابات دقيقة باستخدام الذكاء الاصطناعي من Gemini'
-              : 'Ask questions about the PDF content and get accurate AI-powered answers from Gemini'
-            }
-          </p>
-          {isTempPdf && (
-            <p className="text-xs text-amber-600 mt-4">
-              {language === 'ar'
-                ? 'ملاحظة: هذا ملف مؤقت. سيتم فقدان المحادثة عند إغلاق المتصفح.'
-                : 'Note: This is a temporary file. Chat will be lost when you close the browser.'}
-            </p>
-          )}
-        </div>
-      );
-    }
-    
-    return (
-      <>
-        {chatMessages.map(message => (
-          <div 
-            key={message.id}
-            className={cn(
-              "flex flex-col p-3 rounded-lg max-w-[90%]",
-              message.isUser 
-                ? "ml-auto bg-primary text-primary-foreground" 
-                : "mr-auto bg-muted"
-            )}
-          >
-            <div className="whitespace-pre-wrap break-words">
-              {message.content}
-            </div>
-            
-            {!message.isUser && message.keyPoints && message.keyPoints.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-muted/30">
-                <div 
-                  className="flex items-center gap-2 cursor-pointer mb-2" 
-                  onClick={() => toggleKeyPoints(message.id)}
-                >
-                  <Lightbulb className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm font-medium">
-                    {language === 'ar' ? 'النقاط الرئيسية' : 'Key Points'}
-                  </span>
-                  {showKeyPoints[message.id] ? 
-                    <ChevronUp className="h-4 w-4 opacity-70" /> : 
-                    <ChevronDown className="h-4 w-4 opacity-70" />
-                  }
-                </div>
-                
-                {showKeyPoints[message.id] && (
-                  <div className="space-y-2 text-sm">
-                    {message.keyPoints.map((point, index) => (
-                      <div key={index} className="flex items-start gap-2 group">
-                        {point.type === 'insight' && <Star className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />}
-                        {point.type === 'action' && <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />}
-                        {point.type === 'quote' && <BookOpen className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />}
-                        <p className="flex-1">{point.text}</p>
-                        <button 
-                          onClick={() => copyToClipboard(point.text)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          aria-label="Copy text"
-                        >
-                          <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {!message.isUser && message.keyPoints && message.keyPoints.length === 0 && (
-              <KeyPointsSkeleton />
-            )}
-            
-            {!message.isUser && (
-              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-muted/30">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="rounded-full bg-muted/50 hover:bg-muted flex items-center gap-1.5 h-8 text-xs"
-                  onClick={() => handleActionClick('summarize', message.content)}
-                >
-                  <List className="h-3.5 w-3.5" />
-                  {language === 'ar' ? 'ملخص' : 'Summarize'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="rounded-full bg-muted/50 hover:bg-muted flex items-center gap-1.5 h-8 text-xs"
-                  onClick={() => handleActionClick('keyPoints', message.content)}
-                >
-                  <Bookmark className="h-3.5 w-3.5" />
-                  {language === 'ar' ? 'النقاط الرئيسية' : 'Key Points'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="rounded-full bg-muted/50 hover:bg-muted flex items-center gap-1.5 h-8 text-xs"
-                  onClick={() => handleActionClick('explain', message.content)}
-                >
-                  <FileQuestion className="h-3.5 w-3.5" />
-                  {language === 'ar' ? 'اشرح أكثر' : 'Explain More'}
-                </Button>
-              </div>
-            )}
-            
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-xs opacity-70">
-                {message.timestamp instanceof Date 
-                  ? message.timestamp.toLocaleTimeString() 
-                  : new Date(message.timestamp).toLocaleTimeString()
-                }
-              </span>
-            </div>
-          </div>
-        ))}
-        <div ref={chatEndRef} />
-      </>
-    );
-  };
-
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -862,7 +600,7 @@ const PDFViewer = () => {
               </button>
               <button
                 onClick={handleDeletePDF}
-                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
+                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-destructive/10 text-destructive transition-colors"
                 aria-label={language === 'ar' ? 'حذف الملف' : 'Delete file'}
               >
                 <Trash2 className="h-5 w-5" />
@@ -870,199 +608,286 @@ const PDFViewer = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className={`lg:col-span-2 flex flex-col ${pdfError ? 'items-center justify-center' : ''}`}>
-              {isLoadingPdf ? (
-                <div className="flex flex-col items-center justify-center min-h-[600px] bg-muted/30 border border-muted/20 rounded-lg">
-                  <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
-                  <p className="text-muted-foreground">
-                    {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
-                  </p>
-                </div>
-              ) : pdfError ? (
-                <div className="flex flex-col items-center justify-center max-w-md mx-auto text-center p-6 bg-muted/30 border border-muted/20 rounded-lg">
-                  <AlertTriangle className="h-10 w-10 text-amber-500 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">
-                    {language === 'ar' ? 'حدث خطأ' : 'Error Loading PDF'}
-                  </h3>
-                  <p className="text-muted-foreground mb-4">{pdfError}</p>
-                  <Button onClick={handleRetryLoading}>
-                    {language === 'ar' ? 'إعادة المحاولة' : 'Retry'}
-                  </Button>
-                </div>
-              ) : (
-                <div className="relative">
-                  {showPdfControls && (
-                    <div className="absolute top-2 left-0 right-0 z-10 flex justify-center">
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-background/80 border border-muted/30 rounded-full backdrop-blur-sm">
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-7 w-7" 
-                          onClick={handlePrevPage}
-                          disabled={pageNumber <= 1}
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <span className="text-xs font-medium min-w-12 text-center">
-                          {pageNumber} / {numPages || '?'}
-                        </span>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-7 w-7" 
-                          onClick={handleNextPage}
-                          disabled={numPages !== null && pageNumber >= numPages}
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                        <div className="mx-1 h-4 w-px bg-muted-foreground/20" />
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-7 w-7" 
-                          onClick={handleZoomOut}
-                          disabled={pdfScale <= 0.5}
-                        >
-                          <span className="text-xs font-bold">−</span>
-                        </Button>
-                        <span className="text-xs min-w-6 text-center">
-                          {Math.round(pdfScale * 100)}%
-                        </span>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-7 w-7" 
-                          onClick={handleZoomIn}
-                          disabled={pdfScale >= 2.0}
-                        >
-                          <span className="text-xs font-bold">+</span>
-                        </Button>
-                        <div className="mx-1 h-4 w-px bg-muted-foreground/20" />
-                        <a 
-                          href={pdf?.dataUrl} 
-                          download={pdf?.title}
-                          className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-muted hover:bg-muted/80"
-                        >
-                          <DownloadCloud className="h-3.5 w-3.5" />
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div 
-                    className="p-4 bg-muted/20 border border-muted/30 rounded-lg overflow-hidden flex justify-center"
-                    onClick={() => setShowPdfControls(prev => !prev)}
-                  >
-                    {pdf?.dataUrl && (
-                      <Document
-                        file={pdf.dataUrl}
-                        onLoadSuccess={handleDocumentLoadSuccess}
-                        onLoadError={handleDocumentLoadError}
-                        loading={
-                          <div className="flex flex-col items-center justify-center min-h-[600px]">
-                            <div className="h-8 w-8 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
-                          </div>
-                        }
-                        error={
-                          <div className="flex flex-col items-center justify-center min-h-[600px]">
-                            <AlertTriangle className="h-10 w-10 text-amber-500 mb-4" />
-                            <p className="text-muted-foreground">
-                              {language === 'ar' ? 'فشل في تحميل الملف' : 'Failed to load PDF'}
-                            </p>
-                          </div>
-                        }
-                      >
-                        <div className="py-4">
-                          <Page
-                            pageNumber={pageNumber}
-                            scale={pdfScale}
-                            renderTextLayer={false}
-                            renderAnnotationLayer={false}
-                            loading={
-                              <div className="flex items-center justify-center min-h-[600px] min-w-[400px]">
-                                <div className="h-8 w-8 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
-                              </div>
-                            }
-                          />
-                        </div>
-                      </Document>
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="lg:w-2/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+              <div className="flex justify-between items-center p-4 border-b">
+                <div>
+                  <h1 className="font-display text-xl font-medium truncate">
+                    {pdf.title}
+                  </h1>
+                  <div className="flex gap-2 mt-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {pdf.fileSize}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {pdf.pageCount || '?'} {language === 'ar' ? 'صفحات' : 'pages'}
+                    </Badge>
+                    {isTempPdf && (
+                      <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/30">
+                        {language === 'ar' ? 'مؤقت' : 'Temporary'}
+                      </Badge>
                     )}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowPdfControls(!showPdfControls)}
+                  className="p-1 rounded-md hover:bg-muted transition-colors"
+                >
+                  {showPdfControls ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </button>
+              </div>
+              
+              {showPdfControls && (
+                <div className="flex flex-wrap justify-between items-center p-4 bg-muted/20 border-b">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handlePrevPage}
+                        disabled={pageNumber <= 1 || pdfError !== null || !pdf.dataUrl}
+                      >
+                        {language === 'ar' ? 'السابق' : 'Prev'}
+                      </Button>
+                      <span className="text-sm">
+                        {language === 'ar' 
+                          ? `${pageNumber} من ${numPages || '?'}`
+                          : `${pageNumber} of ${numPages || '?'}`
+                        }
+                      </span>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleNextPage}
+                        disabled={!numPages || pageNumber >= numPages || pdfError !== null || !pdf.dataUrl}
+                      >
+                        {language === 'ar' ? 'التالي' : 'Next'}
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleZoomOut}
+                        disabled={pdfError !== null || !pdf.dataUrl}
+                      >-</Button>
+                      <span className="text-sm">{Math.round(pdfScale * 100)}%</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleZoomIn}
+                        disabled={pdfError !== null || !pdf.dataUrl}
+                      >+</Button>
+                    </div>
+                  </div>
+                  
+                  <div className="text-sm text-muted-foreground">
+                    {language === 'ar' ? 'تم التحميل' : 'Uploaded'}: {pdf.uploadDate}
                   </div>
                 </div>
               )}
+              
+              <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
+                {isLoadingPdf ? (
+                  <div className="flex flex-col items-center justify-center h-full w-full">
+                    <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
+                    <p className="text-lg font-medium mb-2">
+                      {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'ar' ? 'يرجى الانتظار' : 'Please wait'}
+                    </p>
+                  </div>
+                ) : pdfError ? (
+                  <div className="flex flex-col items-center justify-center h-full w-full">
+                    <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" />
+                    <h2 className="text-xl font-medium mb-2 text-center">
+                      {language === 'ar' ? 'تعذر تحميل الملف' : 'Failed to load PDF'}
+                    </h2>
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                      {pdfError}
+                    </p>
+                    <div className="flex gap-3">
+                      <Button variant="outline" onClick={handleRetryLoading}>
+                        {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                      </Button>
+                      <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
+                        {language === 'ar'
+                          ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
+                          : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : !pdf.dataUrl ? (
+                  <div className="flex flex-col items-center justify-center h-full w-full">
+                    <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h2 className="text-xl font-medium mb-2 text-center">
+                      {language === 'ar' ? 'لا توجد بيانات PDF' : 'No PDF Data Available'}
+                    </h2>
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                      {language === 'ar' 
+                        ? 'لم يتم تخزين بيانات PDF بسبب قيود التخزين. حاول حذف بعض الملفات القديمة وتحميل هذا الملف مرة أخرى.'
+                        : 'PDF data was not stored due to storage limitations. Try deleting some older PDFs and upload this file again.'}
+                    </p>
+                    <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
+                      {language === 'ar'
+                        ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
+                        : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
+                    </Button>
+                  </div>
+                ) : (
+                  <Document
+                    file={pdf.dataUrl}
+                    onLoadSuccess={handleDocumentLoadSuccess}
+                    onLoadError={handleDocumentLoadError}
+                    loading={
+                      <div className="flex items-center justify-center h-full w-full">
+                        <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                      </div>
+                    }
+                    error={
+                      <div className="flex flex-col items-center justify-center h-full w-full">
+                        <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground text-center mb-2">
+                          {language === 'ar' ? 'فشل تحميل الملف' : 'Failed to load PDF'}
+                        </p>
+                        <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
+                          {language === 'ar' 
+                            ? 'قد تكون هناك مشكلة في تنسيق الملف أو أن الملف قد يكون كبيرًا جدًا للعرض.' 
+                            : 'There might be an issue with the file format or the file may be too large to display.'}
+                        </p>
+                        <Button variant="outline" onClick={handleRetryLoading}>
+                          {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                        </Button>
+                      </div>
+                    }
+                  >
+                    <Page 
+                      pageNumber={pageNumber} 
+                      scale={pdfScale}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                      error={
+                        <div className="flex flex-col items-center justify-center p-6">
+                          <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
+                          <p className="text-sm text-center">
+                            {language === 'ar' ? 'خطأ في عرض الصفحة' : 'Error rendering page'}
+                          </p>
+                        </div>
+                      }
+                    />
+                  </Document>
+                )}
+              </div>
             </div>
             
-            <div className="bg-muted/10 border border-muted/20 rounded-lg p-4 flex flex-col h-[calc(100vh-12rem)] overflow-hidden">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium">
-                  {showChat 
-                    ? (language === 'ar' ? 'تحليل الملف' : 'PDF Chat') 
-                    : (language === 'ar' ? 'الملخص' : 'Summary')
-                  }
-                </h2>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+            <div className="lg:w-1/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm flex flex-col">
+              <div className="flex justify-between items-center p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-display text-lg font-medium">
+                    {language === 'ar' ? 'دردشة مع هذا الملف' : 'Chat with this PDF'}
+                  </h2>
+                </div>
+                <button 
                   onClick={() => setShowChat(!showChat)}
+                  className="p-1 rounded-md hover:bg-muted transition-colors"
                 >
-                  {showChat 
-                    ? (language === 'ar' ? 'عرض الملخص' : 'Show Summary') 
-                    : (language === 'ar' ? 'عرض المحادثة' : 'Show Chat')
-                  }
-                </Button>
+                  {showChat ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </button>
               </div>
               
-              {showChat ? (
+              {showChat && (
                 <>
-                  <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-2">
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: '60vh' }}>
                     {isAnalyzing && (
                       <PDFAnalysisProgress analysis={analysisProgress} />
                     )}
-                    {renderChatMessages()}
+                    
+                    {isLoadingMessages ? (
+                      <div className="flex justify-center items-center h-full">
+                        <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                      </div>
+                    ) : chatMessages.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                        <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                        <p className="font-medium mb-2">
+                          {language === 'ar' ? 'اطرح سؤالاً حول هذا الملف' : 'Ask a question about this PDF'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {language === 'ar' 
+                            ? 'يمكنك طرح أسئلة حول محتوى الملف والحصول على إجابات دقيقة باستخدام الذكاء الاصطناعي من Gemini'
+                            : 'Ask questions about the PDF content and get accurate AI-powered answers from Gemini'
+                          }
+                        </p>
+                        {isTempPdf && (
+                          <p className="text-xs text-amber-600 mt-4">
+                            {language === 'ar'
+                              ? 'ملاحظة: هذا ملف مؤقت. سيتم فقدان المحادثة عند إغلاق المتصفح.'
+                              : 'Note: This is a temporary file. Chat will be lost when you close the browser.'}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {chatMessages.map(message => (
+                          <div 
+                            key={message.id}
+                            className={cn(
+                              "flex flex-col p-3 rounded-lg max-w-[80%]",
+                              message.isUser 
+                                ? "ml-auto bg-primary text-primary-foreground" 
+                                : "mr-auto bg-muted"
+                            )}
+                          >
+                            <div className="whitespace-pre-wrap break-words">
+                              {message.content}
+                            </div>
+                            <div className="flex justify-between items-center mt-2">
+                              <span className="text-xs opacity-70">
+                                {message.timestamp instanceof Date 
+                                  ? message.timestamp.toLocaleTimeString() 
+                                  : new Date(message.timestamp).toLocaleTimeString()
+                                }
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={chatEndRef} />
+                      </>
+                    )}
                   </div>
                   
-                  <form onSubmit={handleChatSubmit} className="mt-auto">
-                    <div className="relative">
+                  <form onSubmit={handleChatSubmit} className="p-4 border-t bg-muted/10">
+                    <div className="flex gap-2">
                       <Textarea
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
-                        placeholder={language === 'ar' 
-                          ? 'اكتب سؤالاً حول هذا الملف...' 
-                          : 'Ask a question about this PDF...'
-                        }
-                        className="pr-14 resize-none"
-                        rows={3}
+                        placeholder={language === 'ar' ? 'اكتب سؤالك هنا...' : 'Type your question here...'}
+                        className="min-h-[60px] resize-none"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleChatSubmit(e);
+                          }
+                        }}
                         disabled={isWaitingForResponse}
                       />
                       <Button 
                         type="submit" 
-                        size="icon"
-                        className="absolute right-2 bottom-2"
+                        size="icon" 
+                        className="h-auto"
                         disabled={!chatInput.trim() || isWaitingForResponse}
                       >
-                        <Send className="h-4 w-4" />
+                        {isWaitingForResponse ? (
+                          <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/20 border-t-current animate-spin" />
+                        ) : (
+                          <Send className="h-5 w-5" />
+                        )}
                       </Button>
                     </div>
                   </form>
                 </>
-              ) : (
-                <div className="flex-1 overflow-y-auto">
-                  {pdf?.summary ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <p>{pdf.summary}</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                      <p className="text-muted-foreground">
-                        {language === 'ar' 
-                          ? 'لا يوجد مل��ص متاح. استخدم المحادثة لتحليل الملف وإنشاء ملخص.' 
-                          : 'No summary available. Use the chat to analyze the document and generate a summary.'
-                        }
-                      </p>
-                    </div>
-                  )}
-                </div>
               )}
             </div>
           </div>
