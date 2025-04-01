@@ -20,9 +20,7 @@ const PDFGrid = () => {
       if (user) {
         try {
           const userPDFs = await getUserPDFs(user.id);
-          if (userPDFs.length > 0) {
-            setAllPDFs(userPDFs);
-          }
+          setAllPDFs(userPDFs);
         } catch (error) {
           console.error('Error loading user PDFs:', error);
         }
