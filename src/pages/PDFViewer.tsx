@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -41,7 +40,6 @@ import {
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
-// New interfaces for key points
 interface KeyPoint {
   text: string;
   type: 'insight' | 'action' | 'quote';
@@ -356,12 +354,9 @@ const PDFViewer = () => {
     }
   };
 
-  // Helper function to extract key points from AI responses
   const extractKeyPoints = (content: string): KeyPoint[] => {
-    // Simple heuristic to identify potential key points in the content
     const points: KeyPoint[] = [];
     
-    // Look for insights (important concepts, definitions, etc.)
     const insightPatterns = [
       /important\s+(?:point|concept|idea)(?:s)?.*?:([^\.]+)/gi,
       /key\s+(?:point|concept|takeaway|finding)(?:s)?.*?:([^\.]+)/gi,
@@ -369,21 +364,18 @@ const PDFViewer = () => {
       /(?:According to|The book states|The author notes|The text mentions)([^\.]+)/gi
     ];
     
-    // Look for action items or recommendations
     const actionPatterns = [
       /(?:recommend|suggest|advise)(?:s|ed)?(?:\s+that)?([^\.]+)/gi,
       /(?:should|could|must|need to)([^\.]+)/gi,
       /(?:action|step|task|todo)(?:s)?(?:\s+to\s+take)?.*?:([^\.]+)/gi
     ];
     
-    // Look for notable quotes or passages
     const quotePatterns = [
       /"([^"]+)"/g,
       /'([^']+)'/g,
       /page\s+\d+(?:\s*-\s*\d+)?(?:\s*:|,)?([^\.]+)/gi
     ];
     
-    // Extract all matches from each pattern group
     insightPatterns.forEach(pattern => {
       let match;
       while ((match = pattern.exec(content)) !== null) {
@@ -414,14 +406,11 @@ const PDFViewer = () => {
       }
     });
     
-    // If we couldn't find any patterns, create some generic ones based on paragraphs
     if (points.length === 0) {
       const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim().length > 0);
       if (paragraphs.length > 1) {
-        // Use first 2-3 paragraphs as points
         const useParagraphs = paragraphs.slice(0, Math.min(3, paragraphs.length));
         useParagraphs.forEach(p => {
-          // Take first sentence of each paragraph
           const firstSentence = p.split(/\.\s+/)[0].trim();
           if (firstSentence.length > 15 && firstSentence.length < 150) {
             points.push({ text: firstSentence, type: 'insight' });
@@ -430,11 +419,9 @@ const PDFViewer = () => {
       }
     }
     
-    // Limit to at most 3 points
     return points.slice(0, 3);
   };
 
-  // Toggle key points visibility
   const toggleKeyPoints = (messageId: string) => {
     setShowKeyPoints(prev => ({
       ...prev,
@@ -442,13 +429,11 @@ const PDFViewer = () => {
     }));
   };
 
-  // Function to copy text to clipboard
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success(language === 'ar' ? 'تم النسخ إلى الحافظة' : 'Copied to clipboard');
   };
 
-  // Handle action button clicks
   const handleActionClick = (action: string, messageContent: string) => {
     switch (action) {
       case 'summarize':
@@ -465,7 +450,6 @@ const PDFViewer = () => {
     }
   };
 
-  // Modified handleChatSubmit to include key points extraction
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim() || !id || !pdf) return;
@@ -561,7 +545,6 @@ const PDFViewer = () => {
         
         const aiContent = await analyzePDFWithGemini(textContent, userMessageContent, updateAnalysisProgress);
         
-        // Extract key points from AI response
         const keyPoints = extractKeyPoints(aiContent);
         
         let savedAiMessage: EnhancedChatMessage | null = null;
@@ -618,7 +601,6 @@ const PDFViewer = () => {
         
         if (savedAiMessage) {
           setChatMessages(prev => [...prev, savedAiMessage!]);
-          // Auto-show key points for this new message
           setShowKeyPoints(prev => ({
             ...prev,
             [savedAiMessage!.id]: true
@@ -715,7 +697,6 @@ const PDFViewer = () => {
     );
   }
 
-  // Update the rendering of chat messages to include key points
   const renderChatMessages = () => {
     if (isLoadingMessages) {
       return (
@@ -803,7 +784,7 @@ const PDFViewer = () => {
               </div>
             )}
             
-            {!message.isUser && !message.keyPoints && (
+            {!message.isUser && message.keyPoints && message.keyPoints.length === 0 && (
               <KeyPointsSkeleton />
             )}
             
@@ -854,7 +835,6 @@ const PDFViewer = () => {
     );
   };
 
-  // Complete the JSX structure properly with all closing tags
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -981,10 +961,7 @@ const PDFViewer = () => {
                         onLoadError={handleDocumentLoadError}
                         loading={
                           <div className="flex flex-col items-center justify-center min-h-[600px]">
-                            <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
-                            <p className="text-muted-foreground">
-                              {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
-                            </p>
+                            <div className="h-8 w-8 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
                           </div>
                         }
                         error={
@@ -1040,7 +1017,7 @@ const PDFViewer = () => {
                 <>
                   <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-2">
                     {isAnalyzing && (
-                      <PDFAnalysisProgress progress={analysisProgress} />
+                      <PDFAnalysisProgress analysis={analysisProgress} />
                     )}
                     {renderChatMessages()}
                   </div>
@@ -1079,7 +1056,7 @@ const PDFViewer = () => {
                     <div className="flex flex-col items-center justify-center h-full text-center p-4">
                       <p className="text-muted-foreground">
                         {language === 'ar' 
-                          ? 'لا يوجد ملخص متاح. استخدم المحادثة لتحليل الملف وإنشاء ملخص.' 
+                          ? 'لا يوجد مل��ص متاح. استخدم المحادثة لتحليل الملف وإنشاء ملخص.' 
                           : 'No summary available. Use the chat to analyze the document and generate a summary.'
                         }
                       </p>

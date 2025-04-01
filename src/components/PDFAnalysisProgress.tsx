@@ -13,6 +13,11 @@ interface PDFAnalysisProgressProps {
 const PDFAnalysisProgress = ({ analysis }: PDFAnalysisProgressProps) => {
   const { language } = useLanguage();
 
+  // Add a safeguard to handle undefined analysis
+  if (!analysis) {
+    return null;
+  }
+
   const getStageIcon = () => {
     switch (analysis.stage) {
       case 'extracting':

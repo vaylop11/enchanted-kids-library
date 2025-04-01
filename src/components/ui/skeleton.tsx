@@ -1,4 +1,6 @@
+
 import { cn } from "@/lib/utils"
+import { AnalysisProgress } from "@/services/pdfAnalysisService";
 
 function Skeleton({
   className,
