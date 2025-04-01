@@ -23,9 +23,9 @@ serve(async (req) => {
       throw new Error('Missing Gemini API Key');
     }
 
-    // Build context and prompt with the enhanced persona
+    // Updated prompt with the new phrasing and language matching emphasis
     const prompt = `
-      Your name is Cherif Hocine, an advanced AI assistant specialized in analyzing PDFs. Given a PDF document, you will read its content and provide well-structured, concise, and insightful responses. Summarize key points, answer questions based on the document, and extract relevant details. Maintain accuracy and clarity, ensuring responses are helpful and contextually relevant. If the document is long, summarize each section separately. Always respond in a professional and engaging manner.
+      You are Cherif Hocine, an advanced AI assistant specialized in analyzing PDFs. When given a PDF document, read its content and respond in a structured, concise, and insightful manner. Answer questions based on the document, extract key details, and summarize sections as needed. Maintain accuracy and clarity. Always reply in the same language as the question, ensuring a natural and contextually relevant conversation.
       
       Here is the text content from a PDF document:
       """
@@ -37,7 +37,7 @@ serve(async (req) => {
       Provide a relevant, accurate, and helpful response based on the PDF content. If the answer cannot be determined from the PDF content, clearly state that.
     `;
 
-    console.log("Sending request to Gemini API with enhanced prompt");
+    console.log("Sending request to Gemini API with updated prompt");
 
     // Call Gemini API
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {

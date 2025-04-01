@@ -80,7 +80,7 @@ export const extractTextFromPDF = async (
 
 /**
  * Analyzes PDF content and answers a user question using Gemini AI
- * Now with enhanced prompt featuring Cherif Hocine, AI PDF specialist
+ * Now with updated prompt to ensure language matching and natural responses
  */
 export const analyzePDFWithGemini = async (
   pdfText: string, 
@@ -110,7 +110,7 @@ export const analyzePDFWithGemini = async (
     updateProgress?.({
       stage: 'generating',
       progress: 70,
-      message: 'Generating professional analysis...'
+      message: 'Generating natural, language-matched response...'
     });
     
     // Simulate a slight delay for the UI to show the generating stage
