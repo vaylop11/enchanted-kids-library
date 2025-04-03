@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { supabaseUntyped } from '@/integrations/supabase/client';
-import { Loader2, RefreshCw, Eye, Bold, Heading1, Heading2, Heading3 } from 'lucide-react';
+import { Loader2, RefreshCw, Eye, Bold, Heading1, Heading2, Heading3, Link as LinkIcon } from 'lucide-react';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -30,6 +31,9 @@ const formSchema = z.object({
   content: z.string().min(50, {
     message: "Content must be at least 50 characters.",
   }),
+  slug: z.string().min(2, {
+    message: "Slug must be at least 2 characters.",
+  }).optional(),
 });
 
 const AdminPanel = () => {
@@ -41,6 +45,7 @@ const AdminPanel = () => {
   const [previewMode, setPreviewMode] = useState(false);
   const [activeTab, setActiveTab] = useState('create');
   const [imageUrl, setImageUrl] = useState('');
+  const [titleSlug, setTitleSlug] = useState('');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -48,8 +53,29 @@ const AdminPanel = () => {
       title: '',
       category: '',
       content: '',
+      slug: '',
     },
   });
+
+  // Generate slug from title
+  const generateSlug = (title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
+  };
+
+  // Update slug when title changes
+  useEffect(() => {
+    const title = form.watch('title');
+    if (title) {
+      const slug = generateSlug(title);
+      form.setValue('slug', slug);
+      setTitleSlug(slug);
+    }
+  }, [form.watch('title')]);
 
   if (!isAdmin) {
     return (
@@ -82,6 +108,9 @@ const AdminPanel = () => {
     
     // Convert bold text to HTML
     formattedContent = formattedContent.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    
+    // Convert markdown links to HTML
+    formattedContent = formattedContent.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary hover:underline">$1</a>');
     
     // Convert paragraphs to HTML
     formattedContent = '<p>' + formattedContent.replace(/\n\n/g, '</p><p>') + '</p>';
@@ -123,6 +152,12 @@ const AdminPanel = () => {
         // Set a default category if none exists
         if (!form.getValues('category')) {
           form.setValue('category', 'AI');
+        }
+        
+        // Set the slug if provided from the API
+        if (data.titleSlug) {
+          form.setValue('slug', data.titleSlug);
+          setTitleSlug(data.titleSlug);
         }
         
         toast.success(
@@ -173,6 +208,9 @@ const AdminPanel = () => {
         ? `${readTimeMinutes} دقائق للقراءة` 
         : `${readTimeMinutes} min read`;
       
+      // Use the current slug or generate one from title
+      const slug = values.slug || generateSlug(values.title);
+      
       // Format content with proper HTML tags
       const formattedContent = formatBlogContent(values.content);
       
@@ -186,6 +224,7 @@ const AdminPanel = () => {
           category: values.category,
           read_time: readTime,
           author_id: user.id,
+          slug: slug,
           published: true
         });
       
@@ -259,6 +298,15 @@ const AdminPanel = () => {
           cursorPosition = start + 5;
         }
         break;
+      case 'link':
+        // For internal links, use the blog slug as base
+        const linkUrl = `/blog/${titleSlug}-related-topic`;
+        formattedText = `[${selectedText || 'link text'}](${linkUrl})`;
+        cursorPosition = start + formattedText.length;
+        if (!selectedText) {
+          cursorPosition = start + 1;
+        }
+        break;
     }
 
     // Update the content in the form
@@ -275,7 +323,7 @@ const AdminPanel = () => {
       textarea.focus();
       if (!selectedText) {
         textarea.setSelectionRange(
-          start + (type === 'bold' ? 2 : (type === 'h1' ? 3 : (type === 'h2' ? 4 : 5))), 
+          start + (type === 'bold' ? 2 : (type === 'h1' ? 3 : (type === 'h2' ? 4 : (type === 'h3' ? 5 : (type === 'link' ? 1 : 0))))), 
           cursorPosition
         );
       } else {
@@ -355,24 +403,50 @@ const AdminPanel = () => {
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          {language === 'ar' ? 'التصنيف' : 'Category'}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={language === 'ar' ? 'تصنيف المقال' : 'Blog category'}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {language === 'ar' ? 'التصنيف' : 'Category'}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={language === 'ar' ? 'تصنيف المقال' : 'Blog category'}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="slug"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {language === 'ar' ? 'الرابط المختصر' : 'URL Slug'}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={language === 'ar' ? 'الرابط-المختصر' : 'url-slug'}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            {language === 'ar' 
+                              ? 'سيتم استخدام هذا في عنوان URL للمقال'
+                              : 'This will be used in the post URL'}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   
                   <FormItem>
                     <FormLabel>
@@ -427,6 +501,9 @@ const AdminPanel = () => {
                               <ToggleGroupItem value="h3" onClick={() => insertFormatting('h3')} title="Heading 3">
                                 <Heading3 className="h-4 w-4" />
                               </ToggleGroupItem>
+                              <ToggleGroupItem value="link" onClick={() => insertFormatting('link')} title="Internal Link">
+                                <LinkIcon className="h-4 w-4" />
+                              </ToggleGroupItem>
                             </ToggleGroup>
                           </div>
                         )}
@@ -450,8 +527,8 @@ const AdminPanel = () => {
                         
                         <FormDescription>
                           {language === 'ar' 
-                            ? 'يمكنك استخدام علامات مثل # و ## و ### للعناوين، و**النص** للنص العريض'
-                            : 'You can use # ## ### for headings, and **text** for bold text'}
+                            ? 'يمكنك استخدام علامات مثل # و ## و ### للعناوين، و**النص** للنص العريض، و[النص](الرابط) للروابط'
+                            : 'You can use # ## ### for headings, **text** for bold text, and [text](link) for links'}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

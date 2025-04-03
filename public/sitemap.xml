@@ -1,6 +1,9 @@
 
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://chatpdf.icu/</loc>
     <lastmod>2025-04-03</lastmod>
@@ -16,7 +19,7 @@
   <url>
     <loc>https://chatpdf.icu/blog</loc>
     <lastmod>2025-04-03</lastmod>
-    <changefreq>weekly</changefreq>
+    <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
@@ -48,5 +51,24 @@
     <lastmod>2025-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
+  </url>
+  <!-- Blog categories -->
+  <url>
+    <loc>https://chatpdf.icu/blog/category/ai</loc>
+    <lastmod>2025-04-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://chatpdf.icu/blog/category/tutorial</loc>
+    <lastmod>2025-04-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://chatpdf.icu/blog/category/technology</loc>
+    <lastmod>2025-04-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
   </url>
 </urlset>
