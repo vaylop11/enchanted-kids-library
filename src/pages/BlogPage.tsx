@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { supabaseUntyped } from '@/integrations/supabase/client';
 import Footer from '@/components/Footer';
+import SEO from '@/components/SEO';
 
 interface BlogPost {
   id: string;
@@ -21,6 +22,7 @@ interface BlogPost {
   image_url: string;
   category: string;
   content: string;
+  slug: string;
 }
 
 const BlogPage = () => {
@@ -97,6 +99,12 @@ const BlogPage = () => {
   
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO 
+        title="Gemi ChatPDF Blog - AI PDF Chat Tips & Tutorials"
+        description="Explore the latest articles about Gemi ChatPDF, AI-powered PDF analysis, document chat, and helpful tutorials to get the most out of your PDFs."
+        keywords="Gemi ChatPDF, PDF chat blog, AI document analysis, PDF tutorials, document AI"
+      />
+      
       <Navbar />
       
       <div className="pt-32 pb-20 px-4 md:px-6 container mx-auto max-w-7xl animate-fade-in">
@@ -176,7 +184,7 @@ const BlogPage = () => {
                 {filteredPosts.map((post, index) => (
                   <motion.div key={post.id} variants={itemVariants}>
                     <Link
-                      to={`/blog/${post.id}`}
+                      to={`/blog/${post.slug || post.id}`}
                       className="group block h-full"
                     >
                       <Card className="overflow-hidden h-full hover:shadow-md transition-all duration-300 border-border/60 hover:border-primary/20 hover:-translate-y-1">

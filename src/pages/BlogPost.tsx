@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowLeft, Calendar, ChevronRight, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabaseUntyped } from '@/integrations/supabase/client';
+import SEO from '@/components/SEO';
 
 interface BlogPostData {
   id: string;
@@ -18,6 +19,7 @@ interface BlogPostData {
   read_time?: string;
   category?: string;
   image_url?: string;
+  slug?: string;
 }
 
 const BlogPost = () => {
@@ -283,8 +285,23 @@ const BlogPost = () => {
     );
   }
 
+  // Set the canonical URL based on the slug if available
+  const canonicalUrl = post.slug 
+    ? `https://chatpdf.icu/blog/${post.slug}` 
+    : `https://chatpdf.icu/blog/${id}`;
+
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO 
+        title={`${post.title} | Gemi ChatPDF`}
+        description={post.excerpt || `${post.title} - Chat with PDF using Gemi AI`}
+        keywords={`${post.title}, Gemi ChatPDF, ${post.category || 'AI'}, PDF chat, document analysis`}
+        ogImage={post.image_url || '/og-image.png'}
+        ogUrl={canonicalUrl}
+        articlePublishedTime={post.created_at}
+        articleSection={post.category}
+      />
+      
       <Navbar />
       
       <article className="pt-32 pb-20 px-4 md:px-6">
@@ -388,7 +405,7 @@ const BlogPost = () => {
               {relatedPosts.map(related => (
                 <Link 
                   key={related.id}
-                  to={`/blog/${related.id}`}
+                  to={`/blog/${related.slug || related.id}`}
                   className="flex group hover:bg-muted/50 rounded-lg p-4 transition-colors"
                 >
                   <div className="w-20 h-20 rounded-md overflow-hidden flex-shrink-0 mr-4">

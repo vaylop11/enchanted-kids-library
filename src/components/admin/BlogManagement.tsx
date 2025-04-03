@@ -12,7 +12,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Trash2, Eye } from 'lucide-react';
+import { Trash2, Eye, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -22,6 +22,7 @@ interface BlogPost {
   created_at: string;
   category: string;
   published: boolean;
+  slug: string;
 }
 
 const BlogManagement = () => {
@@ -41,7 +42,7 @@ const BlogManagement = () => {
       setLoading(true);
       const { data, error } = await supabaseUntyped
         .from('blog_posts')
-        .select('id, title, created_at, category, published')
+        .select('id, title, created_at, category, published, slug')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -125,6 +126,7 @@ const BlogManagement = () => {
                 <TableHead>{language === 'ar' ? 'العنوان' : 'Title'}</TableHead>
                 <TableHead>{language === 'ar' ? 'التاريخ' : 'Date'}</TableHead>
                 <TableHead>{language === 'ar' ? 'التصنيف' : 'Category'}</TableHead>
+                <TableHead>{language === 'ar' ? 'الرابط' : 'Slug'}</TableHead>
                 <TableHead>{language === 'ar' ? 'الحالة' : 'Status'}</TableHead>
                 <TableHead className="text-right">{language === 'ar' ? 'الإجراءات' : 'Actions'}</TableHead>
               </TableRow>
@@ -135,6 +137,7 @@ const BlogManagement = () => {
                   <TableCell className="font-medium">{post.title}</TableCell>
                   <TableCell>{formatDate(post.created_at)}</TableCell>
                   <TableCell>{post.category}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{post.slug}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs ${post.published ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                       {post.published ? 
