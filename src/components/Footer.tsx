@@ -16,6 +16,7 @@ const Footer = () => {
               to="/" 
               className="flex items-center transition-opacity hover:opacity-80"
               style={{ gap: '0.5rem' }}
+              aria-label="ChatPDF Home"
             >
               <BookOpen className="h-5 w-5" />
               <span className="font-display text-lg font-medium">
@@ -34,17 +35,17 @@ const Footer = () => {
               <h3 className="text-sm font-medium mb-3">{language === 'ar' ? 'استكشف' : 'Explore'}</h3>
               <ul className="space-y-2">
                 <li>
-                  <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors" aria-label="Go to home page">
                     {language === 'ar' ? 'الرئيسية' : 'Home'}
                   </Link>
                 </li>
                 <li>
-                  <Link to="/pdfs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Link to="/pdfs" className="text-sm text-muted-foreground hover:text-foreground transition-colors" aria-label="Browse PDF documents">
                     {language === 'ar' ? 'ملفات PDF' : 'PDFs'}
                   </Link>
                 </li>
                 <li>
-                  <Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground transition-colors" aria-label="Read our blog articles">
                     {language === 'ar' ? 'المدونة' : 'Blog'}
                   </Link>
                 </li>
@@ -55,12 +56,12 @@ const Footer = () => {
               <h3 className="text-sm font-medium mb-3">{language === 'ar' ? 'قانوني' : 'Legal'}</h3>
               <ul className="space-y-2">
                 <li>
-                  <Link to="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Link to="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground transition-colors" aria-label="Read our privacy policy">
                     {language === 'ar' ? 'سياسة الخصوصية' : 'Privacy Policy'}
                   </Link>
                 </li>
                 <li>
-                  <Link to="/terms-of-service" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Link to="/terms-of-service" className="text-sm text-muted-foreground hover:text-foreground transition-colors" aria-label="Read our terms of service">
                     {language === 'ar' ? 'شروط الخدمة' : 'Terms of Service'}
                   </Link>
                 </li>

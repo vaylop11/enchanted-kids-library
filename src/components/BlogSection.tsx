@@ -102,12 +102,13 @@ const BlogSection = () => {
               key={post.id}
               to={`/blog/${post.slug || post.id}`}
               className="group block cursor-pointer"
+              aria-label={`Read article: ${post.title}`}
             >
               <Card className="overflow-hidden h-full hover:shadow-md transition-all duration-300 border-border/60 hover:border-primary/20 hover:-translate-y-1 relative">
                 <div className="aspect-video w-full overflow-hidden">
                   <img 
                     src={post.image_url} 
-                    alt={post.title}
+                    alt={`${post.title} - featured image`}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     onError={(e) => {
                       // Fallback image if the original fails to load
@@ -143,7 +144,7 @@ const BlogSection = () => {
         
         <div className="text-center mt-10">
           <Button asChild variant="outline" className="animate-fade-in">
-            <Link to="/blog">
+            <Link to="/blog" aria-label="View all blog articles">
               {language === 'ar' ? 'عرض جميع المقالات' : 'View All Articles'}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>

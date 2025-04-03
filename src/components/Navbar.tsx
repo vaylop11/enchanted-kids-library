@@ -54,6 +54,7 @@ const Navbar = () => {
             to="/" 
             className="flex items-center transition-opacity hover:opacity-80"
             style={{ gap: '0.5rem' }}
+            aria-label="ChatPDF Home"
           >
             <BookOpen className="h-6 w-6" />
             <span className="font-display text-lg font-medium">
@@ -73,6 +74,8 @@ const Navbar = () => {
                         location.pathname === '/' && "bg-accent text-accent-foreground",
                         "px-3 py-2 text-sm font-medium rounded-full"
                       )}
+                      aria-label="Home page"
+                      aria-current={location.pathname === '/' ? 'page' : undefined}
                     >
                       {t('home')}
                     </NavigationMenuLink>
@@ -86,6 +89,8 @@ const Navbar = () => {
                         location.pathname === '/pdfs' && "bg-accent text-accent-foreground",
                         "px-3 py-2 text-sm font-medium rounded-full"
                       )}
+                      aria-label="PDF documents page"
+                      aria-current={location.pathname === '/pdfs' ? 'page' : undefined}
                     >
                       {t('pdfs')}
                     </NavigationMenuLink>
@@ -99,6 +104,8 @@ const Navbar = () => {
                         location.pathname === '/blog' && "bg-accent text-accent-foreground",
                         "px-3 py-2 text-sm font-medium rounded-full"
                       )}
+                      aria-label="Blog articles page"
+                      aria-current={location.pathname === '/blog' ? 'page' : undefined}
                     >
                       {t('blog')}
                     </NavigationMenuLink>
@@ -113,6 +120,8 @@ const Navbar = () => {
                           location.pathname === '/chat' && "bg-accent text-accent-foreground",
                           "px-3 py-2 text-sm font-medium rounded-full"
                         )}
+                        aria-label="Chat with documents"
+                        aria-current={location.pathname === '/chat' ? 'page' : undefined}
                       >
                         <MessageCircle className="h-4 w-4 mr-1" />
                         {t('chat')}
@@ -132,6 +141,7 @@ const Navbar = () => {
                   variant="outline" 
                   onClick={() => navigate('/signin')}
                   className="rounded-full"
+                  aria-label="Sign in to your account"
                 >
                   {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
                 </Button>
@@ -165,6 +175,7 @@ const Navbar = () => {
                       to="/" 
                       className="flex items-center justify-center transition-opacity hover:opacity-80"
                       onClick={() => setIsDrawerOpen(false)}
+                      aria-label="ChatPDF Home"
                     >
                       <BookOpen className="h-8 w-8 mb-4" />
                       <span className="font-display text-xl font-medium ml-2 mb-4">
@@ -182,6 +193,8 @@ const Navbar = () => {
                             ? "bg-accent text-accent-foreground" 
                             : "hover:bg-muted"
                         )}
+                        aria-label="Home page"
+                        aria-current={location.pathname === '/' ? 'page' : undefined}
                       >
                         {t('home')}
                       </Link>
@@ -194,6 +207,8 @@ const Navbar = () => {
                             ? "bg-accent text-accent-foreground" 
                             : "hover:bg-muted"
                         )}
+                        aria-label="PDF documents page"
+                        aria-current={location.pathname === '/pdfs' ? 'page' : undefined}
                       >
                         {t('pdfs')}
                       </Link>
@@ -206,6 +221,8 @@ const Navbar = () => {
                             ? "bg-accent text-accent-foreground" 
                             : "hover:bg-muted"
                         )}
+                        aria-label="Blog articles page"
+                        aria-current={location.pathname === '/blog' ? 'page' : undefined}
                       >
                         {t('blog')}
                       </Link>
@@ -219,6 +236,8 @@ const Navbar = () => {
                               ? "bg-accent text-accent-foreground" 
                               : "hover:bg-muted"
                           )}
+                          aria-label="Chat with documents"
+                          aria-current={location.pathname === '/chat' ? 'page' : undefined}
                         >
                           <MessageCircle className="h-5 w-5" />
                           {t('chat')}
@@ -233,6 +252,7 @@ const Navbar = () => {
                           setIsDrawerOpen(false);
                         }}
                         className="mt-6 w-full"
+                        aria-label="Sign in to your account"
                       >
                         {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
                       </Button>
