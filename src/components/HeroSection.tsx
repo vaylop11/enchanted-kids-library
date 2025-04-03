@@ -12,24 +12,24 @@ const HeroSection = () => {
         <div className="flex flex-col items-center text-center space-y-8 md:space-y-12">
           <h1 className="text-4xl md:text-6xl font-bold tracking-tighter max-w-3xl">
             {language === 'ar' 
-              ? 'تفاعل مع ملفات PDF بطريقة ذكية مع تشات PDF'
-              : 'Chat with your PDFs intelligently with ChatPDF'}
+              ? 'تفاعل مع ملفات PDF بطريقة ذكية مع Gemi تشات PDF'
+              : 'Chat with your PDFs intelligently with Gemi ChatPDF'}
           </h1>
           
           <p className="text-xl text-muted-foreground max-w-2xl">
             {language === 'ar'
-              ? 'تحدث مع مستنداتك وملفاتك الرقمية بشكل طبيعي. تحليل، استخراج واستكشاف محتويات PDF الخاصة بك بكفاءة.'
-              : 'Talk to your documents naturally. Analyze, extract, and explore your PDF contents efficiently.'}
+              ? 'تحدث مع مستنداتك وملفاتك الرقمية بشكل طبيعي. تحليل، استخراج واستكشاف محتويات PDF الخاصة بك بكفاءة مع Gemi.'
+              : 'Talk to your documents naturally with Gemi ChatPDF. Analyze, extract, and explore your PDF contents efficiently - completely free!'}
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4">
             <Button asChild size="lg" className="px-8">
-              <Link to="/pdfs">
+              <Link to="/pdfs" aria-label="Get started with Gemi ChatPDF">
                 {language === 'ar' ? 'ابدأ الآن' : 'Get Started'}
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="px-8">
-              <Link to="/blog">
+              <Link to="/blog" aria-label="Learn more about Gemi ChatPDF">
                 {language === 'ar' ? 'تعلم المزيد' : 'Learn More'}
               </Link>
             </Button>
