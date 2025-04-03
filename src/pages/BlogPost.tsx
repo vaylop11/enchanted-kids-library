@@ -1,4 +1,3 @@
-
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
@@ -23,7 +22,7 @@ interface BlogPostData {
 }
 
 const BlogPost = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const { language } = useLanguage();
   const navigate = useNavigate();
   const [post, setPost] = useState<BlogPostData | null>(null);
@@ -32,20 +31,49 @@ const BlogPost = () => {
 
   useEffect(() => {
     const fetchBlogPost = async () => {
-      if (!id) return;
+      if (!slug) return;
 
       try {
         // First try to fetch from Supabase
         const { data, error } = await supabaseUntyped
           .from('blog_posts')
           .select('*')
-          .eq('id', id)
+          .eq('slug', slug)
           .eq('published', true)
           .single();
         
         if (error) {
-          // If not found in Supabase, check if it's one of the sample posts
-          const samplePost = getSampleBlogPost(id, language);
+          // If not found in Supabase by slug, check if it's one of the sample posts or a legacy ID
+          // First check if it's a legacy ID
+          const { data: legacyData, error: legacyError } = await supabaseUntyped
+            .from('blog_posts')
+            .select('*')
+            .eq('id', slug)
+            .eq('published', true)
+            .single();
+            
+          if (!legacyError && legacyData) {
+            setPost(legacyData);
+            
+            // Fetch related posts (posts with the same category)
+            if (legacyData.category) {
+              const { data: relatedData } = await supabaseUntyped
+                .from('blog_posts')
+                .select('*')
+                .eq('published', true)
+                .eq('category', legacyData.category)
+                .neq('id', legacyData.id)
+                .limit(2);
+                
+              if (relatedData && relatedData.length > 0) {
+                setRelatedPosts(relatedData as BlogPostData[]);
+              }
+            }
+            return;
+          }
+            
+          // Then check if it's a sample post
+          const samplePost = getSampleBlogPost(slug, language);
           if (samplePost) {
             setPost(samplePost);
             
@@ -53,7 +81,7 @@ const BlogPost = () => {
             const related = [
               getSampleBlogPost('chatpdf-education', language),
               getSampleBlogPost('chatpdf-vs-traditional', language)
-            ].filter(p => p && p.id !== id) as BlogPostData[];
+            ].filter(p => p && p.id !== slug) as BlogPostData[];
             
             setRelatedPosts(related);
             return;
@@ -79,7 +107,7 @@ const BlogPost = () => {
               .select('*')
               .eq('published', true)
               .eq('category', data.category)
-              .neq('id', id)
+              .neq('id', data.id)
               .limit(2);
               
             if (relatedData && relatedData.length > 0) {
@@ -98,9 +126,8 @@ const BlogPost = () => {
     };
     
     fetchBlogPost();
-  }, [id, language, navigate]);
+  }, [slug, language, navigate]);
 
-  // Sample blog posts data for fallback
   const getSampleBlogPost = (postId: string, lang: string): BlogPostData | null => {
     const blogPosts: Record<string, BlogPostData> = {
       'chatpdf-vs-traditional': {
@@ -169,7 +196,7 @@ const BlogPost = () => {
              <p>غالبًا ما يجد الطلاب صعوبة في استيعاب المعلومات من الكتب المدرسية الطويلة، مما يؤدي إلى:</p>
              <ul>
                <li>إجهاد القراءة والتعب المعرفي</li>
-               <li>صعوبة في تحديد الأفكار الرئيسية</li>
+               <li>صعوبة في تحديد الأفكار الر��يسية</li>
                <li>احتفاظ منخفض بالمعلومات</li>
                <li>وقت دراسة غير فعال</li>
              </ul>
@@ -285,21 +312,20 @@ const BlogPost = () => {
     );
   }
 
-  // Set the canonical URL based on the slug if available
-  const canonicalUrl = post.slug 
+  const canonicalUrl = post?.slug 
     ? `https://chatpdf.icu/blog/${post.slug}` 
-    : `https://chatpdf.icu/blog/${id}`;
+    : `https://chatpdf.icu/blog/${slug}`;
 
   return (
     <div className="min-h-screen flex flex-col">
       <SEO 
-        title={`${post.title} | Gemi ChatPDF`}
-        description={post.excerpt || `${post.title} - Chat with PDF using Gemi AI`}
-        keywords={`${post.title}, Gemi ChatPDF, ${post.category || 'AI'}, PDF chat, document analysis`}
-        ogImage={post.image_url || '/og-image.png'}
+        title={`${post?.title || 'Blog Post'} | Gemi ChatPDF`}
+        description={post?.excerpt || `${post?.title || 'Blog Post'} - Chat with PDF using Gemi AI`}
+        keywords={`${post?.title || 'Blog Post'}, Gemi ChatPDF, ${post?.category || 'AI'}, PDF chat, document analysis`}
+        ogImage={post?.image_url || '/og-image.png'}
         ogUrl={canonicalUrl}
-        articlePublishedTime={post.created_at}
-        articleSection={post.category}
+        articlePublishedTime={post?.created_at}
+        articleSection={post?.category}
       />
       
       <Navbar />

@@ -15,6 +15,7 @@ interface BlogPost {
   read_time: string;
   image_url: string;
   category: string;
+  slug: string;
 }
 
 const BlogSection = () => {
@@ -99,7 +100,7 @@ const BlogSection = () => {
           {blogPosts.map((post) => (
             <Link
               key={post.id}
-              to={`/blog/${post.id}`}
+              to={`/blog/${post.slug || post.id}`}
               className="group block cursor-pointer"
             >
               <Card className="overflow-hidden h-full hover:shadow-md transition-all duration-300 border-border/60 hover:border-primary/20 hover:-translate-y-1 relative">

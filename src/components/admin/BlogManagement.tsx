@@ -93,8 +93,8 @@ const BlogManagement = () => {
     setDeleteId(id);
   };
 
-  const viewPost = (id: string) => {
-    navigate(`/blog/${id}`);
+  const viewPost = (slug: string) => {
+    navigate(`/blog/${slug}`);
   };
 
   const formatDate = (dateString: string) => {
@@ -147,7 +147,7 @@ const BlogManagement = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">
-                      <Button variant="ghost" size="icon" onClick={() => viewPost(post.id)}>
+                      <Button variant="ghost" size="icon" onClick={() => viewPost(post.slug || post.id)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(post.id)}>
