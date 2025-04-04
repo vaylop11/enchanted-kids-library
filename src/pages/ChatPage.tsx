@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
+import SEO from '@/components/SEO';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
 import { Send, User, ArrowLeft, Crown, Trash2, Eraser } from 'lucide-react';
@@ -13,6 +14,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { ChatMessageSkeleton } from '@/components/ui/skeleton';
 
 type Message = {
   id: string;
@@ -30,11 +32,12 @@ type OnlineUser = {
 
 const ChatPage = () => {
   const { user, loading, isAdmin } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [onlineUsers, setOnlineUsers] = useState<Record<string, OnlineUser>>({});
+  const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -111,6 +114,7 @@ const ChatPage = () => {
       });
 
     const fetchMessages = async () => {
+      setIsLoading(true);
       try {
         const { data, error } = await supabaseUntyped
           .from('messages')
@@ -123,6 +127,8 @@ const ChatPage = () => {
       } catch (error) {
         console.error('Error fetching messages:', error);
         toast.error('Failed to load messages');
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -139,18 +145,43 @@ const ChatPage = () => {
     
     if (!user || !newMessage.trim()) return;
 
+    const messageContent = newMessage.trim();
+    setNewMessage('');
+    
+    // Optimistic update for better UX
+    const optimisticMessage: Message = {
+      id: `temp-${Date.now()}`,
+      content: messageContent,
+      user_id: user.id,
+      user_email: user.email || 'Anonymous',
+      created_at: new Date().toISOString(),
+    };
+    
+    setMessages((prev) => [...prev, optimisticMessage]);
+
     try {
-      const { error } = await supabaseUntyped.from('messages').insert({
-        content: newMessage.trim(),
+      const { error, data } = await supabaseUntyped.from('messages').insert({
+        content: messageContent,
         user_id: user.id,
         user_email: user.email || 'Anonymous',
-      });
+      }).select('*');
 
       if (error) throw error;
-      setNewMessage('');
+      
+      // Replace optimistic message with real one if needed
+      if (data && data.length > 0) {
+        setMessages((prev) => 
+          prev.map((msg) => 
+            msg.id === optimisticMessage.id ? data[0] : msg
+          )
+        );
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
+      
+      // Remove the optimistic message on error
+      setMessages((prev) => prev.filter(msg => msg.id !== optimisticMessage.id));
     }
   };
 
@@ -231,8 +262,31 @@ const ChatPage = () => {
     return <Navigate to="/signin" replace />;
   }
 
+  const pageTitle = language === 'ar' ? 'غرفة الدردشة | تشات PDF' : 'Chat Room | ChatPDF';
+  const pageDescription = language === 'ar' 
+    ? 'تواصل مع مستخدمين آخرين وناقش ملفات PDF ومشاريعك في غرفة دردشة تشات PDF'
+    : 'Connect with other users and discuss PDF files and projects in the ChatPDF chat room';
+
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO 
+        title={pageTitle}
+        description={pageDescription}
+        keywords="chat room, pdf discussion, real time chat, document collaboration"
+        ogImage="/chat-preview.png"
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": pageTitle,
+          "description": pageDescription,
+          "isPartOf": {
+            "@type": "WebSite",
+            "name": "Gemi ChatPDF",
+            "url": "https://chatpdf.icu"
+          }
+        }}
+      />
+      
       <Navbar />
       
       <main className="flex-1 pt-24 pb-16 px-6 md:px-8 max-w-7xl mx-auto w-full">
@@ -307,7 +361,15 @@ const ChatPage = () => {
             
             <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4 mb-4">
               <div className="space-y-4">
-                {messages.length === 0 ? (
+                {isLoading ? (
+                  <div className="space-y-4">
+                    <ChatMessageSkeleton />
+                    <div className="flex justify-end">
+                      <ChatMessageSkeleton />
+                    </div>
+                    <ChatMessageSkeleton />
+                  </div>
+                ) : messages.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-muted-foreground">
                     <p>{t('noMessages')}</p>
                   </div>
@@ -374,8 +436,13 @@ const ChatPage = () => {
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder={t('typeMessage')}
                 className="flex-1"
+                aria-label="Type a message"
               />
-              <Button type="submit" disabled={!newMessage.trim()}>
+              <Button 
+                type="submit" 
+                disabled={!newMessage.trim()}
+                aria-label="Send message"
+              >
                 <Send className="h-4 w-4 mr-2" />
                 {t('send')}
               </Button>

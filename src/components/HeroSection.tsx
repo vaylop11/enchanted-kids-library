@@ -7,10 +7,16 @@ const HeroSection = () => {
   const { language } = useLanguage();
 
   return (
-    <section className="py-20 md:py-28 bg-background relative overflow-hidden">
+    <section 
+      className="py-20 md:py-28 bg-background relative overflow-hidden"
+      aria-labelledby="hero-heading"
+    >
       <div className="container mx-auto px-4 md:px-6 max-w-7xl relative z-10">
         <div className="flex flex-col items-center text-center space-y-8 md:space-y-12">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter max-w-3xl">
+          <h1 
+            id="hero-heading"
+            className="text-4xl md:text-6xl font-bold tracking-tighter max-w-3xl"
+          >
             {language === 'ar' 
               ? 'تفاعل مع ملفات PDF بطريقة ذكية مع Gemi تشات PDF'
               : 'Chat with your PDFs intelligently with Gemi ChatPDF'}
@@ -24,12 +30,18 @@ const HeroSection = () => {
           
           <div className="flex flex-col sm:flex-row gap-4">
             <Button asChild size="lg" className="px-8">
-              <Link to="/pdfs" aria-label="Get started with Gemi ChatPDF">
+              <Link 
+                to="/pdfs" 
+                aria-label={language === 'ar' ? 'ابدأ استخدام تشات PDF الآن' : 'Get started with Gemi ChatPDF now'}
+              >
                 {language === 'ar' ? 'ابدأ الآن' : 'Get Started'}
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="px-8">
-              <Link to="/blog" aria-label="Learn more about Gemi ChatPDF">
+              <Link 
+                to="/blog" 
+                aria-label={language === 'ar' ? 'تعلم المزيد عن خدمات تشات PDF' : 'Learn more about Gemi ChatPDF services'}
+              >
                 {language === 'ar' ? 'تعلم المزيد' : 'Learn More'}
               </Link>
             </Button>

@@ -1,4 +1,15 @@
+
 User-agent: *
 Allow: /
 
+# Block specific directories
+Disallow: /admin/
+Disallow: /temp/
+Disallow: /api/
+
+# Crawl delay for better server performance
+Crawl-delay: 10
+
+# Sitemap location
 Sitemap: https://chatpdf.icu/sitemap.xml
+
