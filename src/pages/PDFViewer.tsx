@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -316,7 +315,7 @@ const PDFViewer = () => {
           : 'Starting text extraction from PDF...'
       });
       
-      const text = await extractTextFromPDF(pdf.dataUrl, updateAnalysisProgress);
+      const text = await extractTextFromPDF(pdf.dataUrl, pdf.id, updateAnalysisProgress);
       setPdfTextContent(text);
       
       setAnalysisProgress({
@@ -434,7 +433,12 @@ const PDFViewer = () => {
             : 'Generating accurate answer...'
         });
         
-        const aiContent = await analyzePDFWithGemini(textContent, userMessageContent, updateAnalysisProgress);
+        const aiContent = await analyzePDFWithGemini(
+          textContent, 
+          userMessageContent, 
+          updateAnalysisProgress, 
+          chatMessages.filter(m => m.isUser === false).slice(-3)
+        );
         
         let savedAiMessage: ChatMessage | null = null;
         

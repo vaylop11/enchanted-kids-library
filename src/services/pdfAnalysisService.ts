@@ -29,11 +29,11 @@ let cachedPDFText: Record<string, string> = {};
 export const extractTextFromPDF = async (
   pdfUrl: string, 
   pdfId: string,
+  updateProgress?: (progress: AnalysisProgress) => void,
   extractionOptions: {
     quickMode?: boolean; // If true, only extracts a portion of the document for faster response
     maxPages?: number;   // Maximum pages to extract in quick mode
-  } = {},
-  updateProgress?: (progress: AnalysisProgress) => void
+  } = {}
 ): Promise<string> => {
   try {
     // Check if we already have the text for this PDF
