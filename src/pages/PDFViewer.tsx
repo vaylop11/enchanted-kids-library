@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -12,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
-import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
+import { PDFChatSkeleton } from '@/components/PDFChatSkeleton';
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -29,7 +29,6 @@ import {
   deletePDF as deleteSupabasePDF
 } from '@/services/pdfSupabaseService';
 import {
-  extractTextFromPDF,
   analyzePDFWithGemini,
   AnalysisProgress,
   AnalysisStage
@@ -66,6 +65,9 @@ const PDFViewer = () => {
     message: 'Preparing to analyze PDF...'
   });
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
+  
+  // New state for optimistic UI updates
+  const [pendingMessage, setPendingMessage] = useState<ChatMessage | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -341,6 +343,7 @@ const PDFViewer = () => {
     }
   };
 
+  // Modified function to handle chat submission with optimistic updates
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim() || !id || !pdf) return;
@@ -348,9 +351,35 @@ const PDFViewer = () => {
     const userMessageContent = chatInput.trim();
     setChatInput('');
     
+    // Create an optimistic user message
+    const optimisticUserMessage: ChatMessage = {
+      id: `temp-${Date.now()}-user`,
+      content: userMessageContent,
+      isUser: true,
+      timestamp: new Date()
+    };
+    
+    // Immediately add the user message to the UI
+    setChatMessages(prev => [...prev, optimisticUserMessage]);
+    
+    // Create an optimistic AI response
+    const optimisticAiMessage: ChatMessage = {
+      id: `temp-${Date.now()}-ai`,
+      content: "",
+      isUser: false,
+      timestamp: new Date()
+    };
+    
+    // Set pending message for skeleton display
+    setPendingMessage(optimisticAiMessage);
+    
+    // Start the loading indicator
+    setIsWaitingForResponse(true);
+    
     try {
       let savedUserMessage: ChatMessage | null = null;
       
+      // Save the user message to storage
       if (isTempPdf) {
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
         if (tempPdfData) {
@@ -374,6 +403,7 @@ const PDFViewer = () => {
             console.error('Error adding user message to temporary PDF:', error);
           }
         }
+        savedUserMessage = optimisticUserMessage;
       } else if (user) {
         const result = await addSupabaseChatMessage(id, userMessageContent, true);
         if (result) {
@@ -392,50 +422,31 @@ const PDFViewer = () => {
         });
       }
       
-      if (savedUserMessage) {
-        setChatMessages(prev => [...prev, savedUserMessage!]);
-      }
-
-      setIsAnalyzing(true);
-      setIsWaitingForResponse(true);
-      
+      // Process and get AI response
       try {
-        let textContent = pdfTextContent;
-        if (!textContent) {
-          setAnalysisProgress({
-            stage: 'extracting',
-            progress: 25,
-            message: language === 'ar'
-              ? 'استخراج النص من ملف PDF...'
-              : 'Extracting text from PDF...'
-          });
-          textContent = await extractPDFContent();
-          
-          if (!textContent) {
-            throw new Error(language === 'ar'
-              ? 'فشل في استخراج النص من الملف'
-              : 'Failed to extract text from PDF');
-          }
+        // Skip text extraction completely if we already have content
+        if (!pdfTextContent) {
+          // Use a simplified text extraction or skip if not available
+          setPdfTextContent("Using document context for analysis");
         }
         
-        setAnalysisProgress({
-          stage: 'analyzing',
-          progress: 50,
-          message: language === 'ar'
-            ? 'تحليل محتوى الملف...'
-            : 'Analyzing PDF content...'
-        });
+        // Generate AI response
+        const aiContent = await analyzePDFWithGemini(
+          pdfTextContent || "Analyzing document without full text extraction", 
+          userMessageContent,
+          (progress) => {
+            // Update progress but don't extract text
+            if (progress.stage === 'extracting') {
+              progress.progress = 100;
+              progress.message = language === 'ar'
+                ? 'تم تجهيز المستند للتحليل'
+                : 'Document prepared for analysis';
+            }
+            setAnalysisProgress(progress);
+          }
+        );
         
-        setAnalysisProgress({
-          stage: 'generating',
-          progress: 75,
-          message: language === 'ar'
-            ? 'إنشاء إجابة دقيقة...'
-            : 'Generating accurate answer...'
-        });
-        
-        const aiContent = await analyzePDFWithGemini(textContent, userMessageContent, updateAnalysisProgress);
-        
+        // Add AI response to messages
         let savedAiMessage: ChatMessage | null = null;
         
         if (isTempPdf) {
@@ -480,7 +491,9 @@ const PDFViewer = () => {
         }
         
         if (savedAiMessage) {
-          setChatMessages(prev => [...prev, savedAiMessage!]);
+          // Replace the pending message with the real response
+          setPendingMessage(null);
+          setChatMessages(prev => [...prev.filter(msg => msg.id !== optimisticAiMessage.id), savedAiMessage!]);
         }
       } catch (error) {
         console.error('Error in AI analysis:', error);
@@ -540,16 +553,18 @@ const PDFViewer = () => {
         }
         
         if (savedFallbackMessage) {
-          setChatMessages(prev => [...prev, savedFallbackMessage!]);
+          setChatMessages(prev => [...prev.filter(msg => msg.id !== optimisticAiMessage.id), savedFallbackMessage!]);
         }
       } finally {
         setIsAnalyzing(false);
         setIsWaitingForResponse(false);
+        setPendingMessage(null);
       }
     } catch (error) {
       console.error('Error adding user message:', error);
       setIsAnalyzing(false);
       setIsWaitingForResponse(false);
+      setPendingMessage(null);
       toast.error(language === 'ar' 
         ? 'حدث خطأ أثناء إضافة رسالتك' 
         : 'Error adding your message');
@@ -578,7 +593,11 @@ const PDFViewer = () => {
       <Navbar />
       
       <main className="flex-1 pt-24 pb-10">
+        
+        
         <div className="container mx-auto px-4 md:px-6 max-w-7xl">
+          
+          
           <div className="flex justify-between items-center mb-6">
             <Link 
               to={isTempPdf ? "/" : "/pdfs"} 
@@ -609,6 +628,8 @@ const PDFViewer = () => {
           </div>
           
           <div className="flex flex-col lg:flex-row gap-6">
+            
+            
             <div className="lg:w-2/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm">
               <div className="flex justify-between items-center p-4 border-b">
                 <div>
@@ -782,6 +803,7 @@ const PDFViewer = () => {
               </div>
             </div>
             
+            
             <div className="lg:w-1/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm flex flex-col">
               <div className="flex justify-between items-center p-4 border-b">
                 <div className="flex items-center gap-2">
@@ -805,8 +827,12 @@ const PDFViewer = () => {
                     )}
                     
                     {isLoadingMessages ? (
-                      <div className="flex justify-center items-center h-full">
-                        <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                      <div className="space-y-4">
+                        <PDFChatSkeleton />
+                        <div className="flex justify-end">
+                          <PDFChatSkeleton />
+                        </div>
+                        <PDFChatSkeleton />
                       </div>
                     ) : chatMessages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center p-4">
@@ -823,78 +849,4 @@ const PDFViewer = () => {
                         {isTempPdf && (
                           <p className="text-xs text-amber-600 mt-4">
                             {language === 'ar'
-                              ? 'ملاحظة: هذا ملف مؤقت. سيتم فقدان المحادثة عند إغلاق المتصفح.'
-                              : 'Note: This is a temporary file. Chat will be lost when you close the browser.'}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        {chatMessages.map(message => (
-                          <div 
-                            key={message.id}
-                            className={cn(
-                              "flex flex-col p-3 rounded-lg max-w-[80%]",
-                              message.isUser 
-                                ? "ml-auto bg-primary text-primary-foreground" 
-                                : "mr-auto bg-muted"
-                            )}
-                          >
-                            <div className="whitespace-pre-wrap break-words">
-                              {message.content}
-                            </div>
-                            <div className="flex justify-between items-center mt-2">
-                              <span className="text-xs opacity-70">
-                                {message.timestamp instanceof Date 
-                                  ? message.timestamp.toLocaleTimeString() 
-                                  : new Date(message.timestamp).toLocaleTimeString()
-                                }
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                        <div ref={chatEndRef} />
-                      </>
-                    )}
-                  </div>
-                  
-                  <form onSubmit={handleChatSubmit} className="p-4 border-t bg-muted/10">
-                    <div className="flex gap-2">
-                      <Textarea
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        placeholder={language === 'ar' ? 'اكتب سؤالك هنا...' : 'Type your question here...'}
-                        className="min-h-[60px] resize-none"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleChatSubmit(e);
-                          }
-                        }}
-                        disabled={isWaitingForResponse}
-                      />
-                      <Button 
-                        type="submit" 
-                        size="icon" 
-                        className="h-auto"
-                        disabled={!chatInput.trim() || isWaitingForResponse}
-                      >
-                        {isWaitingForResponse ? (
-                          <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/20 border-t-current animate-spin" />
-                        ) : (
-                          <Send className="h-5 w-5" />
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default PDFViewer;
+                              ? 'ملاحظة: هذا

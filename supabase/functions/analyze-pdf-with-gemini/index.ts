@@ -27,17 +27,17 @@ serve(async (req) => {
     const prompt = `
       You are an AI assistant that helps users analyze PDF documents and answer questions about them.
       
-      Here is the text content from a PDF document:
+      Here is the text content from a PDF document (note that this may be a partial extraction if the document is large):
       """
       ${pdfText}
       """
       
       User question: ${userQuestion}
       
-      Provide a relevant, accurate, and helpful response based on the PDF content. If the answer cannot be determined from the PDF content, clearly state that.
+      Provide a relevant, accurate, and helpful response based on the PDF content. If the answer cannot be determined from the PDF content, clearly state that. Be concise but informative.
     `;
 
-    // Call Gemini API
+    // Call Gemini API with optimized settings for faster responses
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
@@ -51,7 +51,8 @@ serve(async (req) => {
           temperature: 0.2,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 1024, // Reduced for faster response
+          responseFormat: { type: "MARKDOWN" }
         }
       }),
     });

@@ -40,31 +40,49 @@ export const extractTextFromPDF = async (
     // Total pages for progress calculation
     const totalPages = pdf.numPages;
     
-    for (let i = 1; i <= totalPages; i++) {
+    // Sample strategy - extract first few pages and last few pages for faster response
+    const maxPagesToExtract = Math.min(10, totalPages);
+    const pagesToExtract = new Set<number>();
+    
+    // Add first pages
+    for (let i = 1; i <= Math.ceil(maxPagesToExtract / 2); i++) {
+      pagesToExtract.add(i);
+    }
+    
+    // Add last pages if there are more than maxPagesToExtract pages
+    if (totalPages > maxPagesToExtract) {
+      for (let i = totalPages - Math.floor(maxPagesToExtract / 2) + 1; i <= totalPages; i++) {
+        pagesToExtract.add(i);
+      }
+    }
+    
+    // Extract text from selected pages
+    let extractedPages = 0;
+    for (const pageNum of pagesToExtract) {
       updateProgress?.({
         stage: 'extracting',
-        progress: Math.round((i - 1) / totalPages * 100),
-        message: `Extracting text from page ${i} of ${totalPages}...`
+        progress: Math.round(extractedPages / pagesToExtract.size * 100),
+        message: `Extracting key text from page ${pageNum}...`
       });
       
-      const page = await pdf.getPage(i);
+      const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
       const pageText = textContent.items.map((item: any) => item.str).join(' ');
-      fullText += pageText + ' ';
+      fullText += `[Page ${pageNum}] ${pageText}\n\n`;
       
-      // Update progress after each page
-      updateProgress?.({
-        stage: 'extracting',
-        progress: Math.round(i / totalPages * 100),
-        message: `Extracted page ${i} of ${totalPages}`
-      });
+      extractedPages++;
     }
     
     updateProgress?.({
       stage: 'analyzing',
       progress: 100,
-      message: 'Text extraction complete'
+      message: 'Sample text extraction complete'
     });
+    
+    // Add a note about partial extraction for large documents
+    if (totalPages > maxPagesToExtract) {
+      fullText = `[Note: This is a partial extraction of ${pagesToExtract.size} pages from a ${totalPages}-page document]\n\n${fullText}`;
+    }
     
     return fullText.trim();
   } catch (error) {
@@ -113,7 +131,7 @@ export const analyzePDFWithGemini = async (
     });
     
     // Simulate a slight delay for the UI to show the generating stage
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     updateProgress?.({
       stage: 'complete',
