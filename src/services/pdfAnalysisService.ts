@@ -116,8 +116,8 @@ export const extractTextFromPDF = async (
 export const analyzePDFWithGemini = async (
   pdfText: string, 
   userQuestion: string,
-  previousChat: any[] = [],
-  updateProgress?: (progress: AnalysisProgress) => void
+  updateProgress?: (progress: AnalysisProgress) => void,
+  previousChat: any[] = []
 ): Promise<string> => {
   try {
     updateProgress?.({

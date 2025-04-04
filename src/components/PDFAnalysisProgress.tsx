@@ -5,13 +5,30 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { FileText, Brain, Sparkles, CheckCircle, AlertTriangle, Loader } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface PDFAnalysisProgressProps {
   analysis: AnalysisProgress;
+  isLoading?: boolean;
 }
 
-const PDFAnalysisProgress = ({ analysis }: PDFAnalysisProgressProps) => {
+const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgressProps) => {
   const { language } = useLanguage();
+
+  if (isLoading) {
+    return (
+      <div className="bg-muted/30 rounded-lg p-3 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-4 w-8" />
+        </div>
+        <div className="relative w-full h-2 overflow-hidden bg-muted rounded-full">
+          <div className="h-full bg-primary animate-pulse rounded-full" style={{ width: '60%' }} />
+        </div>
+        <Skeleton className="h-4 w-full mt-2" />
+      </div>
+    );
+  }
 
   const getStageIcon = () => {
     switch (analysis.stage) {

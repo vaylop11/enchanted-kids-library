@@ -29,20 +29,19 @@ function ChatMessageSkeleton() {
 
 function PDFAnalysisSkeletonLoader() {
   return (
-    <div className="flex flex-col space-y-4">
-      <div className="flex items-center gap-2 animate-pulse">
-        <div className="h-5 w-5 rounded-full bg-primary/30"></div>
-        <div className="h-4 w-32 bg-muted rounded"></div>
+    <div className="bg-muted/30 rounded-lg p-3 mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="h-7 w-32 rounded bg-muted animate-pulse" />
+        <div className="h-4 w-8 rounded bg-muted animate-pulse" />
       </div>
       
       <div className="h-2 w-full bg-muted/50 rounded overflow-hidden relative">
-        <div className="h-full bg-primary rounded absolute left-0 top-0 animate-[indeterminate_1.5s_infinite]"></div>
+        <div className="h-full bg-primary rounded absolute left-0 top-0 w-[60%] animate-pulse"></div>
       </div>
       
-      <div className="h-3 w-3/4 bg-muted rounded"></div>
+      <div className="h-4 w-3/4 bg-muted rounded mt-2 animate-pulse"></div>
     </div>
   )
 }
 
 export { Skeleton, ChatMessageSkeleton, PDFAnalysisSkeletonLoader }
-
