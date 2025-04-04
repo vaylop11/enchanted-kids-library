@@ -13,6 +13,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { AIChatMessageSkeleton } from '@/components/ui/skeleton';
+import TranslatableMessage from '@/components/TranslatableMessage';
 
 type Message = {
   id: string;
@@ -37,6 +39,8 @@ const ChatPage = () => {
   const [onlineUsers, setOnlineUsers] = useState<Record<string, OnlineUser>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [optimisticId, setOptimisticId] = useState<string | null>(null);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -112,6 +116,7 @@ const ChatPage = () => {
 
     const fetchMessages = async () => {
       try {
+        setIsSubmitting(true); // Show loading state while fetching messages
         const { data, error } = await supabaseUntyped
           .from('messages')
           .select('*')
@@ -123,6 +128,8 @@ const ChatPage = () => {
       } catch (error) {
         console.error('Error fetching messages:', error);
         toast.error('Failed to load messages');
+      } finally {
+        setIsSubmitting(false);
       }
     };
 
@@ -137,20 +144,44 @@ const ChatPage = () => {
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user || !newMessage.trim()) return;
+    if (!user || !newMessage.trim() || isSubmitting) return;
 
+    // Create optimistic message ID for UI responsiveness
+    const tempId = `temp-${Date.now()}`;
+    setOptimisticId(tempId);
+    
+    // Add optimistic message immediately for better UX
+    const optimisticMessage: Message = {
+      id: tempId,
+      content: newMessage.trim(),
+      user_id: user.id,
+      user_email: user.email || 'Anonymous',
+      created_at: new Date().toISOString(),
+    };
+    
+    setMessages(prev => [...prev, optimisticMessage]);
+    setNewMessage(''); // Clear input right away
+    setIsSubmitting(true);
+    
     try {
       const { error } = await supabaseUntyped.from('messages').insert({
-        content: newMessage.trim(),
+        content: optimisticMessage.content,
         user_id: user.id,
         user_email: user.email || 'Anonymous',
       });
 
       if (error) throw error;
-      setNewMessage('');
+      
+      // The real message will be added via the subscription
+      // So we don't need to add it manually here
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
+      // Remove the optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== tempId));
+    } finally {
+      setIsSubmitting(false);
+      setOptimisticId(null);
     }
   };
 
@@ -201,18 +232,6 @@ const ChatPage = () => {
 
   const getInitials = (email: string) => {
     return email.substring(0, 2).toUpperCase();
-  };
-
-  const maskEmail = (email: string) => {
-    if (!email || email === 'Anonymous') return 'Anonymous';
-    
-    const parts = email.split('@');
-    if (parts.length !== 2) return email;
-    
-    const name = parts[0];
-    if (name.length <= 2) return email;
-    
-    return `${name.substring(0, 2)}***`;
   };
 
   const isAdminEmail = (email: string) => {
@@ -324,36 +343,13 @@ const ChatPage = () => {
                           </AvatarFallback>
                         </Avatar>
                       )}
-                      <div className={`max-w-[75%] ${message.user_id === user.id ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg p-3 group relative`}>
-                        {message.user_id !== user.id && (
-                          <div className="flex items-center gap-1 text-xs font-medium mb-1">
-                            {isAdminEmail(message.user_email) ? (
-                              <>
-                                <Crown className="h-3 w-3 text-amber-500" />
-                                <span className="font-medium text-amber-600">Admin</span>
-                              </>
-                            ) : (
-                              <span>User {message.user_id.substring(0, 4)}</span>
-                            )}
-                          </div>
-                        )}
-                        <p className="break-words">{message.content}</p>
-                        <p className="text-xs opacity-70 text-right mt-1">
-                          {formatTime(message.created_at)}
-                        </p>
-                        
-                        {isAdmin && message.user_id !== user.id && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute -right-2 -top-2 h-6 w-6 bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => deleteMessage(message.id)}
-                            title="Delete message"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
+                      
+                      <TranslatableMessage 
+                        content={message.content}
+                        timestamp={message.created_at}
+                        isUser={message.user_id === user.id}
+                      />
+                      
                       {message.user_id === user.id && (
                         <Avatar className="h-8 w-8 bg-primary/10">
                           <AvatarFallback className="text-primary">
@@ -364,21 +360,46 @@ const ChatPage = () => {
                     </div>
                   ))
                 )}
+                
+                {optimisticId && (
+                  <AIChatMessageSkeleton />
+                )}
+                
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
             
-            <form onSubmit={sendMessage} className="flex gap-2">
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder={t('typeMessage')}
-                className="flex-1"
-              />
-              <Button type="submit" disabled={!newMessage.trim()}>
-                <Send className="h-4 w-4 mr-2" />
-                {t('send')}
-              </Button>
+            <form onSubmit={sendMessage} className="p-4 border-t bg-muted/10">
+              <div className="flex gap-2">
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder={t('typeMessage')}
+                  className="flex-1"
+                  disabled={isSubmitting}
+                  autoComplete="off"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (newMessage.trim() && !isSubmitting) {
+                        sendMessage(e);
+                      }
+                    }
+                  }}
+                />
+                <Button 
+                  type="submit" 
+                  disabled={!newMessage.trim() || isSubmitting}
+                  className="transition-all duration-300"
+                >
+                  {isSubmitting ? (
+                    <div className="h-4 w-4 rounded-full border-2 border-current border-r-transparent animate-spin mr-2"></div>
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  {t('send')}
+                </Button>
+              </div>
             </form>
           </Card>
         </div>
