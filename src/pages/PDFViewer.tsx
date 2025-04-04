@@ -315,6 +315,7 @@ const PDFViewer = () => {
           : 'Starting text extraction from PDF...'
       });
       
+      // Extract text from all pages by default (no quickMode)
       const text = await extractTextFromPDF(pdf.dataUrl, pdf.id, updateAnalysisProgress);
       setPdfTextContent(text);
       
@@ -408,6 +409,8 @@ const PDFViewer = () => {
               ? 'استخراج النص من ملف PDF...'
               : 'Extracting text from PDF...'
           });
+          
+          // Extract the full text without quickMode
           textContent = await extractPDFContent();
           
           if (!textContent) {
@@ -433,11 +436,12 @@ const PDFViewer = () => {
             : 'Generating accurate answer...'
         });
         
+        // Include more previous chat messages for better context
         const aiContent = await analyzePDFWithGemini(
           textContent, 
           userMessageContent, 
           updateAnalysisProgress, 
-          chatMessages.filter(m => m.isUser === false).slice(-3)
+          chatMessages.filter(m => m.isUser === false).slice(-5) // Increased from -3 to -5
         );
         
         let savedAiMessage: ChatMessage | null = null;
@@ -840,65 +844,4 @@ const PDFViewer = () => {
                             className={cn(
                               "flex flex-col p-3 rounded-lg max-w-[80%]",
                               message.isUser 
-                                ? "ml-auto bg-primary text-primary-foreground" 
-                                : "mr-auto bg-muted"
-                            )}
-                          >
-                            <div className="whitespace-pre-wrap break-words">
-                              {message.content}
-                            </div>
-                            <div className="flex justify-between items-center mt-2">
-                              <span className="text-xs opacity-70">
-                                {message.timestamp instanceof Date 
-                                  ? message.timestamp.toLocaleTimeString() 
-                                  : new Date(message.timestamp).toLocaleTimeString()
-                                }
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                        <div ref={chatEndRef} />
-                      </>
-                    )}
-                  </div>
-                  
-                  <form onSubmit={handleChatSubmit} className="p-4 border-t bg-muted/10">
-                    <div className="flex gap-2">
-                      <Textarea
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        placeholder={language === 'ar' ? 'اكتب سؤالك هنا...' : 'Type your question here...'}
-                        className="min-h-[60px] resize-none"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleChatSubmit(e);
-                          }
-                        }}
-                        disabled={isWaitingForResponse}
-                      />
-                      <Button 
-                        type="submit" 
-                        size="icon" 
-                        className="h-auto"
-                        disabled={!chatInput.trim() || isWaitingForResponse}
-                      >
-                        {isWaitingForResponse ? (
-                          <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/20 border-t-current animate-spin" />
-                        ) : (
-                          <Send className="h-5 w-5" />
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default PDFViewer;
+                                ? "ml-auto bg

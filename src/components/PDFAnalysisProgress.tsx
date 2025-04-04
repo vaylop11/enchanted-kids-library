@@ -2,7 +2,7 @@
 import { Progress } from "@/components/ui/progress";
 import { AnalysisProgress } from "@/services/pdfAnalysisService";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { FileText, Brain, Sparkles, CheckCircle, AlertTriangle, Loader } from "lucide-react";
+import { FileText, Brain, Sparkles, CheckCircle, AlertTriangle, Loader, FileSearch } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,7 +35,7 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
       case 'extracting':
         return <FileText className="h-5 w-5 animate-pulse" />;
       case 'analyzing':
-        return <Brain className="h-5 w-5 animate-pulse" />;
+        return <FileSearch className="h-5 w-5 animate-pulse" />;
       case 'generating':
         return <Sparkles className="h-5 w-5 animate-pulse" />;
       case 'complete':
@@ -78,6 +78,7 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
             "flex items-center gap-1 text-xs font-medium",
             analysis.stage === 'error' ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" :
             analysis.stage === 'complete' ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
+            analysis.stage === 'analyzing' ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" :
             "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
           )}
         >
@@ -93,7 +94,8 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
           className={cn(
             "h-full transition-all duration-300 ease-out rounded-full",
             analysis.stage === 'error' ? "bg-red-500" :
-            analysis.stage === 'complete' ? "bg-green-500" : "bg-primary",
+            analysis.stage === 'complete' ? "bg-green-500" : 
+            analysis.stage === 'analyzing' ? "bg-amber-500" : "bg-primary",
             analysis.stage !== 'complete' && analysis.stage !== 'error' && "animate-pulse"
           )}
           style={{ width: `${analysis.progress}%` }}

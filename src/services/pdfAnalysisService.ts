@@ -60,7 +60,7 @@ export const extractTextFromPDF = async (
     const totalPages = pdf.numPages;
     const { quickMode, maxPages } = extractionOptions;
     
-    // If in quick mode, only process a limited number of pages
+    // Always process all pages unless quickMode is explicitly set to true
     const pagesToProcess = quickMode && maxPages ? Math.min(maxPages, totalPages) : totalPages;
     
     for (let i = 1; i <= pagesToProcess; i++) {
@@ -82,7 +82,7 @@ export const extractTextFromPDF = async (
         message: `Extracted page ${i}`
       });
       
-      // If in quick mode and we've extracted enough representative text (at least 5000 chars)
+      // Only break early if quickMode is explicitly set to true
       if (quickMode && fullText.length > 5000 && i >= Math.min(5, pagesToProcess)) {
         fullText += `\n\n[Note: Only the first ${i} pages were analyzed for quick response]`;
         break;
