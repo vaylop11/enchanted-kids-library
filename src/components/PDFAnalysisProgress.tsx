@@ -2,7 +2,7 @@
 import { Progress } from "@/components/ui/progress";
 import { AnalysisProgress } from "@/services/pdfAnalysisService";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { FileText, Brain, Sparkles, CheckCircle, AlertTriangle } from "lucide-react";
+import { FileText, Brain, Sparkles, CheckCircle, AlertTriangle, Loader } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +26,7 @@ const PDFAnalysisProgress = ({ analysis }: PDFAnalysisProgressProps) => {
       case 'error':
         return <AlertTriangle className="h-5 w-5 text-red-500" />;
       default:
-        return <FileText className="h-5 w-5" />;
+        return <Loader className="h-5 w-5 animate-spin" />;
     }
   };
 
@@ -71,7 +71,17 @@ const PDFAnalysisProgress = ({ analysis }: PDFAnalysisProgressProps) => {
           {analysis.progress}%
         </span>
       </div>
-      <Progress value={analysis.progress} className="h-2 w-full" />
+      <div className="relative w-full h-2 overflow-hidden bg-muted rounded-full">
+        <div 
+          className={cn(
+            "h-full transition-all duration-300 ease-out rounded-full",
+            analysis.stage === 'error' ? "bg-red-500" :
+            analysis.stage === 'complete' ? "bg-green-500" : "bg-primary",
+            analysis.stage !== 'complete' && analysis.stage !== 'error' && "animate-pulse"
+          )}
+          style={{ width: `${analysis.progress}%` }}
+        />
+      </div>
       <p className="text-xs text-muted-foreground mt-2">{analysis.message}</p>
     </div>
   );
