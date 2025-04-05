@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw } from 'lucide-react';
+import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
@@ -57,7 +58,9 @@ const PDFViewer = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState("1");
   const [pdfScale, setPdfScale] = useState(1.0);
+  const [pdfRotation, setPdfRotation] = useState(0);
   const [showPdfControls, setShowPdfControls] = useState(true);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -286,14 +289,47 @@ const PDFViewer = () => {
     }
   };
 
+  // PDF navigation and display handlers
   const handlePrevPage = () => {
-    setPageNumber(prevPage => Math.max(prevPage - 1, 1));
+    const newPage = Math.max(pageNumber - 1, 1);
+    setPageNumber(newPage);
+    setPageInputValue(newPage.toString());
   };
 
   const handleNextPage = () => {
     if (numPages) {
-      setPageNumber(prevPage => Math.min(prevPage + 1, numPages));
+      const newPage = Math.min(pageNumber + 1, numPages);
+      setPageNumber(newPage);
+      setPageInputValue(newPage.toString());
     }
+  };
+
+  // New page input handler
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPageInputValue(e.target.value.replace(/[^0-9]/g, ''));
+  };
+
+  const handlePageInputSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const pageNum = parseInt(pageInputValue);
+    if (isNaN(pageNum) || !numPages) {
+      setPageInputValue(pageNumber.toString());
+      return;
+    }
+    
+    const validPage = Math.max(1, Math.min(pageNum, numPages));
+    setPageNumber(validPage);
+    setPageInputValue(validPage.toString());
+  };
+
+  // New rotation handlers
+  const handleRotateClockwise = () => {
+    setPdfRotation((prev) => (prev + 90) % 360);
+  };
+
+  const handleRotateCounterClockwise = () => {
+    setPdfRotation((prev) => (prev - 90 + 360) % 360);
   };
 
   const handleZoomIn = () => {
@@ -701,50 +737,115 @@ const PDFViewer = () => {
               
               {showPdfControls && (
                 <div className="flex flex-wrap justify-between items-center p-4 bg-muted/20 border-b">
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center flex-wrap gap-4 w-full md:w-auto">
+                    {/* Page navigation controls */}
                     <div className="flex items-center space-x-2">
                       <Button 
                         variant="outline" 
-                        size="sm" 
+                        size="icon"
+                        className="h-8 w-8" 
                         onClick={handlePrevPage}
                         disabled={pageNumber <= 1 || pdfError !== null || !pdf.dataUrl}
                       >
-                        {language === 'ar' ? 'السابق' : 'Prev'}
+                        <ArrowLeft className="h-4 w-4" />
                       </Button>
-                      <span className="text-sm">
-                        {language === 'ar' 
-                          ? `${pageNumber} من ${numPages || '?'}`
-                          : `${pageNumber} of ${numPages || '?'}`
-                        }
-                      </span>
+                      
+                      <form onSubmit={handlePageInputSubmit} className="flex items-center">
+                        <Input
+                          type="text"
+                          value={pageInputValue}
+                          onChange={handlePageInputChange}
+                          onBlur={handlePageInputSubmit}
+                          className="page-number-input"
+                          disabled={pdfError !== null || !pdf.dataUrl}
+                          aria-label={language === 'ar' ? 'رقم الصفحة' : 'Page number'}
+                        />
+                        <span className="px-2 text-sm text-muted-foreground">/ {numPages || '?'}</span>
+                      </form>
+                      
                       <Button 
-                        variant="outline" 
-                        size="sm" 
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8" 
                         onClick={handleNextPage}
                         disabled={!numPages || pageNumber >= numPages || pdfError !== null || !pdf.dataUrl}
                       >
-                        {language === 'ar' ? 'التالي' : 'Next'}
+                        <ArrowLeft className="h-4 w-4 rotate-180" />
                       </Button>
                     </div>
                     
+                    {/* Zoom controls */}
                     <div className="flex items-center space-x-2">
                       <Button 
                         variant="outline" 
-                        size="sm" 
+                        size="icon"
+                        className="h-8 w-8"
                         onClick={handleZoomOut}
                         disabled={pdfError !== null || !pdf.dataUrl}
-                      >-</Button>
-                      <span className="text-sm">{Math.round(pdfScale * 100)}%</span>
+                      >
+                        -
+                      </Button>
+                      <span className="text-sm min-w-[50px] text-center">{Math.round(pdfScale * 100)}%</span>
                       <Button 
                         variant="outline" 
-                        size="sm" 
+                        size="icon"
+                        className="h-8 w-8"
                         onClick={handleZoomIn}
                         disabled={pdfError !== null || !pdf.dataUrl}
-                      >+</Button>
+                      >
+                        +
+                      </Button>
+                    </div>
+                    
+                    {/* Rotation controls */}
+                    <div className="flex items-center space-x-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              className="h-8 w-8 rotation-control"
+                              onClick={handleRotateCounterClockwise}
+                              disabled={pdfError !== null || !pdf.dataUrl}
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {language === 'ar' ? 'تدوير عكس عقارب الساعة' : 'Rotate counterclockwise'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              className="h-8 w-8 rotation-control"
+                              onClick={handleRotateClockwise}
+                              disabled={pdfError !== null || !pdf.dataUrl}
+                            >
+                              <RotateCw className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {language === 'ar' ? 'تدوير باتجاه عقارب الساعة' : 'Rotate clockwise'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      {pdfRotation !== 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {pdfRotation}°
+                        </span>
+                      )}
                     </div>
                   </div>
                   
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-muted-foreground mt-2 md:mt-0">
                     {language === 'ar' ? 'تم التحميل' : 'Uploaded'}: {pdf.uploadDate}
                   </div>
                 </div>
@@ -828,6 +929,7 @@ const PDFViewer = () => {
                     <Page 
                       pageNumber={pageNumber} 
                       scale={pdfScale}
+                      rotate={pdfRotation}
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
                       error={

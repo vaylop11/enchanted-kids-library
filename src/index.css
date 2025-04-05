@@ -194,4 +194,14 @@
     @apply rounded-lg p-3 bg-muted/90 border border-muted-foreground/10;
     max-width: 90%;
   }
+  
+  /* Page number input styles */
+  .page-number-input {
+    @apply w-16 text-center rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+  
+  /* Rotation control button styles */
+  .rotation-control {
+    @apply rounded-full p-2 hover:bg-muted transition-colors;
+  }
 }
