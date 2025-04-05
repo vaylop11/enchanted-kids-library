@@ -410,6 +410,15 @@ const PDFViewer = () => {
       setIsAnalyzing(true);
       setIsWaitingForResponse(true);
       
+      // Show the waiting state immediately
+      setAnalysisProgress({
+        stage: 'waiting',
+        progress: 15,
+        message: language === 'ar'
+          ? 'لحظة من فضلك، نعمل على إجابة سؤالك...'
+          : 'One moment please, working on your answer...'
+      });
+      
       try {
         let textContent = pdfTextContent;
         if (!textContent) {
@@ -452,7 +461,7 @@ const PDFViewer = () => {
           textContent, 
           userMessageContent, 
           updateAnalysisProgress, 
-          chatMessages.filter(m => m.isUser === false).slice(-5) // Increased from -3 to -5
+          chatMessages.filter(m => m.isUser === false).slice(-5)
         );
         
         let savedAiMessage: ChatMessage | null = null;

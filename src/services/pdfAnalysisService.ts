@@ -12,7 +12,8 @@ export type AnalysisStage =
   | 'analyzing' 
   | 'generating' 
   | 'complete' 
-  | 'error';
+  | 'error'
+  | 'waiting'; // Added waiting stage
 
 export interface AnalysisProgress {
   stage: AnalysisStage;
@@ -120,6 +121,16 @@ export const analyzePDFWithGemini = async (
   previousChat: any[] = []
 ): Promise<string> => {
   try {
+    // First set the waiting state before starting the analysis
+    updateProgress?.({
+      stage: 'waiting',
+      progress: 20,
+      message: 'Preparing your request...'
+    });
+    
+    // Short delay to show the waiting state
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
     updateProgress?.({
       stage: 'analyzing',
       progress: 30,

@@ -2,7 +2,7 @@
 import { Progress } from "@/components/ui/progress";
 import { AnalysisProgress } from "@/services/pdfAnalysisService";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { FileText, Brain, Sparkles, CheckCircle, AlertTriangle, Loader, FileSearch } from "lucide-react";
+import { FileText, Brain, Sparkles, CheckCircle, AlertTriangle, Loader, FileSearch, Dices } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,6 +42,8 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'error':
         return <AlertTriangle className="h-5 w-5 text-red-500" />;
+      case 'waiting':
+        return <Dices className="h-5 w-5 animate-spin" />;
       default:
         return <Loader className="h-5 w-5 animate-spin" />;
     }
@@ -55,6 +57,7 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
         case 'generating': return 'إنشاء الإجابة';
         case 'complete': return 'اكتمل';
         case 'error': return 'خطأ';
+        case 'waiting': return 'لحظة من فضلك';
         default: return '';
       }
     } else {
@@ -64,13 +67,21 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
         case 'generating': return 'Generating Answer';
         case 'complete': return 'Complete';
         case 'error': return 'Error';
+        case 'waiting': return 'One moment please';
         default: return '';
       }
     }
   };
 
+  // Special styling for waiting stage
+  const isWaiting = analysis.stage === 'waiting';
+  const waitingClass = isWaiting ? "animate-pulse" : "";
+
   return (
-    <div className="bg-muted/30 rounded-lg p-3 mb-4">
+    <div className={cn(
+      "bg-muted/30 rounded-lg p-3 mb-4",
+      isWaiting && "border border-primary/30"
+    )}>
       <div className="flex items-center justify-between mb-2">
         <Badge
           variant="outline"
@@ -79,6 +90,7 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
             analysis.stage === 'error' ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" :
             analysis.stage === 'complete' ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
             analysis.stage === 'analyzing' ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" :
+            analysis.stage === 'waiting' ? "bg-blue-100/50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300" :
             "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
           )}
         >
@@ -90,18 +102,33 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
         </span>
       </div>
       <div className="relative w-full h-2 overflow-hidden bg-muted rounded-full">
-        <div 
-          className={cn(
-            "h-full transition-all duration-300 ease-out rounded-full",
-            analysis.stage === 'error' ? "bg-red-500" :
-            analysis.stage === 'complete' ? "bg-green-500" : 
-            analysis.stage === 'analyzing' ? "bg-amber-500" : "bg-primary",
-            analysis.stage !== 'complete' && analysis.stage !== 'error' && "animate-pulse"
-          )}
-          style={{ width: `${analysis.progress}%` }}
-        />
+        {isWaiting ? (
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="animate-[progress_2s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-primary to-transparent h-full w-1/2" />
+          </div>
+        ) : (
+          <div 
+            className={cn(
+              "h-full transition-all duration-300 ease-out rounded-full",
+              analysis.stage === 'error' ? "bg-red-500" :
+              analysis.stage === 'complete' ? "bg-green-500" : 
+              analysis.stage === 'analyzing' ? "bg-amber-500" : "bg-primary",
+              analysis.stage !== 'complete' && analysis.stage !== 'error' && "animate-pulse"
+            )}
+            style={{ width: `${analysis.progress}%` }}
+          />
+        )}
       </div>
-      <p className="text-xs text-muted-foreground mt-2">{analysis.message}</p>
+      <div className={cn("flex items-center mt-2", waitingClass)}>
+        <p className="text-xs text-muted-foreground">{analysis.message}</p>
+        {isWaiting && (
+          <div className="ml-auto flex gap-1">
+            <span className="h-1.5 w-1.5 bg-primary rounded-full animate-[bounce_1.1s_infinite]"></span>
+            <span className="h-1.5 w-1.5 bg-primary rounded-full animate-[bounce_1.1s_0.2s_infinite]"></span>
+            <span className="h-1.5 w-1.5 bg-primary rounded-full animate-[bounce_1.1s_0.4s_infinite]"></span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
