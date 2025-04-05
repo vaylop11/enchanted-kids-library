@@ -21,8 +21,8 @@ const HeroSection = () => {
     ? (
         <>
           تفاعل مع ملفات PDF بطريقة ذكية مع{' '}
-          <span className="relative inline-block text-purple-600">
-            Gemi تشات PDF
+          <span className="relative inline-block text-purple-800">
+            Gemi ChatPDF
             <span className="absolute left-0 bottom-0 w-full h-1 bg-purple-400 rounded-md -z-10"></span>
           </span>
         </>
@@ -30,7 +30,7 @@ const HeroSection = () => {
     : (
         <>
           Chat with your PDFs intelligently with{' '}
-          <span className="relative inline-block text-purple-600">
+          <span className="relative inline-block text-purple-800">
             Gemi ChatPDF
             <span className="absolute left-0 bottom-0 w-full h-1 bg-purple-400 rounded-md -z-10"></span>
           </span>
