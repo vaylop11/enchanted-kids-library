@@ -326,7 +326,6 @@ const PDFViewer = () => {
           : 'Starting text extraction from PDF...'
       });
       
-      // Extract text from all pages by default (no quickMode)
       const text = await extractTextFromPDF(pdf.dataUrl, pdf.id, updateAnalysisProgress);
       setPdfTextContent(text);
       
@@ -410,7 +409,6 @@ const PDFViewer = () => {
       setIsAnalyzing(true);
       setIsWaitingForResponse(true);
       
-      // Show the waiting state immediately - add to scroll view
       setAnalysisProgress({
         stage: 'waiting',
         progress: 15,
@@ -432,7 +430,6 @@ const PDFViewer = () => {
               : 'Extracting text from PDF...'
           });
           
-          // Extract the full text without quickMode
           textContent = await extractPDFContent();
           
           if (!textContent) {
@@ -458,7 +455,6 @@ const PDFViewer = () => {
             : 'Generating accurate answer...'
         });
         
-        // Include more previous chat messages for better context
         const aiContent = await analyzePDFWithGemini(
           textContent, 
           userMessageContent, 
@@ -889,10 +885,6 @@ const PDFViewer = () => {
               {showChat && (
                 <>
                   <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: '60vh' }}>
-                    {isAnalyzing && (
-                      <PDFAnalysisProgress analysis={analysisProgress} />
-                    )}
-                    
                     {isLoadingMessages ? (
                       <div className="flex justify-center items-center h-full">
                         <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
@@ -1007,6 +999,12 @@ const PDFViewer = () => {
                             </div>
                           </div>
                         ))}
+
+                        {isAnalyzing && (
+                          <div className="mr-auto max-w-[80%]">
+                            <PDFAnalysisProgress analysis={analysisProgress} />
+                          </div>
+                        )}
                         <div ref={chatEndRef} />
                       </>
                     )}
