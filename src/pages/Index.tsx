@@ -14,8 +14,8 @@ const Index = () => {
   const { language } = useLanguage();
 
   const pageTitle = language === 'ar'
-    ? 'تشات PDF - محادثة ذكية مع ملفات PDF مجانًا | تحدث مع مستنداتك'
-    : 'Gemi ChatPDF - Free AI PDF Chat & Reader | Talk to Your Documents';
+    ? 'Gemi ChatPDF - اقرأ وتحدث مع ملفات PDF'
+    : 'Gemi ChatPDF - Free AI PDF Chat & Reader';
   
   const pageDescription = language === 'ar'
     ? 'دردش مع ملفات PDF مجانًا باستخدام الذكاء الاصطناعي! قم بتحميل أي ملف PDF واحصل على إجابات فورية. تشات PDF هي الطريقة الذكية لاستخراج المعلومات من المستندات.'
