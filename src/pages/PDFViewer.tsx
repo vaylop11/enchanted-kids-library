@@ -844,4 +844,55 @@ const PDFViewer = () => {
                             className={cn(
                               "flex flex-col p-3 rounded-lg max-w-[80%]",
                               message.isUser 
-                                ? "ml-auto bg
+                                ? "ml-auto bg-primary text-primary-foreground" 
+                                : "mr-auto bg-muted"
+                            )}
+                          >
+                            <div className="whitespace-pre-wrap text-sm">
+                              {message.content}
+                            </div>
+                            <div className="text-xs opacity-70 mt-1 text-right">
+                              {new Date(message.timestamp).toLocaleTimeString()}
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={chatEndRef} />
+                      </>
+                    )}
+                  </div>
+                  
+                  <form 
+                    onSubmit={handleChatSubmit} 
+                    className="border-t p-4 flex gap-2 items-end"
+                  >
+                    <Textarea
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      placeholder={language === 'ar' 
+                        ? "اكتب سؤالك حول محتوى الملف..."
+                        : "Type your question about the PDF content..."
+                      }
+                      className="resize-none min-h-[80px]"
+                      dir={language === 'ar' ? 'rtl' : 'ltr'}
+                      disabled={isWaitingForResponse}
+                    />
+                    <Button 
+                      type="submit" 
+                      size="icon" 
+                      className="h-10 w-10 rounded-full flex-shrink-0"
+                      disabled={!chatInput.trim() || isWaitingForResponse}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </form>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default PDFViewer;
