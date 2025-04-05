@@ -270,7 +270,7 @@ const PDFViewer = () => {
 
   useEffect(() => {
     scrollToLatestMessage();
-  }, [chatMessages]);
+  }, [chatMessages, isAnalyzing]);
 
   const handleShare = () => {
     if (navigator.share) {
@@ -410,7 +410,7 @@ const PDFViewer = () => {
       setIsAnalyzing(true);
       setIsWaitingForResponse(true);
       
-      // Show the waiting state immediately
+      // Show the waiting state immediately - add to scroll view
       setAnalysisProgress({
         stage: 'waiting',
         progress: 15,
@@ -418,6 +418,8 @@ const PDFViewer = () => {
           ? 'لحظة من فضلك، نعمل على إجابة سؤالك...'
           : 'One moment please, working on your answer...'
       });
+      
+      scrollToLatestMessage();
       
       try {
         let textContent = pdfTextContent;
@@ -588,7 +590,7 @@ const PDFViewer = () => {
     if (!id || !pdf) return;
     
     const confirmMessage = language === 'ar' 
-      ? '��ل أنت متأكد أنك تريد مسح جميع الرسائل؟'
+      ? 'هل أنت متأكد أنك تريد مسح جميع الرسائل؟'
       : 'Are you sure you want to clear all messages?';
       
     if (window.confirm(confirmMessage)) {
