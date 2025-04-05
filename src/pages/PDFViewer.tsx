@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -12,6 +12,17 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -564,6 +575,42 @@ const PDFViewer = () => {
     }
   };
 
+  const handleResetChat = () => {
+    if (!id || !pdf) return;
+    
+    const confirmMessage = language === 'ar' 
+      ? '��ل أنت متأكد أنك تريد مسح جميع الرسائل؟'
+      : 'Are you sure you want to clear all messages?';
+      
+    if (window.confirm(confirmMessage)) {
+      setChatMessages([]);
+      
+      if (isTempPdf) {
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          try {
+            const parsedData = JSON.parse(tempPdfData);
+            parsedData.fileData.chatMessages = [];
+            sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+          } catch (error) {
+            console.error('Error clearing chat messages from temporary PDF:', error);
+          }
+        }
+      }
+      
+      toast.success(language === 'ar' 
+        ? 'تم مسح المحادثة بنجاح'
+        : 'Chat cleared successfully');
+    }
+  };
+
+  const handleCopyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+    toast.success(language === 'ar' 
+      ? 'تم نسخ الرسالة إلى الحافظة'
+      : 'Message copied to clipboard');
+  };
+
   if (!pdf) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -797,12 +844,35 @@ const PDFViewer = () => {
                     {language === 'ar' ? 'دردشة مع هذا الملف' : 'Chat with this PDF'}
                   </h2>
                 </div>
-                <button 
-                  onClick={() => setShowChat(!showChat)}
-                  className="p-1 rounded-md hover:bg-muted transition-colors"
-                >
-                  {showChat ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                </button>
+                <div className="flex items-center gap-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={handleResetChat}
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          aria-label={language === 'ar' ? 'إعادة تعيين المحادثة' : 'Reset chat'}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {language === 'ar' ? 'إعادة تعيين المحادثة' : 'Reset chat'}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setShowChat(!showChat)}
+                    className="h-8 w-8"
+                  >
+                    {showChat ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                  </Button>
+                </div>
               </div>
               
               {showChat && (
@@ -842,7 +912,7 @@ const PDFViewer = () => {
                           <div 
                             key={message.id}
                             className={cn(
-                              "flex flex-col p-3 rounded-lg max-w-[80%]",
+                              "flex flex-col p-3 rounded-lg max-w-[80%] group relative",
                               message.isUser 
                                 ? "ml-auto bg-primary text-primary-foreground" 
                                 : "mr-auto bg-muted"
@@ -853,6 +923,76 @@ const PDFViewer = () => {
                             </div>
                             <div className="text-xs opacity-70 mt-1 text-right">
                               {new Date(message.timestamp).toLocaleTimeString()}
+                            </div>
+
+                            <div className={cn(
+                              "absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity", 
+                              message.isUser ? "left-2" : "right-2",
+                              "flex gap-1"
+                            )}>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-6 w-6 bg-background/80 backdrop-blur-sm rounded-full p-1"
+                                      onClick={() => handleCopyMessage(message.content)}
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {language === 'ar' ? 'نسخ' : 'Copy'}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    className="h-6 w-6 bg-background/80 backdrop-blur-sm rounded-full p-1"
+                                  >
+                                    <MoreHorizontal className="h-3 w-3" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-56 p-2">
+                                  <div className="space-y-1">
+                                    <h3 className="text-sm font-medium mb-2">
+                                      {language === 'ar' ? 'تفاصيل اضافية' : 'More Details'}
+                                    </h3>
+                                    <div className="text-xs text-muted-foreground space-y-2">
+                                      <div>
+                                        <span className="font-medium">{language === 'ar' ? 'النوع:' : 'Type:'}</span>{' '}
+                                        {message.isUser 
+                                          ? (language === 'ar' ? 'رسالة مستخدم' : 'User Message') 
+                                          : (language === 'ar' ? 'رد الذكاء الاصطناعي' : 'AI Response')}
+                                      </div>
+                                      <div>
+                                        <span className="font-medium">{language === 'ar' ? 'الوقت:' : 'Time:'}</span>{' '}
+                                        {new Date(message.timestamp).toLocaleString()}
+                                      </div>
+                                      <div>
+                                        <span className="font-medium">{language === 'ar' ? 'المعرف:' : 'ID:'}</span>{' '}
+                                        {message.id.substring(0, 8)}...
+                                      </div>
+                                      <div className="pt-1">
+                                        <Button 
+                                          variant="secondary" 
+                                          size="sm" 
+                                          className="w-full text-xs" 
+                                          onClick={() => handleCopyMessage(message.content)}
+                                        >
+                                          <Copy className="h-3 w-3 mr-1" />
+                                          {language === 'ar' ? 'نسخ الرسالة' : 'Copy Message'}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
                             </div>
                           </div>
                         ))}
