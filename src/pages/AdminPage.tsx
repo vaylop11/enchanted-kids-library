@@ -58,7 +58,7 @@ const AdminPage = () => {
   }
   
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-background/95 via-muted/5">
       <Navbar />
       
       <main className="flex-1 pt-24 pb-20 px-4 md:px-6">
