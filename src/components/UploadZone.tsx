@@ -259,8 +259,8 @@ const UploadZone = () => {
       ) : (
         <div
           className={`relative p-8 border-2 border-dashed rounded-xl transition-colors duration-200 w-full ${
-            isDragging ? 'border-primary bg-primary/50' : 'border-border'
-          } hover:border-primary/500 hover:bg-muted/30 ${hasReachedMaxPDFs ? 'opacity-70 pointer-events-none' : ''}`}
+            isDragging ? 'border-primary bg-primary/20' : 'border-border'
+          } hover:border-primary/50 hover:bg-muted/30 ${hasReachedMaxPDFs ? 'opacity-70 pointer-events-none' : ''}`}
           onDragOver={hasReachedMaxPDFs ? undefined : handleDragOver}
           onDragLeave={hasReachedMaxPDFs ? undefined : handleDragLeave}
           onDrop={hasReachedMaxPDFs ? undefined : handleDrop}
