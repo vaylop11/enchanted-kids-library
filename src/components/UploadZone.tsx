@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import { File, Upload, AlertTriangle } from 'lucide-react';
+import { File, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
@@ -297,8 +297,8 @@ const UploadZone = () => {
             disabled={isUploading || hasReachedMaxPDFs}
           />
           
-          <div className="flex flex-col md:flex-row items-center justify-center gap-6 text-center">
-            <div className="w-full md:w-1/2 max-w-[250px] mb-4 md:mb-0">
+          <div className="flex flex-col items-center justify-center gap-6 text-center">
+            <div className="w-full max-w-[280px] mb-4">
               <img 
                 src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/Generated%20Image%20April%2006,%202025%20-%2012_51AM%20(1).png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvR2VuZXJhdGVkIEltYWdlIEFwcmlsIDA2LCAyMDI1IC0gMTJfNTFBTSAoMSkucG5nIiwiaWF0IjoxNzQzODk5NDAyLCJleHAiOjE3NzU0MzU0MDJ9.E_gIvYsWG6SPy7xc-wdvo4lXLEWkB4G_AreBPy-xyWY" 
                 alt="PDF Chat Illustration" 
@@ -310,25 +310,36 @@ const UploadZone = () => {
               />
             </div>
             
-            <div className="md:w-1/2 flex flex-col items-center justify-center space-y-4">
-              <div className="h-16 w-16 rounded-full bg-purple-100 flex items-center justify-center">
-                {isUploading ? (
-                  <div className="h-8 w-8 rounded-full border-2 border-purple-800 border-t-transparent animate-spin" />
-                ) : (
-                  <Upload className="h-8 w-8 text-purple-800" />
-                )}
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-medium mb-1">
-                  {language === 'ar' ? 'قم بتحميل ملف PDF' : 'Upload PDF File'}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {language === 'ar'
-                    ? 'اسحب وأفلت أو انقر لاختيار ملف (بحد أقصى 10 ميجابايت)'
-                    : 'Drag and drop or click to select a file (max 10MB)'
-                  }
+            {isUploading ? (
+              <div className="w-full max-w-xs">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-purple-800 transition-all duration-300 ease-out"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {uploadProgress}% {language === 'ar' ? 'تم التحميل' : 'Uploaded'}
                 </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-sm text-purple-800 font-medium">
+                  {language === 'ar' ? 'الحد الأقصى 10 ميجابايت' : 'Max 10MB'}
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="border-purple-800 text-purple-800 hover:bg-purple-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerFileInput();
+                  }}
+                  disabled={isUploading || hasReachedMaxPDFs}
+                >
+                  <File className="mr-2 h-4 w-4" />
+                  {language === 'ar' ? 'اختر ملف' : 'Select File'}
+                </Button>
+                
                 {user ? (
                   <p className="text-xs text-muted-foreground mt-2">
                     {language === 'ar'
@@ -339,40 +350,13 @@ const UploadZone = () => {
                 ) : (
                   <p className="text-xs text-amber-600 mt-2">
                     {language === 'ar'
-                      ? 'ملاحظة: يمكنك التحدث مع الملف مؤقتًا. سجل الدخول لحفظ الملفات'
-                      : 'Note: You can chat with the file temporarily. Sign in to save files'
+                      ? 'ملاحظة: سجل الدخول لحفظ الملفات'
+                      : 'Note: Sign in to save files'
                     }
                   </p>
                 )}
               </div>
-              
-              {isUploading ? (
-                <div className="w-full max-w-xs">
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-purple-800 transition-all duration-300 ease-out"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {uploadProgress}% {language === 'ar' ? 'تم التحميل' : 'Uploaded'}
-                  </p>
-                </div>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  className="mt-2 border-purple-800 text-purple-800 hover:bg-purple-50"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerFileInput();
-                  }}
-                  disabled={isUploading || hasReachedMaxPDFs}
-                >
-                  <File className="mr-2 h-4 w-4" />
-                  {language === 'ar' ? 'اختر ملف' : 'Select File'}
-                </Button>
-              )}
-            </div>
+            )}
           </div>
         </div>
       )}
