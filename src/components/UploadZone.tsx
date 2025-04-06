@@ -302,7 +302,7 @@ const UploadZone = () => {
               <img 
                 src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/Generated%20Image%20April%2006,%202025%20-%2012_51AM%20(1).png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvR2VuZXJhdGVkIEltYWdlIEFwcmlsIDA2LCAyMDI1IC0gMTJfNTFBTSAoMSkucG5nIiwiaWF0IjoxNzQzODk5NDAyLCJleHAiOjE3NzU0MzU0MDJ9.E_gIvYsWG6SPy7xc-wdvo4lXLEWkB4G_AreBPy-xyWY" 
                 alt="PDF Chat Illustration" 
-                className="max-w-full h-auto rounded-lg shadow-md"
+                className="max-w-full h-auto rounded-lg"
                 onError={(e) => {
                   console.error("Image failed to load");
                   (e.target as HTMLImageElement).style.display = 'none';
