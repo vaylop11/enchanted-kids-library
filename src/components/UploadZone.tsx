@@ -282,108 +282,124 @@ const UploadZone = () => {
           </div>
         </div>
       ) : (
-        <div
-          className={`relative p-8 border-2 border-dashed rounded-xl transition-colors duration-200 ${
-            isDragging ? 'border-primary bg-primary/5' : 'border-border'
-          } hover:border-primary/50 hover:bg-muted/30 ${hasReachedMaxPDFs ? 'opacity-70 pointer-events-none' : ''}`}
-          onDragOver={hasReachedMaxPDFs ? undefined : handleDragOver}
-          onDragLeave={hasReachedMaxPDFs ? undefined : handleDragLeave}
-          onDrop={hasReachedMaxPDFs ? undefined : handleDrop}
-          onClick={isUploading || hasReachedMaxPDFs ? undefined : triggerFileInput}
-        >
-          {hasReachedMaxPDFs && (
-            <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10 rounded-xl">
-              <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800 max-w-sm text-center">
-                <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-500 mx-auto mb-2" />
-                <p className="text-sm text-amber-800 dark:text-amber-300">
-                  {language === 'ar' 
-                    ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
-                    : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.'
+        <div className="flex flex-col lg:flex-row gap-6 items-center">
+          {/* PDF Illustration Image */}
+          <div className="w-full lg:w-2/5 flex justify-center">
+            <img 
+              src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/Generated%20Image%20April%2006,%202025%20-%2012_51AM%20(1).png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvR2VuZXJhdGVkIEltYWdlIEFwcmlsIDA2LCAyMDI1IC0gMTJfNTFBTSAoMSkucG5nIiwiaWF0IjoxNzQzODk5NDAyLCJleHAiOjE3NzU0MzU0MDJ9.E_gIvYsWG6SPy7xc-wdvo4lXLEWkB4G_AreBPy-xyWY" 
+              alt="PDF Chat Illustration" 
+              className="max-w-full h-auto rounded-lg shadow-lg"
+              onError={(e) => {
+                console.error("Image failed to load");
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          </div>
+
+          {/* Upload Zone */}
+          <div
+            className={`relative p-8 border-2 border-dashed rounded-xl transition-colors duration-200 w-full lg:w-3/5 ${
+              isDragging ? 'border-primary bg-primary/5' : 'border-border'
+            } hover:border-primary/50 hover:bg-muted/30 ${hasReachedMaxPDFs ? 'opacity-70 pointer-events-none' : ''}`}
+            onDragOver={hasReachedMaxPDFs ? undefined : handleDragOver}
+            onDragLeave={hasReachedMaxPDFs ? undefined : handleDragLeave}
+            onDrop={hasReachedMaxPDFs ? undefined : handleDrop}
+            onClick={isUploading || hasReachedMaxPDFs ? undefined : triggerFileInput}
+          >
+            {hasReachedMaxPDFs && (
+              <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10 rounded-xl">
+                <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800 max-w-sm text-center">
+                  <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-500 mx-auto mb-2" />
+                  <p className="text-sm text-amber-800 dark:text-amber-300">
+                    {language === 'ar' 
+                      ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
+                      : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.'
+                    }
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={handleNavigateToPDFs}
+                  >
+                    {language === 'ar' ? 'إدارة ملفاتي' : 'Manage My Files'}
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf"
+              onChange={handleFileChange}
+              disabled={isUploading || hasReachedMaxPDFs}
+            />
+            
+            <div className="flex flex-col items-center justify-center text-center space-y-4">
+              <div className="h-16 w-16 rounded-full bg-purple-100 flex items-center justify-center">
+                {isUploading ? (
+                  <div className="h-8 w-8 rounded-full border-2 border-purple-800 border-t-transparent animate-spin" />
+                ) : (
+                  <Upload className="h-8 w-8 text-purple-800" />
+                )}
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium mb-1">
+                  {language === 'ar' ? 'قم بتحميل ملف PDF' : 'Upload PDF File'}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {language === 'ar'
+                    ? 'اسحب وأفلت أو انقر لاختيار ملف (بحد أقصى 10 ميجابايت)'
+                    : 'Drag and drop or click to select a file (max 10MB)'
                   }
                 </p>
+                {user ? (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {language === 'ar'
+                      ? `${userPDFCount}/4 ملفات تم تحميلها`
+                      : `${userPDFCount}/4 PDFs uploaded`
+                    }
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-600 mt-2">
+                    {language === 'ar'
+                      ? 'ملاحظة: يمكنك التحدث مع الملف مؤقتًا. سجل الدخول لحفظ الملفات'
+                      : 'Note: You can chat with the file temporarily. Sign in to save files'
+                    }
+                  </p>
+                )}
+              </div>
+              
+              {isUploading ? (
+                <div className="w-full max-w-xs">
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-purple-800 transition-all duration-300 ease-out"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {uploadProgress}% {language === 'ar' ? 'تم التحميل' : 'Uploaded'}
+                  </p>
+                </div>
+              ) : (
                 <Button 
                   variant="outline" 
-                  size="sm" 
                   className="mt-2"
-                  onClick={handleNavigateToPDFs}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerFileInput();
+                  }}
+                  disabled={isUploading || hasReachedMaxPDFs}
                 >
-                  {language === 'ar' ? 'إدارة ملفاتي' : 'Manage My Files'}
+                  <File className="mr-2 h-4 w-4" />
+                  {language === 'ar' ? 'اختر ملف' : 'Select File'}
                 </Button>
-              </div>
-            </div>
-          )}
-          
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept=".pdf"
-            onChange={handleFileChange}
-            disabled={isUploading || hasReachedMaxPDFs}
-          />
-          
-          <div className="flex flex-col items-center justify-center text-center space-y-4">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              {isUploading ? (
-                <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-              ) : (
-                <Upload className="h-8 w-8 text-primary" />
               )}
             </div>
-            
-            <div>
-              <h3 className="text-lg font-medium mb-1">
-                {language === 'ar' ? 'قم بتحميل ملف PDF' : 'Upload PDF File'}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {language === 'ar'
-                  ? 'اسحب وأفلت أو انقر لاختيار ملف (بحد أقصى 10 ميجابايت)'
-                  : 'Drag and drop or click to select a file (max 10MB)'
-                }
-              </p>
-              {user ? (
-                <p className="text-xs text-muted-foreground mt-2">
-                  {language === 'ar'
-                    ? `${userPDFCount}/4 ملفات تم تحميلها`
-                    : `${userPDFCount}/4 PDFs uploaded`
-                  }
-                </p>
-              ) : (
-                <p className="text-xs text-amber-600 mt-2">
-                  {language === 'ar'
-                    ? 'ملاحظة: يمكنك التحدث مع الملف مؤقتًا. سجل الدخول لحفظ الملفات'
-                    : 'Note: You can chat with the file temporarily. Sign in to save files'
-                  }
-                </p>
-              )}
-            </div>
-            
-            {isUploading ? (
-              <div className="w-full max-w-xs">
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary transition-all duration-300 ease-out"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {uploadProgress}% {language === 'ar' ? 'تم التحميل' : 'Uploaded'}
-                </p>
-              </div>
-            ) : (
-              <Button 
-                variant="outline" 
-                className="mt-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  triggerFileInput();
-                }}
-                disabled={isUploading || hasReachedMaxPDFs}
-              >
-                <File className="mr-2 h-4 w-4" />
-                {language === 'ar' ? 'اختر ملف' : 'Select File'}
-              </Button>
-            )}
           </div>
         </div>
       )}
@@ -400,7 +416,7 @@ const UploadZone = () => {
           <Button 
             variant="link" 
             onClick={handleSignIn}
-            className="text-xs"
+            className="text-xs text-purple-800 hover:text-purple-900"
           >
             {language === 'ar'
               ? 'تسجيل الدخول لحفظ ملفات PDF الخاصة بك'

@@ -45,7 +45,7 @@ const HeroSection = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button asChild size="lg" className="px-8">
+            <Button asChild size="lg" className="px-8 bg-purple-800 hover:bg-purple-900">
               <Link 
                 to="/pdfs" 
                 aria-label={language === 'ar' ? 'ابدأ استخدام تشات PDF الآن' : 'Get started with Gemi ChatPDF now'}
@@ -53,7 +53,7 @@ const HeroSection = () => {
                 {language === 'ar' ? 'ابدأ الآن' : 'Get Started'}
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="px-8">
+            <Button asChild variant="outline" size="lg" className="px-8 border-purple-800 text-purple-800 hover:bg-purple-50">
               <Link 
                 to="/blog" 
                 aria-label={language === 'ar' ? 'تعلم المزيد عن خدمات تشات PDF' : 'Learn more about Gemi ChatPDF services'}
@@ -65,7 +65,7 @@ const HeroSection = () => {
         </div>
       </div>
       
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-background z-0"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-purple-100/20 to-background z-0"></div>
     </section>
   );
 };
