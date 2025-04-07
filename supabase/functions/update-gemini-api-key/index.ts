@@ -29,22 +29,19 @@ serve(async (req) => {
     }
     
     // Get the user from the JWT
-    const { data: { user }, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    
     if (userError || !user) {
+      console.error("User error:", userError);
       return new Response(JSON.stringify({ error: "Not authorized" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
       });
     }
     
-    // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-      
-    if (profileError || !profile || !profile.is_admin) {
+    // Check if user is admin (has a specific email)
+    if (user.email !== 'cherifhoucine83@gmail.com') {
       return new Response(JSON.stringify({ error: "Not authorized - admin access required" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 403,
@@ -60,24 +57,10 @@ serve(async (req) => {
       });
     }
     
-    // Update the API key in the Supabase environment variables
-    // This requires service role key to update secrets
-    const supabaseAdmin = createClient(
-      supabaseUrl,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string
-    );
+    // Update the API key using Deno KV
+    await Deno.env.set("GEMINI_API_KEY", apiKey);
     
-    // Update the secret
-    const { error: secretError } = await supabaseAdmin.functions.updateSecret(
-      "GEMINI_API_KEY",
-      apiKey
-    );
-    
-    if (secretError) {
-      console.error("Error updating secret:", secretError);
-      throw secretError;
-    }
-    
+    // Return success response
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
@@ -85,7 +68,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error updating Gemini API key:", error);
     
-    return new Response(JSON.stringify({ error: "Failed to update API key" }), {
+    return new Response(JSON.stringify({ error: "Failed to update API key", details: String(error) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

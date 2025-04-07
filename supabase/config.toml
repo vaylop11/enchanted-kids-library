@@ -1,1 +1,27 @@
+
 project_id = "nknrkkzegbrkqtutmafo"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+
+[db]
+port = 54322
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+
+[storage]
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+
+[functions]
+[functions.update-gemini-api-key]
+verify_jwt = true
