@@ -73,7 +73,23 @@ const Index = () => {
         <BlogSection />
         <FAQSection />
       </main>
-
+<section className="bg-muted/10 py-8">
+  <div className="container mx-auto px-4 text-center">
+    <p className="text-lg font-medium mb-4 text-primary">
+      {language === 'ar' 
+        ? 'ادعم Gemi ChatPDF واستمرارية تطويره' 
+        : 'Support Gemi ChatPDF and its continued development'}
+    </p>
+    <a 
+      href="https://ko-fi.com/gemichatpdf" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="inline-block px-6 py-3 text-white bg-pink-600 hover:bg-pink-500 transition-colors duration-200 rounded-2xl font-semibold shadow-md"
+    >
+      ☕ {language === 'ar' ? 'اشترِ لنا قهوة على Ko-fi' : 'Buy us a Coffee on Ko-fi'}
+    </a>
+  </div>
+</section>
       <Footer />
     </div>
   );
