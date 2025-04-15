@@ -1,37 +1,51 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, CheckCircle, FileUp, Languages, Zap } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import SEO from '@/components/SEO';
 import ProSubscriptionCard from '@/components/ProSubscriptionCard';
+import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
+import { createSubscription, getSubscriptionPlans, type SubscriptionPlan } from '@/services/subscriptionService';
 
 const SubscribePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const { user } = useAuth();
+  const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
   
-  const redirectedFromSignIn = searchParams.get('from') === 'signin';
+  useEffect(() => {
+    const loadPlan = async () => {
+      const plans = await getSubscriptionPlans();
+      if (plans.length > 0) {
+        setPlan(plans[0]); // Get the first plan (our PRO plan)
+      }
+    };
+    
+    loadPlan();
+  }, []);
   
   React.useEffect(() => {
-    // If user is not authenticated, redirect to sign in
     if (!user) {
       navigate('/signin?redirect=subscribe');
     }
   }, [user, navigate]);
-  
-  const handleCheckout = () => {
-    // This is where you would integrate with a payment provider like Stripe
-    // For now, we'll just show a success message
-    alert('Subscription functionality coming soon!');
+
+  const handlePayPalApprove = async (data: { subscriptionID: string }) => {
+    if (!plan) return;
+    
+    try {
+      await createSubscription(data.subscriptionID, plan.id);
+      navigate('/pdfs'); // Redirect to PDFs page after successful subscription
+    } catch (error) {
+      console.error('Error processing subscription:', error);
+    }
   };
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background via-muted/5">
       <SEO 
@@ -122,13 +136,24 @@ const SubscribePage = () => {
               </div>
             </div>
             
-            <Button 
-              onClick={handleCheckout}
-              size="lg" 
-              className="w-full py-6 text-lg"
-            >
-              {language === 'ar' ? 'اشترك الآن بـ 9.99$ شهرياً' : 'Subscribe Now for $9.99/month'}
-            </Button>
+            {plan && (
+              <PayPalScriptProvider options={{ 
+                "client-id": "YOUR_PAYPAL_CLIENT_ID",
+                vault: true,
+                intent: "subscription"
+              }}>
+                <PayPalButtons
+                  createSubscription={(data, actions) => {
+                    return actions.subscription.create({
+                      'plan_id': plan.paypal_plan_id
+                    });
+                  }}
+                  onApprove={handlePayPalApprove}
+                  style={{ layout: "vertical" }}
+                  className="w-full mt-4"
+                />
+              </PayPalScriptProvider>
+            )}
             
             <p className="text-sm text-center text-muted-foreground mt-3">
               {language === 'ar' 
