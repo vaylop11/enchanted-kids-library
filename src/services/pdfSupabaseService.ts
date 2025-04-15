@@ -1,5 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { BasePDF, PDF, SupabasePDF, PDFChatMessage } from '@/types/pdf';
 
 // Base PDF interface with common properties
 export interface BasePDF {
@@ -82,20 +82,24 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
     if (error) throw error;
     
     // Transform data to match the SupabasePDF interface with additional compatibility properties
-    const transformedData = data.map(pdf => {
+    const transformedData = await Promise.all(data.map(async (pdf) => {
       // Get file URL for each PDF
       const { data: urlData } = supabase.storage
         .from('pdfs')
         .getPublicUrl(pdf.file_path);
         
+      // Try to generate a thumbnail from the first page of the PDF
+      const thumbnailUrl = `${urlData.publicUrl}?page=1&width=300`;
+      
       return {
         ...pdf,
         pageCount: pdf.page_count,
         fileSize: pdf.file_size,
         uploadDate: pdf.upload_date,
-        fileUrl: urlData.publicUrl
+        fileUrl: urlData.publicUrl,
+        thumbnail: thumbnailUrl
       };
-    });
+    }));
 
     return transformedData;
   } catch (error) {

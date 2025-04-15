@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { MoreVertical, FileText, Trash, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -12,8 +13,6 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { deletePDF, SupabasePDF, PDF } from '@/services/pdfSupabaseService';
-
-export type { PDF };
 
 type PDFCardProps = {
   pdf: PDF | SupabasePDF;
@@ -48,8 +47,22 @@ const PDFCard: React.FC<PDFCardProps> = ({ pdf, index, onDelete }) => {
                      'upload_date' in pdf ? pdf.upload_date : 
                      new Date().toISOString().split('T')[0];
 
+  // Determine thumbnail, use a default if not available
+  const thumbnailUrl = 'thumbnail' in pdf && pdf.thumbnail ? pdf.thumbnail : 
+                       'fileUrl' in pdf && pdf.fileUrl ? `${pdf.fileUrl}?page=1&width=300` : 
+                       '/placeholder.svg';
+
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow duration-300 h-full flex flex-col">
+      {/* Thumbnail Section */}
+      <div className="relative w-full aspect-video overflow-hidden">
+        <img 
+          src={thumbnailUrl} 
+          alt={`${pdf.title} thumbnail`} 
+          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+          loading="lazy"
+        />
+      </div>
       
       <CardContent className="pt-6 pb-2 flex flex-col flex-1">
         <div className="mb-2 flex items-start justify-between">
