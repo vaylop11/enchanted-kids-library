@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MoreVertical, FileText, Trash, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -12,8 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
-import { deletePDF, SupabasePDF } from '@/services/pdfSupabaseService';
-import { PDF } from '@/types/pdf';
+import { deletePDF } from '@/services/pdfSupabaseService';
+import type { PDF, SupabasePDF } from '@/types/pdf';
 
 type PDFCardProps = {
   pdf: PDF | SupabasePDF;

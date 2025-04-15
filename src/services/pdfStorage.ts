@@ -1,7 +1,6 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import { UploadedPDF, ChatMessage } from '@/types/pdf';
+import type { UploadedPDF, ChatMessage } from '@/types/pdf';
 
 const PDF_STORAGE_KEY = 'pdf_storage';
 const MAX_PDF_COUNT = 50; // Maximum number of PDFs to store

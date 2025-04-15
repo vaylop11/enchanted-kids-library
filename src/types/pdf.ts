@@ -36,7 +36,7 @@ export interface PDFChatMessage {
 }
 
 // For the PDF storage service
-export interface UploadedPDF extends BasePDF {
+export interface UploadedPDF {
   id: string;
   title: string;
   summary: string;

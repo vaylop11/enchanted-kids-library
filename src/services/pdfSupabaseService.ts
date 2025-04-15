@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
-import { BasePDF, PDF, SupabasePDF, PDFChatMessage } from '@/types/pdf';
+import type { BasePDF, PDF, SupabasePDF, PDFChatMessage, ChatMessage, UploadedPDF } from '@/types/pdf';
 
-export { BasePDF, PDF, SupabasePDF, PDFChatMessage };
+export type { BasePDF, PDF, SupabasePDF, PDFChatMessage, ChatMessage, UploadedPDF };
 
 export const getSupabasePDFById = async (id: string) => {
   try {
