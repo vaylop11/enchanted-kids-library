@@ -30,24 +30,53 @@ serve(async (req) => {
       );
     }
 
+    // Check if text is empty or just whitespace
+    if (!text.trim()) {
+      return new Response(
+        JSON.stringify({ 
+          translatedText: '',
+          detectedSourceLanguage: null,
+          isMarkdown: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Using flash model instead of pro for better rate limits
 
     const prompt = `Translate the following text to ${targetLanguage}. Format the output in markdown to preserve formatting, headings, and structure. Only respond with the translated text in markdown format, nothing else:
 
 ${text}`;
 
-    const result = await model.generateContent(prompt);
-    const translatedText = result.response.text();
-    
-    return new Response(
-      JSON.stringify({ 
-        translatedText,
-        detectedSourceLanguage: null,
-        isMarkdown: true
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    try {
+      const result = await model.generateContent(prompt);
+      const translatedText = result.response.text();
+      
+      return new Response(
+        JSON.stringify({ 
+          translatedText,
+          detectedSourceLanguage: null,
+          isMarkdown: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (modelError) {
+      console.error('Gemini API Error:', modelError.message);
+      
+      // Check if it's a quota error
+      if (modelError.message && modelError.message.includes('429')) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Translation quota exceeded. Please try again in a few moments.',
+            isQuotaError: true 
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      throw modelError;
+    }
   } catch (error) {
     console.error('Error in translate-text function:', error);
     return new Response(
