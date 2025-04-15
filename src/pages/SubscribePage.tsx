@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -5,7 +6,7 @@ import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileUp, Languages, Zap } from 'lucide-react';
 import SEO from '@/components/SEO';
 import ProSubscriptionCard from '@/components/ProSubscriptionCard';
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
@@ -35,7 +36,7 @@ const SubscribePage = () => {
     }
   }, [user, navigate]);
 
-  const handlePayPalApprove = async (data: { subscriptionID: string }) => {
+  const handlePayPalApprove = async (data: any) => {
     if (!plan) return;
     
     try {
@@ -138,7 +139,7 @@ const SubscribePage = () => {
             
             {plan && (
               <PayPalScriptProvider options={{ 
-                "client-id": "YOUR_PAYPAL_CLIENT_ID",
+                clientId: "YOUR_PAYPAL_CLIENT_ID",
                 vault: true,
                 intent: "subscription"
               }}>
