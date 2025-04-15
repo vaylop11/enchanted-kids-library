@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
     // Verify subscription with PayPal
     const accessToken = await getPayPalAccessToken()
     const subscription = await verifySubscription(subscriptionId, accessToken)
+    console.log("Subscription details from PayPal:", subscription)
 
     if (subscription.status === 'ACTIVE') {
       // Store subscription in database

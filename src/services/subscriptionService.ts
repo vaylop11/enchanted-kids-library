@@ -48,3 +48,23 @@ export const createSubscription = async (subscriptionId: string, planId: string)
     throw error;
   }
 };
+
+export const getPayPalPlanIdFromDatabase = async (): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('subscription_plans')
+      .select('paypal_plan_id')
+      .single();
+    
+    if (error) {
+      console.error('Error fetching PayPal plan ID:', error);
+      return null;
+    }
+    
+    console.log("Retrieved PayPal plan ID:", data?.paypal_plan_id);
+    return data?.paypal_plan_id || null;
+  } catch (error) {
+    console.error('Error retrieving PayPal plan ID:', error);
+    return null;
+  }
+};

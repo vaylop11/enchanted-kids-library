@@ -10,7 +10,12 @@ import { ArrowLeft, FileUp, Languages, Zap } from 'lucide-react';
 import SEO from '@/components/SEO';
 import ProSubscriptionCard from '@/components/ProSubscriptionCard';
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
-import { createSubscription, getSubscriptionPlans, type SubscriptionPlan } from '@/services/subscriptionService';
+import { 
+  createSubscription, 
+  getSubscriptionPlans, 
+  type SubscriptionPlan,
+  getPayPalPlanIdFromDatabase 
+} from '@/services/subscriptionService';
 import { toast } from 'sonner';
 
 const SubscribePage = () => {
@@ -20,6 +25,8 @@ const SubscribePage = () => {
   const { user } = useAuth();
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [paypalPlanId, setPaypalPlanId] = useState<string | null>(null);
+  const [paypalError, setPaypalError] = useState<string | null>(null);
   
   useEffect(() => {
     const loadPlan = async () => {
@@ -29,6 +36,15 @@ const SubscribePage = () => {
         console.log("Loaded plans:", plans);
         if (plans.length > 0) {
           setPlan(plans[0]); // Get the first plan (our PRO plan)
+          
+          // Separately fetch PayPal Plan ID to ensure we have it
+          const paypalId = await getPayPalPlanIdFromDatabase();
+          if (paypalId) {
+            setPaypalPlanId(paypalId);
+            console.log("Set PayPal Plan ID:", paypalId);
+          } else {
+            setPaypalError("Missing PayPal plan ID. Please contact support.");
+          }
         }
       } catch (error) {
         console.error("Error loading subscription plans:", error);
@@ -65,6 +81,16 @@ const SubscribePage = () => {
         ? 'حدث خطأ أثناء معالجة الاشتراك'
         : 'Error processing subscription');
     }
+  };
+
+  const handlePayPalError = (error: Record<string, unknown>) => {
+    console.error('PayPal error:', error);
+    setPaypalError(language === 'ar' 
+      ? 'خطأ في معالجة الدفع. يرجى المحاولة مرة أخرى.' 
+      : 'Error processing payment. Please try again.');
+    toast.error(language === 'ar' 
+      ? 'خطأ في PayPal. يرجى المحاولة مرة أخرى لاحقًا.' 
+      : 'PayPal error. Please try again later.');
   };
 
   return (
@@ -161,7 +187,7 @@ const SubscribePage = () => {
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                 <span className="ml-3">{language === 'ar' ? 'جاري التحميل...' : 'Loading...'}</span>
               </div>
-            ) : plan ? (
+            ) : plan && paypalPlanId ? (
               <div className="bg-background rounded-lg border p-4 mb-4">
                 <h3 className="font-medium text-lg mb-2">
                   {language === 'ar' ? 'تفاصيل الاشتراك:' : 'Subscription Details:'}
@@ -169,6 +195,14 @@ const SubscribePage = () => {
                 <p className="text-lg font-semibold mb-4">
                   {plan.name} - ${plan.price}/{plan.interval}
                 </p>
+                
+                <div className="my-4 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-md">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    {language === 'ar' 
+                      ? 'سيتم استخدام خطة PayPal التالية: ' + paypalPlanId
+                      : 'Using PayPal plan: ' + paypalPlanId}
+                  </p>
+                </div>
                 
                 <PayPalScriptProvider options={{ 
                   clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID,
@@ -178,22 +212,23 @@ const SubscribePage = () => {
                 }}>
                   <PayPalButtons
                     createSubscription={(data, actions) => {
-                      console.log("Creating subscription with plan ID:", plan.paypal_plan_id);
+                      console.log("Creating subscription with plan ID:", paypalPlanId);
                       return actions.subscription.create({
-                        'plan_id': plan.paypal_plan_id
+                        'plan_id': paypalPlanId
                       });
                     }}
                     onApprove={handlePayPalApprove}
-                    style={{ layout: "vertical", color: "blue" }}
+                    onError={handlePayPalError}
+                    style={{ layout: "vertical", color: "blue", label: "subscribe" }}
                     className="w-full mt-4"
                   />
                 </PayPalScriptProvider>
               </div>
             ) : (
               <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-700 dark:text-amber-300">
-                {language === 'ar' 
+                {paypalError || (language === 'ar' 
                   ? 'لم يتم العثور على خطط اشتراك. يرجى المحاولة مرة أخرى لاحقًا.'
-                  : 'No subscription plans found. Please try again later.'}
+                  : 'No subscription plans found. Please try again later.')}
               </div>
             )}
             
