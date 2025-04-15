@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw, Languages } from 'lucide-react';
+import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -170,8 +170,8 @@ const PDFViewer = () => {
             const convertedMessages: ChatMessage[] = messages.map(msg => ({
               id: msg.id,
               content: msg.content,
-              isUser: msg.isUser ?? msg.is_user,
-              timestamp: new Date(msg.timestamp)
+              isUser: msg.isUser,
+              timestamp: msg.timestamp
             }));
             
             setChatMessages(convertedMessages);
@@ -289,8 +289,55 @@ const PDFViewer = () => {
     }
   };
 
-  const handleTranslate = () => {
-    navigate(`/translate/${id}`);
+  // PDF navigation and display handlers
+  const handlePrevPage = () => {
+    const newPage = Math.max(pageNumber - 1, 1);
+    setPageNumber(newPage);
+    setPageInputValue(newPage.toString());
+  };
+
+  const handleNextPage = () => {
+    if (numPages) {
+      const newPage = Math.min(pageNumber + 1, numPages);
+      setPageNumber(newPage);
+      setPageInputValue(newPage.toString());
+    }
+  };
+
+  // New page input handler
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPageInputValue(e.target.value.replace(/[^0-9]/g, ''));
+  };
+
+  const handlePageInputSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const pageNum = parseInt(pageInputValue);
+    if (isNaN(pageNum) || !numPages) {
+      setPageInputValue(pageNumber.toString());
+      return;
+    }
+    
+    const validPage = Math.max(1, Math.min(pageNum, numPages));
+    setPageNumber(validPage);
+    setPageInputValue(validPage.toString());
+  };
+
+  // New rotation handlers
+  const handleRotateClockwise = () => {
+    setPdfRotation((prev) => (prev + 90) % 360);
+  };
+
+  const handleRotateCounterClockwise = () => {
+    setPdfRotation((prev) => (prev - 90 + 360) % 360);
+  };
+
+  const handleZoomIn = () => {
+    setPdfScale(prev => Math.min(prev + 0.2, 2.0));
+  };
+
+  const handleZoomOut = () => {
+    setPdfScale(prev => Math.max(prev - 0.2, 0.5));
   };
 
   const handleRetryLoading = () => {
@@ -379,8 +426,8 @@ const PDFViewer = () => {
           savedUserMessage = {
             id: result.id,
             content: result.content,
-            isUser: result.isUser ?? result.is_user,
-            timestamp: new Date(result.timestamp)
+            isUser: result.isUser,
+            timestamp: result.timestamp
           };
         }
       } else {
@@ -482,8 +529,8 @@ const PDFViewer = () => {
             savedAiMessage = {
               id: result.id,
               content: result.content,
-              isUser: result.isUser ?? result.is_user,
-              timestamp: new Date(result.timestamp)
+              isUser: result.isUser,
+              timestamp: result.timestamp
             };
           }
         } else {
@@ -542,8 +589,8 @@ const PDFViewer = () => {
             savedFallbackMessage = {
               id: result.id,
               content: result.content,
-              isUser: result.isUser ?? result.is_user,
-              timestamp: new Date(result.timestamp)
+              isUser: result.isUser,
+              timestamp: result.timestamp
             };
           }
         } else {
@@ -607,51 +654,6 @@ const PDFViewer = () => {
       : 'Message copied to clipboard');
   };
 
-  const handlePrevPage = () => {
-    if (pageNumber > 1) {
-      setPageNumber(pageNumber - 1);
-      setPageInputValue(String(pageNumber - 1));
-    }
-  };
-
-  const handleNextPage = () => {
-    if (numPages && pageNumber < numPages) {
-      setPageNumber(pageNumber + 1);
-      setPageInputValue(String(pageNumber + 1));
-    }
-  };
-
-  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPageInputValue(e.target.value);
-  };
-
-  const handlePageInputSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    
-    const pageNum = parseInt(pageInputValue, 10);
-    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= (numPages || 1)) {
-      setPageNumber(pageNum);
-    } else {
-      setPageInputValue(String(pageNumber));
-    }
-  };
-
-  const handleZoomIn = () => {
-    setPdfScale(prevScale => Math.min(prevScale + 0.25, 3.0));
-  };
-
-  const handleZoomOut = () => {
-    setPdfScale(prevScale => Math.max(prevScale - 0.25, 0.5));
-  };
-
-  const handleRotateClockwise = () => {
-    setPdfRotation(prevRotation => (prevRotation + 90) % 360);
-  };
-
-  const handleRotateCounterClockwise = () => {
-    setPdfRotation(prevRotation => (prevRotation - 90 + 360) % 360);
-  };
-
   if (!pdf) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -694,15 +696,6 @@ const PDFViewer = () => {
               >
                 <Share className="h-5 w-5" />
               </button>
-              
-              <Link
-                to={`/translate/${id}`}
-                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-muted transition-colors"
-                aria-label={language === 'ar' ? 'ترجمة الملف' : 'Translate PDF'}
-              >
-                <Languages className="h-5 w-5" />
-              </Link>
-              
               <button
                 onClick={handleDeletePDF}
                 className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-destructive/10 text-destructive transition-colors"

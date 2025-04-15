@@ -1,9 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { pdfs } from '@/data/pdfs';
 import { getUserPDFs } from '@/services/pdfSupabaseService';
-import type { SupabasePDF, PDF } from '@/types/pdf';
 import { useAuth } from '@/contexts/AuthContext';
 import { Grid3X3, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import PDFCard from '@/components/PDFCard';
 
 const PDFGrid = () => {
-  const [allPDFs, setAllPDFs] = useState<SupabasePDF[] | PDF[]>(pdfs);
+  const [allPDFs, setAllPDFs] = useState(pdfs);
   const { language } = useLanguage();
   const { user } = useAuth();
 
@@ -30,10 +30,12 @@ const PDFGrid = () => {
     loadPDFs();
   }, [user]);
 
+  // Don't render anything if user is not signed in
   if (!user) {
     return null;
   }
 
+  // Don't render if there are no PDFs
   if (allPDFs.length === 0) {
     return null;
   }

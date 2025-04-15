@@ -25,6 +25,3 @@ site_url = "http://localhost:3000"
 [functions]
 [functions.update-gemini-api-key]
 verify_jwt = true
-[functions.translate-text]
-verify_jwt = false
-

@@ -1,5 +1,5 @@
 
-import { PDF } from '@/types/pdf';
+import { PDF } from '@/components/PDFCard';
 
 // This is just mock data for development/testing
 export const pdfs: PDF[] = [

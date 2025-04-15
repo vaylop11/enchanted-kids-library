@@ -1,6 +1,19 @@
+
+import { PDF } from '@/components/PDFCard';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import type { UploadedPDF, ChatMessage } from '@/types/pdf';
+
+export interface UploadedPDF extends PDF {
+  dataUrl: string;
+  chatMessages?: ChatMessage[];
+}
+
+export interface ChatMessage {
+  id: string;
+  content: string;
+  isUser: boolean;
+  timestamp: Date;
+}
 
 const PDF_STORAGE_KEY = 'pdf_storage';
 const MAX_PDF_COUNT = 50; // Maximum number of PDFs to store
