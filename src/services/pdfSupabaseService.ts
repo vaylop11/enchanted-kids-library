@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Base PDF interface with common properties
@@ -25,6 +26,8 @@ export interface SupabasePDF extends BasePDF {
   created_at: string;
   updated_at: string;
   fileUrl?: string;
+  // Add uploadDate as optional for compatibility with PDF interface
+  uploadDate?: string;
 }
 
 export interface PDFChatMessage {

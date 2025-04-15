@@ -7,7 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserPDFs, uploadPDFToSupabase, SupabasePDF } from '@/services/pdfSupabaseService';
+import { getUserPDFs, uploadPDFToSupabase, SupabasePDF, PDF } from '@/services/pdfSupabaseService';
 
 const PDFs = () => {
   const location = useLocation();
@@ -249,7 +249,7 @@ const PDFs = () => {
                 {filteredPDFs.map((pdf, index) => (
                   <PDFCard 
                     key={pdf.id} 
-                    pdf={pdf as PDF} 
+                    pdf={pdf} 
                     index={index} 
                     onDelete={handlePDFDelete}
                   />
