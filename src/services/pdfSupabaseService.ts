@@ -299,6 +299,9 @@ export const getPDFById = async (pdfId: string): Promise<SupabasePDF | null> => 
   }
 };
 
+// Alias for getPDFById to match usage in TranslatePDF.tsx
+export const getSupabasePDFById = getPDFById;
+
 // Update PDF metadata
 export const updatePDFMetadata = async (pdfId: string, updates: Partial<SupabasePDF>): Promise<boolean> => {
   try {
