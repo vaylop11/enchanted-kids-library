@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -74,7 +73,7 @@ const SubscribePage = () => {
       toast.success(language === 'ar' 
         ? 'تم الاشتراك بنجاح في Gemi PRO!' 
         : 'Successfully subscribed to Gemi PRO!');
-      navigate('/pdfs'); // Redirect to PDFs page after successful subscription
+      navigate('/pdfs');
     } catch (error) {
       console.error('Error processing subscription:', error);
       toast.error(language === 'ar'
@@ -187,7 +186,7 @@ const SubscribePage = () => {
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                 <span className="ml-3">{language === 'ar' ? 'جاري التحميل...' : 'Loading...'}</span>
               </div>
-            ) : plan && paypalPlanId ? (
+            ) : plan ? (
               <div className="bg-background rounded-lg border p-4 mb-4">
                 <h3 className="font-medium text-lg mb-2">
                   {language === 'ar' ? 'تفاصيل الاشتراك:' : 'Subscription Details:'}
@@ -196,31 +195,32 @@ const SubscribePage = () => {
                   {plan.name} - ${plan.price}/{plan.interval}
                 </p>
                 
-                <div className="my-4 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-md">
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    {language === 'ar' 
-                      ? 'سيتم استخدام خطة PayPal التالية: ' + paypalPlanId
-                      : 'Using PayPal plan: ' + paypalPlanId}
-                  </p>
-                </div>
-                
                 <PayPalScriptProvider options={{ 
-                  clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID,
+                  clientId: "AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIuHBIjy_OcQFqtUxUGN2n1DjHnM4A4u62h",
                   vault: true,
                   intent: "subscription",
                   components: "buttons"
                 }}>
                   <PayPalButtons
                     createSubscription={(data, actions) => {
-                      console.log("Creating subscription with plan ID:", paypalPlanId);
+                      console.log("Creating subscription with plan ID: P-8AR43998YB6934043M77H5AI");
                       return actions.subscription.create({
-                        'plan_id': paypalPlanId
+                        'plan_id': 'P-8AR43998YB6934043M77H5AI'
                       });
                     }}
+                    style={{
+                      shape: 'rect',
+                      color: 'black',
+                      layout: 'horizontal',
+                      label: 'subscribe'
+                    }}
                     onApprove={handlePayPalApprove}
-                    onError={handlePayPalError}
-                    style={{ layout: "vertical", color: "blue", label: "subscribe" }}
-                    className="w-full mt-4"
+                    onError={(err) => {
+                      console.error('PayPal error:', err);
+                      toast.error(language === 'ar' 
+                        ? 'خطأ في PayPal. يرجى المحاولة مرة أخرى لاحقًا.'
+                        : 'PayPal error. Please try again later.');
+                    }}
                   />
                 </PayPalScriptProvider>
               </div>

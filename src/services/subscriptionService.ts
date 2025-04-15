@@ -21,6 +21,7 @@ export const getSubscriptionPlans = async (): Promise<SubscriptionPlan[]> => {
 
   if (error) {
     console.error('Error fetching subscription plans:', error);
+    toast.error('Failed to fetch subscription plans');
     return [];
   }
 
@@ -33,11 +34,16 @@ export const createSubscription = async (subscriptionId: string, planId: string)
   
   try {
     const { data, error } = await supabase.functions.invoke('handle-subscription', {
-      body: { subscriptionId, planId }
+      body: { 
+        subscriptionId,
+        planId,
+        paypalPlanId: 'P-8AR43998YB6934043M77H5AI' // Using the specific PayPal plan ID
+      }
     });
 
     if (error) {
       console.error("Supabase function error:", error);
+      toast.error('Failed to create subscription');
       throw error;
     }
     
@@ -45,26 +51,12 @@ export const createSubscription = async (subscriptionId: string, planId: string)
     return data;
   } catch (error) {
     console.error('Error creating subscription:', error);
+    toast.error('Error creating subscription');
     throw error;
   }
 };
 
-export const getPayPalPlanIdFromDatabase = async (): Promise<string | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('subscription_plans')
-      .select('paypal_plan_id')
-      .single();
-    
-    if (error) {
-      console.error('Error fetching PayPal plan ID:', error);
-      return null;
-    }
-    
-    console.log("Retrieved PayPal plan ID:", data?.paypal_plan_id);
-    return data?.paypal_plan_id || null;
-  } catch (error) {
-    console.error('Error retrieving PayPal plan ID:', error);
-    return null;
-  }
+export const getPayPalPlanIdFromDatabase = async (): Promise<string> => {
+  // Always return the specific PayPal plan ID
+  return 'P-8AR43998YB6934043M77H5AI';
 };

@@ -10,7 +10,6 @@ const PAYPAL_API_URL = 'https://api-m.paypal.com'
 const PAYPAL_CLIENT_ID = Deno.env.get('PAYPAL_CLIENT_ID')
 const PAYPAL_SECRET_KEY = Deno.env.get('PAYPAL_SECRET_KEY')
 
-// Get PayPal access token
 async function getPayPalAccessToken() {
   const auth = btoa(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET_KEY}`)
   const response = await fetch(`${PAYPAL_API_URL}/v1/oauth2/token`, {
@@ -25,8 +24,8 @@ async function getPayPalAccessToken() {
   return data.access_token
 }
 
-// Verify subscription details with PayPal
 async function verifySubscription(subscriptionId: string, accessToken: string) {
+  console.log("Verifying subscription:", subscriptionId);
   const response = await fetch(`${PAYPAL_API_URL}/v1/billing/subscriptions/${subscriptionId}`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -37,7 +36,6 @@ async function verifySubscription(subscriptionId: string, accessToken: string) {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
