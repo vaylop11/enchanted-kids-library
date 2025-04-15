@@ -19,7 +19,7 @@ export const supportedLanguages = [
 
 export interface TranslationResult {
   translatedText: string;
-  detectedSourceLanguage?: string;
+  detectedSourceLanguage?: string | null;
 }
 
 export const translateText = async (text: string, targetLanguage: string): Promise<TranslationResult> => {
