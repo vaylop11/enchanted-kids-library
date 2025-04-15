@@ -17,8 +17,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { getPDFById } from '@/services/pdfStorage';
-import { getSupabasePDFById } from '@/services/pdfSupabaseService';
+import { PDF } from '@/components/PDFCard';
+import { getPDFById, getUserPDFs, SupabasePDF } from '@/services/pdfSupabaseService';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { extractTextFromPDF, AnalysisProgress } from '@/services/pdfAnalysisService';
@@ -34,6 +34,7 @@ const TranslatePDF = () => {
   const { language, direction } = useLanguage();
   const { user } = useAuth();
   
+  const [userPDFs, setUserPDFs] = useState<SupabasePDF[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -52,6 +53,21 @@ const TranslatePDF = () => {
   const [targetLanguage, setTargetLanguage] = useState('en');
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
   const [isTempPdf, setIsTempPdf] = useState(false);
+
+  useEffect(() => {
+    const loadUserPDFs = async () => {
+      if (!user) return;
+      try {
+        const pdfs = await getUserPDFs(user.id);
+        setUserPDFs(pdfs);
+      } catch (error) {
+        console.error('Error loading PDFs:', error);
+        toast.error(language === 'ar' ? 'فشل في تحميل الملفات' : 'Failed to load PDFs');
+      }
+    };
+
+    loadUserPDFs();
+  }, [user]);
 
   useEffect(() => {
     if (!id) return;
@@ -76,65 +92,29 @@ const TranslatePDF = () => {
         toast.error(language === 'ar' ? 'لم يتم العثور على الملف المؤقت' : 'Temporary PDF not found');
         navigate('/pdfs');
         return;
-      }
-
-      const loadedPdf = getPDFById(id);
-      if (loadedPdf) {
-        setPdfTitle(loadedPdf.title);
-        
-        if (loadedPdf.dataUrl) {
-          setPdfUrl(loadedPdf.dataUrl);
-          setIsLoaded(true);
-        } else if (user) {
-          tryLoadFromSupabase(id);
-        } else {
-          toast.error(language === 'ar' 
-            ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
-            : 'Could not load PDF data due to storage limitations');
-          navigate('/pdfs');
-        }
       } else {
-        tryLoadFromSupabase(id);
-      }
-    };
-
-    const tryLoadFromSupabase = async (pdfId: string) => {
-      if (!user) {
-        toast.error(language === 'ar' ? 'يرجى تسجيل الدخول لعرض هذا الملف' : 'Please sign in to view this PDF');
-        navigate('/login');
-        return;
-      }
-      
-      try {
-        const supabasePdf = await getSupabasePDFById(pdfId);
-        
-        if (supabasePdf) {
-          let fileUrl = supabasePdf.fileUrl;
-          if (!fileUrl && supabasePdf.file_path) {
-            const { data: urlData } = await supabase.storage
-              .from('pdfs')
-              .getPublicUrl(supabasePdf.file_path);
-            fileUrl = urlData.publicUrl;
-          }
+        const loadedPdf = await getPDFById(id);
+        if (loadedPdf) {
+          setPdfTitle(loadedPdf.title);
           
-          setPdfUrl(fileUrl);
-          setPdfTitle(supabasePdf.title);
-          setIsLoaded(true);
+          if (loadedPdf.fileUrl) {
+            setPdfUrl(loadedPdf.fileUrl);
+            setIsLoaded(true);
+          } else {
+            toast.error(language === 'ar' 
+              ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
+              : 'Could not load PDF data due to storage limitations');
+            navigate('/pdfs');
+          }
         } else {
           toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
           navigate('/pdfs');
-          return;
         }
-      } catch (error) {
-        console.error('Error loading PDF from Supabase:', error);
-        toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
-        navigate('/pdfs');
-        return;
       }
     };
 
     loadPdf();
-  }, [id, navigate, language, user]);
+  }, [id, navigate, language]);
 
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -196,24 +176,74 @@ const TranslatePDF = () => {
     }
   };
 
-  if (!pdfUrl && isLoaded) {
+  // Render PDF selection view if no ID is provided
+  if (!id) {
     return (
       <div className="min-h-screen flex flex-col">
+        <SEO 
+          title={language === 'ar' ? 'ترجمة ملفات PDF' : 'Translate PDFs'}
+          description={language === 'ar' 
+            ? 'اختر ملف PDF لترجمته إلى لغات متعددة'
+            : 'Choose a PDF file to translate into multiple languages'}
+        />
         <Navbar />
-        <main className="flex-1 pt-24 pb-10 flex items-center justify-center">
-          <div className="text-center">
-            <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h1 className="text-2xl font-bold mb-4">
-              {language === 'ar' ? 'لا توجد بيانات PDF' : 'No PDF Data Available'}
-            </h1>
-            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              {language === 'ar'
-                ? 'لم يتم تخزين بيانات PDF بسبب قيود التخزين. حاول حذف بعض الملفات القديمة وتحميل هذا الملف مرة أخرى.'
-                : 'PDF data was not stored due to storage limitations. Try deleting some older PDFs and upload this file again.'}
-            </p>
-            <Button onClick={() => navigate('/pdfs')}>
-              {language === 'ar' ? 'العودة إلى قائمة الملفات' : 'Back to PDF List'}
-            </Button>
+        <main className="flex-1 pt-24 pb-10">
+          <div className="container mx-auto px-4 md:px-6 max-w-7xl">
+            <div className="flex items-center gap-2 mb-8">
+              <Languages className="h-5 w-5 text-primary" />
+              <h1 className="text-2xl font-semibold">
+                {language === 'ar' ? 'اختر ملفاً للترجمة' : 'Choose a PDF to Translate'}
+              </h1>
+            </div>
+            
+            {userPDFs.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2">
+                  {language === 'ar' ? 'لا توجد ملفات PDF' : 'No PDFs Found'}
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  {language === 'ar' 
+                    ? 'قم بتحميل ملف PDF للبدء في الترجمة'
+                    : 'Upload a PDF file to start translating'}
+                </p>
+                <Button asChild>
+                  <Link to="/pdfs">
+                    {language === 'ar' ? 'تحميل ملف PDF' : 'Upload PDF'}
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {userPDFs.map((pdf) => (
+                  <Link 
+                    key={pdf.id}
+                    to={`/translate/${pdf.id}`}
+                    className="block group hover:no-underline"
+                  >
+                    <div className="border rounded-lg p-4 transition-shadow hover:shadow-md">
+                      <div className="aspect-[4/3] mb-4 bg-muted/20 rounded-md flex items-center justify-center">
+                        {pdf.thumbnail ? (
+                          <img
+                            src={pdf.thumbnail}
+                            alt={pdf.title}
+                            className="w-full h-full object-cover rounded-md"
+                          />
+                        ) : (
+                          <FileText className="h-12 w-12 text-muted-foreground" />
+                        )}
+                      </div>
+                      <h3 className="font-medium text-foreground group-hover:text-primary truncate mb-1">
+                        {pdf.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {pdf.page_count} {language === 'ar' ? 'صفحات' : 'pages'}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </main>
         <Footer />
@@ -292,7 +322,7 @@ const TranslatePDF = () => {
                   onClick={() => handlePageChange(pageNumber - 1)}
                   disabled={pageNumber <= 1}
                 >
-                  {language === 'ar' ? 'ا��سابق' : 'Previous'}
+                  {language === 'ar' ? 'السابق' : 'Previous'}
                 </Button>
                 
                 <div className="text-sm">

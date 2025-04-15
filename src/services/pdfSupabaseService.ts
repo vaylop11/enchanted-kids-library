@@ -1,26 +1,30 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { PDF } from '@/components/PDFCard';
 
-// Define the SupabasePDF type based on the Supabase database schema
-export interface SupabasePDF extends Omit<PDF, 'uploadDate'> {
+// Base PDF interface with common properties
+export interface BasePDF {
   id: string;
-  user_id: string;
   title: string;
   summary: string;
-  upload_date: string;
-  pageCount?: number;
-  page_count: number;
-  fileSize?: string;
-  file_size: string;
+  pageCount: number;
+  fileSize: string;
   thumbnail?: string;
+}
+
+// Frontend PDF interface
+export interface PDF extends BasePDF {
+  uploadDate: string;
+}
+
+// Supabase PDF interface
+export interface SupabasePDF extends BasePDF {
+  user_id: string;
   file_path: string;
+  upload_date: string;
+  page_count: number;
+  file_size: string;
   created_at: string;
   updated_at: string;
-  // Virtual property to store file URL
   fileUrl?: string;
-  // Add uploadDate for compatibility with PDF interface
-  uploadDate: string;
 }
 
 export interface PDFChatMessage {
@@ -29,7 +33,6 @@ export interface PDFChatMessage {
   is_user: boolean;
   content: string;
   timestamp: string;
-  // Add isUser for compatibility
   isUser?: boolean;
 }
 
