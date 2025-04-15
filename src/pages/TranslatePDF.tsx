@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -109,8 +108,16 @@ const TranslatePDF = () => {
       try {
         const supabasePdf = await getSupabasePDFById(pdfId);
         
-        if (supabasePdf && supabasePdf.fileUrl) {
-          setPdfUrl(supabasePdf.fileUrl);
+        if (supabasePdf) {
+          let fileUrl = supabasePdf.fileUrl;
+          if (!fileUrl && supabasePdf.file_path) {
+            const { data: urlData } = await supabase.storage
+              .from('pdfs')
+              .getPublicUrl(supabasePdf.file_path);
+            fileUrl = urlData.publicUrl;
+          }
+          
+          setPdfUrl(fileUrl);
           setPdfTitle(supabasePdf.title);
           setIsLoaded(true);
         } else {

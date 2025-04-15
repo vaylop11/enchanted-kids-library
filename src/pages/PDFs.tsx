@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PDFCard from '@/components/PDFCard';
@@ -79,7 +78,6 @@ const PDFs = () => {
       return;
     }
     
-    // Check if user has reached the maximum PDFs limit (4)
     if (pdfs.length >= 4) {
       toast.error(
         language === 'ar' 
@@ -123,7 +121,6 @@ const PDFs = () => {
   };
 
   const handleUploadClick = () => {
-    // Check if user has reached the maximum PDFs limit before opening file selector
     if (pdfs.length >= 4) {
       toast.error(
         language === 'ar' 
@@ -154,7 +151,6 @@ const PDFs = () => {
     return null;
   }
   
-  // Calculate if the user has reached the maximum upload limit
   const hasReachedMaxPDFs = pdfs.length >= 4;
   
   return (
@@ -253,7 +249,7 @@ const PDFs = () => {
                 {filteredPDFs.map((pdf, index) => (
                   <PDFCard 
                     key={pdf.id} 
-                    pdf={pdf} 
+                    pdf={pdf as PDF} 
                     index={index} 
                     onDelete={handlePDFDelete}
                   />

@@ -1,8 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { PDF } from '@/components/PDFCard';
 
 // Define the SupabasePDF type based on the Supabase database schema
-export interface SupabasePDF {
+export interface SupabasePDF extends Omit<PDF, 'uploadDate'> {
   id: string;
   user_id: string;
   title: string;
@@ -19,7 +20,7 @@ export interface SupabasePDF {
   // Virtual property to store file URL
   fileUrl?: string;
   // Add uploadDate for compatibility with PDF interface
-  uploadDate?: string;
+  uploadDate: string;
 }
 
 export interface PDFChatMessage {
