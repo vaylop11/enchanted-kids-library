@@ -1,7 +1,9 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, getCurrentUser } from '@/services/authService';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AuthContextType {
   user: User | null;
@@ -23,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { language } = useLanguage();
 
   const checkUser = async () => {
     setLoading(true);
@@ -93,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, []);
+  }, [language]);
 
   return (
     <AuthContext.Provider value={{ user, loading, checkUser, isAdmin }}>
