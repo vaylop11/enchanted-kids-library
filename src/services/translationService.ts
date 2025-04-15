@@ -30,7 +30,13 @@ export const translateText = async (text: string, targetLanguage: string): Promi
 
     if (error) {
       console.error('Translation error:', error);
+      toast.error('Failed to translate text. Please try again.');
       throw new Error(error.message);
+    }
+
+    if (!data || !data.translatedText) {
+      toast.error('Invalid response from translation service. Please try again.');
+      throw new Error('Invalid response from translation service');
     }
 
     return data;

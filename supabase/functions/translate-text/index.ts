@@ -33,7 +33,8 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    // Update to use gemini-1.5-pro instead of gemini-pro
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
     const prompt = `Translate the following text to ${targetLanguage}. Only respond with the translated text, nothing else:
 
