@@ -30,7 +30,19 @@ export const usePlanLimits = () => {
         });
 
         if (error) throw error;
-        setLimits(data as PlanLimits);
+        
+        // Add proper type validation and casting
+        if (data && typeof data === 'object' && 
+            'has_paid_subscription' in data && 
+            'current_pdf_count' in data && 
+            'max_pdfs' in data && 
+            'max_file_size_mb' in data && 
+            'can_translate' in data) {
+          
+          setLimits(data as PlanLimits);
+        } else {
+          throw new Error('Invalid plan limits data structure returned from server');
+        }
       } catch (error) {
         console.error('Error checking plan limits:', error);
       } finally {
