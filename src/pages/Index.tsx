@@ -10,6 +10,7 @@ import UploadZone from '@/components/UploadZone';
 import PDFGrid from '@/components/PDFGrid';
 import SEO from '@/components/SEO';
 import { Languages } from 'lucide-react';
+import ProSubscriptionCard from '@/components/ProSubscriptionCard';
 
 const Index = () => {
   const { language } = useLanguage();
@@ -74,6 +75,26 @@ const Index = () => {
                     : 'New feature: You can now translate PDF content to multiple languages'}
                 </span>
               </div>
+            </div>
+          </div>
+        </section>
+        
+        {/* Subscription Plan Section */}
+        <section className="py-16 bg-gradient-to-b from-muted/20 to-background">
+          <div className="container mx-auto px-4 md:px-6 max-w-7xl">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold tracking-tight mb-4">
+                {language === 'ar' ? 'ارتقِ بتجربتك مع Gemi PRO' : 'Upgrade Your Experience with Gemi PRO'}
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+                {language === 'ar'
+                  ? 'احصل على ميزات متقدمة وقدرات محسّنة مع خطة Gemi PRO الخاصة بنا'
+                  : 'Unlock advanced features and enhanced capabilities with our Gemi PRO plan'}
+              </p>
+            </div>
+            
+            <div className="max-w-md mx-auto">
+              <ProSubscriptionCard />
             </div>
           </div>
         </section>
