@@ -40,7 +40,7 @@ const SubscribePage = () => {
     if (!plan) return;
     
     try {
-      await createSubscription(data.subscriptionID, plan.id);
+      await createSubscription(data.orderID, plan.id);
       navigate('/pdfs'); // Redirect to PDFs page after successful subscription
     } catch (error) {
       console.error('Error processing subscription:', error);
@@ -139,19 +139,24 @@ const SubscribePage = () => {
             
             {plan && (
               <PayPalScriptProvider options={{ 
-                clientId: "YOUR_PAYPAL_CLIENT_ID",
+                clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID,
                 vault: true,
                 intent: "subscription"
               }}>
                 <PayPalButtons
-                  createSubscription={(data, actions) => {
-                    return actions.subscription.create({
-                      'plan_id': plan.paypal_plan_id
+                  createOrder={(data, actions) => {
+                    return actions.order.create({
+                      purchase_units: [
+                        {
+                          amount: {
+                            value: plan.price.toString(),
+                            currency_code: plan.currency
+                          }
+                        }
+                      ]
                     });
                   }}
                   onApprove={handlePayPalApprove}
-                  style={{ layout: "vertical" }}
-                  className="w-full mt-4"
                 />
               </PayPalScriptProvider>
             )}
