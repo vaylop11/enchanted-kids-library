@@ -25,11 +25,15 @@ export const usePlanLimits = () => {
       }
 
       try {
+        console.log("Checking plan limits for user:", user.id);
         const { data, error } = await supabase.rpc('check_user_pdf_limits', {
           user_id: user.id
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error checking plan limits:", error);
+          throw error;
+        }
         
         // Properly check each property exists and has the correct type before casting
         if (data && 
@@ -49,8 +53,10 @@ export const usePlanLimits = () => {
             can_translate: Boolean(data.can_translate)
           };
           
+          console.log("Retrieved plan limits:", planLimits);
           setLimits(planLimits);
         } else {
+          console.error("Invalid plan limits structure:", data);
           throw new Error('Invalid plan limits data structure returned from server');
         }
       } catch (error) {

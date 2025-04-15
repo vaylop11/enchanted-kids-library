@@ -39,8 +39,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setIsAdmin(false);
       }
-      
-      console.log('Current user:', currentUser);
     } catch (error) {
       console.error('Error checking user:', error);
     } finally {
@@ -49,8 +47,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // First check for current user
     checkUser();
 
+    // Then set up the auth listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.id);
       
@@ -69,27 +69,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsAdmin(false);
         }
 
-        // Check subscription status
-        const { data: subscriptionData } = await supabase
-          .from('user_subscriptions')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .eq('status', 'ACTIVE')
-          .single();
+        // Use setTimeout to avoid potential deadlocks with Supabase client
+        setTimeout(async () => {
+          // Check subscription status
+          const { data: subscriptionData } = await supabase
+            .from('user_subscriptions')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .eq('status', 'ACTIVE')
+            .maybeSingle();  // Using maybeSingle instead of single to prevent errors
 
-        if (subscriptionData) {
-          toast.success(
-            language === 'ar' 
-              ? 'مرحباً بك في Gemi PRO!' 
-              : 'Welcome back to Gemi PRO!'
-          );
-        }
-        
-        toast.success('Signed in successfully');
+          if (subscriptionData) {
+            toast.success(
+              language === 'ar' 
+                ? 'مرحباً بك في Gemi PRO!' 
+                : 'Welcome back to Gemi PRO!'
+            );
+          } else {
+            toast.success(language === 'ar' 
+              ? 'تم تسجيل الدخول بنجاح' 
+              : 'Signed in successfully');
+          }
+        }, 0);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAdmin(false);
-        toast.success('Signed out successfully');
+        toast.success(language === 'ar' 
+          ? 'تم تسجيل الخروج بنجاح' 
+          : 'Signed out successfully');
       }
     });
 
