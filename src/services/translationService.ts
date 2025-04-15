@@ -20,6 +20,7 @@ export const supportedLanguages = [
 export interface TranslationResult {
   translatedText: string;
   detectedSourceLanguage?: string | null;
+  isMarkdown?: boolean;
 }
 
 export const translateText = async (text: string, targetLanguage: string): Promise<TranslationResult> => {
@@ -39,7 +40,10 @@ export const translateText = async (text: string, targetLanguage: string): Promi
       throw new Error('Invalid response from translation service');
     }
 
-    return data;
+    return {
+      ...data,
+      isMarkdown: true,
+    };
   } catch (error) {
     console.error('Error translating text:', error);
     toast.error('Failed to translate text. Please try again.');

@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -23,7 +22,6 @@ serve(async (req) => {
       );
     }
     
-    // Use Gemini API
     const apiKey = Deno.env.get('GEMINI_API_KEY');
     if (!apiKey) {
       return new Response(
@@ -33,10 +31,9 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Update to use gemini-1.5-pro instead of gemini-pro
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
-    const prompt = `Translate the following text to ${targetLanguage}. Only respond with the translated text, nothing else:
+    const prompt = `Translate the following text to ${targetLanguage}. Format the output in markdown to preserve formatting, headings, and structure. Only respond with the translated text in markdown format, nothing else:
 
 ${text}`;
 
@@ -46,7 +43,8 @@ ${text}`;
     return new Response(
       JSON.stringify({ 
         translatedText,
-        detectedSourceLanguage: null // Gemini doesn't provide language detection
+        detectedSourceLanguage: null,
+        isMarkdown: true
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
