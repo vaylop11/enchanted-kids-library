@@ -13,6 +13,7 @@ export interface SubscriptionPlan {
 }
 
 export const getSubscriptionPlans = async (): Promise<SubscriptionPlan[]> => {
+  console.log("Fetching subscription plans...");
   const { data, error } = await supabase
     .from('subscription_plans')
     .select('*')
@@ -23,22 +24,27 @@ export const getSubscriptionPlans = async (): Promise<SubscriptionPlan[]> => {
     return [];
   }
 
+  console.log("Retrieved subscription plans:", data);
   return data;
 };
 
 export const createSubscription = async (subscriptionId: string, planId: string) => {
+  console.log("Creating subscription with ID:", subscriptionId, "for plan:", planId);
+  
   try {
     const { data, error } = await supabase.functions.invoke('handle-subscription', {
       body: { subscriptionId, planId }
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase function error:", error);
+      throw error;
+    }
     
-    toast.success('Successfully subscribed to Gemi PRO!');
+    console.log("Subscription created successfully:", data);
     return data;
   } catch (error) {
     console.error('Error creating subscription:', error);
-    toast.error('Failed to process subscription');
     throw error;
   }
 };

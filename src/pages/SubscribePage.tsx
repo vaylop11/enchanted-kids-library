@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -10,6 +11,7 @@ import SEO from '@/components/SEO';
 import ProSubscriptionCard from '@/components/ProSubscriptionCard';
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { createSubscription, getSubscriptionPlans, type SubscriptionPlan } from '@/services/subscriptionService';
+import { toast } from 'sonner';
 
 const SubscribePage = () => {
   const navigate = useNavigate();
@@ -17,17 +19,29 @@ const SubscribePage = () => {
   const { language } = useLanguage();
   const { user } = useAuth();
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     const loadPlan = async () => {
-      const plans = await getSubscriptionPlans();
-      if (plans.length > 0) {
-        setPlan(plans[0]); // Get the first plan (our PRO plan)
+      setIsLoading(true);
+      try {
+        const plans = await getSubscriptionPlans();
+        console.log("Loaded plans:", plans);
+        if (plans.length > 0) {
+          setPlan(plans[0]); // Get the first plan (our PRO plan)
+        }
+      } catch (error) {
+        console.error("Error loading subscription plans:", error);
+        toast.error(language === 'ar' 
+          ? 'فشل في تحميل خطط الاشتراك' 
+          : 'Failed to load subscription plans');
+      } finally {
+        setIsLoading(false);
       }
     };
     
     loadPlan();
-  }, []);
+  }, [language]);
   
   React.useEffect(() => {
     if (!user) {
@@ -39,10 +53,17 @@ const SubscribePage = () => {
     if (!plan) return;
     
     try {
+      console.log("Subscription approved:", data);
       await createSubscription(data.subscriptionID, plan.id);
+      toast.success(language === 'ar' 
+        ? 'تم الاشتراك بنجاح في Gemi PRO!' 
+        : 'Successfully subscribed to Gemi PRO!');
       navigate('/pdfs'); // Redirect to PDFs page after successful subscription
     } catch (error) {
       console.error('Error processing subscription:', error);
+      toast.error(language === 'ar'
+        ? 'حدث خطأ أثناء معالجة الاشتراك'
+        : 'Error processing subscription');
     }
   };
 
@@ -135,23 +156,45 @@ const SubscribePage = () => {
               </div>
             </div>
             
-            {plan && (
-              <PayPalScriptProvider options={{ 
-                clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID,
-                vault: true,
-                intent: "subscription"
-              }}>
-                <PayPalButtons
-                  createSubscription={(data, actions) => {
-                    return actions.subscription.create({
-                      'plan_id': plan.paypal_plan_id
-                    });
-                  }}
-                  onApprove={handlePayPalApprove}
-                  style={{ layout: "vertical" }}
-                  className="w-full mt-4"
-                />
-              </PayPalScriptProvider>
+            {isLoading ? (
+              <div className="flex items-center justify-center p-6 border rounded-lg bg-background">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                <span className="ml-3">{language === 'ar' ? 'جاري التحميل...' : 'Loading...'}</span>
+              </div>
+            ) : plan ? (
+              <div className="bg-background rounded-lg border p-4 mb-4">
+                <h3 className="font-medium text-lg mb-2">
+                  {language === 'ar' ? 'تفاصيل الاشتراك:' : 'Subscription Details:'}
+                </h3>
+                <p className="text-lg font-semibold mb-4">
+                  {plan.name} - ${plan.price}/{plan.interval}
+                </p>
+                
+                <PayPalScriptProvider options={{ 
+                  clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID,
+                  vault: true,
+                  intent: "subscription",
+                  components: "buttons"
+                }}>
+                  <PayPalButtons
+                    createSubscription={(data, actions) => {
+                      console.log("Creating subscription with plan ID:", plan.paypal_plan_id);
+                      return actions.subscription.create({
+                        'plan_id': plan.paypal_plan_id
+                      });
+                    }}
+                    onApprove={handlePayPalApprove}
+                    style={{ layout: "vertical", color: "blue" }}
+                    className="w-full mt-4"
+                  />
+                </PayPalScriptProvider>
+              </div>
+            ) : (
+              <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-700 dark:text-amber-300">
+                {language === 'ar' 
+                  ? 'لم يتم العثور على خطط اشتراك. يرجى المحاولة مرة أخرى لاحقًا.'
+                  : 'No subscription plans found. Please try again later.'}
+              </div>
             )}
             
             <p className="text-sm text-center text-muted-foreground mt-3">
