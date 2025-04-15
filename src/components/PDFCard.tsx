@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
-import { deletePDF, SupabasePDF, PDF } from '@/services/pdfSupabaseService';
+import { deletePDF, SupabasePDF } from '@/services/pdfSupabaseService';
+import { PDF } from '@/types/pdf';
 
 type PDFCardProps = {
   pdf: PDF | SupabasePDF;

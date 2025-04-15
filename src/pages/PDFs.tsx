@@ -7,7 +7,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserPDFs, uploadPDFToSupabase, SupabasePDF, PDF } from '@/services/pdfSupabaseService';
+import { getUserPDFs, uploadPDFToSupabase, SupabasePDF } from '@/services/pdfSupabaseService';
+import { PDF } from '@/types/pdf';
 
 const PDFs = () => {
   const location = useLocation();

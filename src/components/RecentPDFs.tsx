@@ -6,9 +6,10 @@ import { Link } from 'react-router-dom';
 import { File, Clock, FileText, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { UploadedPDF } from '@/types/pdf';
 
 const RecentPDFs = () => {
-  const [recentPDFs, setRecentPDFs] = useState(getSavedPDFs().slice(0, 3));
+  const [recentPDFs, setRecentPDFs] = useState<UploadedPDF[]>(getSavedPDFs().slice(0, 3));
   const { language } = useLanguage();
 
   useEffect(() => {

@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { PDF } from '@/components/PDFCard';
 import { getPDFById, getUserPDFs, SupabasePDF } from '@/services/pdfSupabaseService';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +24,7 @@ import { extractTextFromPDF, AnalysisProgress } from '@/services/pdfAnalysisServ
 import { translateText, supportedLanguages } from '@/services/translationService';
 import { Separator } from '@/components/ui/separator';
 import SEO from '@/components/SEO';
+import { PDF } from '@/types/pdf';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
@@ -176,7 +176,6 @@ const TranslatePDF = () => {
     }
   };
 
-  // Render PDF selection view if no ID is provided
   if (!id) {
     return (
       <div className="min-h-screen flex flex-col">

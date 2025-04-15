@@ -1,43 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { BasePDF, PDF, SupabasePDF, PDFChatMessage } from '@/types/pdf';
 
-// Base PDF interface with common properties
-export interface BasePDF {
-  id: string;
-  title: string;
-  summary: string;
-  pageCount: number;
-  fileSize: string;
-  thumbnail?: string;
-}
-
-// Frontend PDF interface
-export interface PDF extends BasePDF {
-  uploadDate: string;
-}
-
-// Supabase PDF interface
-export interface SupabasePDF extends BasePDF {
-  user_id: string;
-  file_path: string;
-  upload_date: string;
-  page_count: number;
-  file_size: string;
-  created_at: string;
-  updated_at: string;
-  fileUrl?: string;
-  // Add uploadDate as optional for compatibility with PDF interface
-  uploadDate?: string;
-}
-
-export interface PDFChatMessage {
-  id: string;
-  pdf_id: string;
-  is_user: boolean;
-  content: string;
-  timestamp: string;
-  isUser?: boolean;
-}
+export { BasePDF, PDF, SupabasePDF, PDFChatMessage };
 
 export const getSupabasePDFById = async (id: string) => {
   try {
@@ -98,7 +62,7 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
         uploadDate: pdf.upload_date,
         fileUrl: urlData.publicUrl,
         thumbnail: thumbnailUrl
-      };
+      } as SupabasePDF;
     }));
 
     return transformedData;
@@ -217,7 +181,7 @@ export const getPDFById = async (id: string): Promise<SupabasePDF | null> => {
       fileSize: data.file_size,
       uploadDate: data.upload_date,
       fileUrl: urlData.publicUrl
-    };
+    } as SupabasePDF;
   } catch (error) {
     console.error('Error fetching PDF from Supabase:', error);
     return null;
