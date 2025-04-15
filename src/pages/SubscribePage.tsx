@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -40,7 +39,7 @@ const SubscribePage = () => {
     if (!plan) return;
     
     try {
-      await createSubscription(data.orderID, plan.id);
+      await createSubscription(data.subscriptionID, plan.id);
       navigate('/pdfs'); // Redirect to PDFs page after successful subscription
     } catch (error) {
       console.error('Error processing subscription:', error);
@@ -81,7 +80,6 @@ const SubscribePage = () => {
         </div>
         
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Plan Details */}
           <div className="order-2 md:order-1">
             <h2 className="text-xl font-semibold mb-4">
               {language === 'ar' ? 'ما الذي تحصل عليه مع Gemi PRO:' : 'What you get with Gemi PRO:'}
@@ -144,19 +142,14 @@ const SubscribePage = () => {
                 intent: "subscription"
               }}>
                 <PayPalButtons
-                  createOrder={(data, actions) => {
-                    return actions.order.create({
-                      purchase_units: [
-                        {
-                          amount: {
-                            value: plan.price.toString(),
-                            currency_code: plan.currency
-                          }
-                        }
-                      ]
+                  createSubscription={(data, actions) => {
+                    return actions.subscription.create({
+                      'plan_id': plan.paypal_plan_id
                     });
                   }}
                   onApprove={handlePayPalApprove}
+                  style={{ layout: "vertical" }}
+                  className="w-full mt-4"
                 />
               </PayPalScriptProvider>
             )}
@@ -168,7 +161,6 @@ const SubscribePage = () => {
             </p>
           </div>
           
-          {/* Subscription Card */}
           <div className="order-1 md:order-2">
             <ProSubscriptionCard />
           </div>
