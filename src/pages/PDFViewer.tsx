@@ -289,55 +289,8 @@ const PDFViewer = () => {
     }
   };
 
-  // PDF navigation and display handlers
-  const handlePrevPage = () => {
-    const newPage = Math.max(pageNumber - 1, 1);
-    setPageNumber(newPage);
-    setPageInputValue(newPage.toString());
-  };
-
-  const handleNextPage = () => {
-    if (numPages) {
-      const newPage = Math.min(pageNumber + 1, numPages);
-      setPageNumber(newPage);
-      setPageInputValue(newPage.toString());
-    }
-  };
-
-  // New page input handler
-  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPageInputValue(e.target.value.replace(/[^0-9]/g, ''));
-  };
-
-  const handlePageInputSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const pageNum = parseInt(pageInputValue);
-    if (isNaN(pageNum) || !numPages) {
-      setPageInputValue(pageNumber.toString());
-      return;
-    }
-    
-    const validPage = Math.max(1, Math.min(pageNum, numPages));
-    setPageNumber(validPage);
-    setPageInputValue(validPage.toString());
-  };
-
-  // New rotation handlers
-  const handleRotateClockwise = () => {
-    setPdfRotation((prev) => (prev + 90) % 360);
-  };
-
-  const handleRotateCounterClockwise = () => {
-    setPdfRotation((prev) => (prev - 90 + 360) % 360);
-  };
-
-  const handleZoomIn = () => {
-    setPdfScale(prev => Math.min(prev + 0.2, 2.0));
-  };
-
-  const handleZoomOut = () => {
-    setPdfScale(prev => Math.max(prev - 0.2, 0.5));
+  const handleTranslate = () => {
+    navigate(`/translate/${id}`);
   };
 
   const handleRetryLoading = () => {
@@ -696,6 +649,15 @@ const PDFViewer = () => {
               >
                 <Share className="h-5 w-5" />
               </button>
+              
+              <Link
+                to={`/translate/${id}`}
+                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-muted transition-colors"
+                aria-label={language === 'ar' ? 'ترجمة الملف' : 'Translate PDF'}
+              >
+                <Languages className="h-5 w-5" />
+              </Link>
+              
               <button
                 onClick={handleDeletePDF}
                 className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-destructive/10 text-destructive transition-colors"

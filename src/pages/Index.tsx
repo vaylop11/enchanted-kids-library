@@ -9,6 +9,7 @@ import FAQSection from '@/components/FAQSection';
 import UploadZone from '@/components/UploadZone';
 import PDFGrid from '@/components/PDFGrid';
 import SEO from '@/components/SEO';
+import { Languages } from 'lucide-react';
 
 const Index = () => {
   const { language } = useLanguage();
@@ -63,6 +64,17 @@ const Index = () => {
             </div>
             
             <UploadZone />
+            
+            <div className="mt-6 text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-background/50 text-sm">
+                <Languages className="h-4 w-4 text-primary" />
+                <span>
+                  {language === 'ar'
+                    ? 'ميزة جديدة: يمكنك الآن ترجمة محتوى ملف PDF إلى لغات متعددة'
+                    : 'New feature: You can now translate PDF content to multiple languages'}
+                </span>
+              </div>
+            </div>
           </div>
         </section>
         
@@ -73,23 +85,25 @@ const Index = () => {
         <BlogSection />
         <FAQSection />
       </main>
-<section className="bg-muted/10 py-8">
-  <div className="container mx-auto px-4 text-center">
-    <p className="text-lg font-medium mb-4 text-primary">
-      {language === 'ar' 
-        ? 'ادعم Gemi ChatPDF واستمرارية تطويره' 
-        : 'Support Gemi ChatPDF and its continued development'}
-    </p>
-    <a 
-      href="https://ko-fi.com/gemichatpdf" 
-      target="_blank" 
-      rel="noopener noreferrer"
-      className="inline-block px-6 py-3 text-white bg-pink-600 hover:bg-pink-500 transition-colors duration-200 rounded-2xl font-semibold shadow-md"
-    >
-      ☕ {language === 'ar' ? 'اشترِ لنا قهوة على Ko-fi' : 'Buy us a Coffee on Ko-fi'}
-    </a>
-  </div>
-</section>
+      
+      <section className="bg-muted/10 py-8">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-lg font-medium mb-4 text-primary">
+            {language === 'ar' 
+              ? 'ادعم Gemi ChatPDF واستمرارية تطويره' 
+              : 'Support Gemi ChatPDF and its continued development'}
+          </p>
+          <a 
+            href="https://ko-fi.com/gemichatpdf" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-block px-6 py-3 text-white bg-pink-600 hover:bg-pink-500 transition-colors duration-200 rounded-2xl font-semibold shadow-md"
+          >
+            ☕ {language === 'ar' ? 'اشترِ لنا قهوة على Ko-fi' : 'Buy us a Coffee on Ko-fi'}
+          </a>
+        </div>
+      </section>
+      
       <Footer />
     </div>
   );
