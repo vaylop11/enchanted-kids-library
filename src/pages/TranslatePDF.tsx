@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -53,12 +52,8 @@ const TranslatePDF = () => {
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
   const [isTempPdf, setIsTempPdf] = useState(false);
 
-  // Load PDF data
   useEffect(() => {
-    if (!id) {
-      navigate('/');
-      return;
-    }
+    if (!id) return;
 
     const loadPdf = async () => {
       if (id.startsWith('temp-') || window.location.pathname.includes('/pdf/temp/')) {
@@ -78,7 +73,7 @@ const TranslatePDF = () => {
           }
         }
         toast.error(language === 'ar' ? 'لم يتم العثور على الملف المؤقت' : 'Temporary PDF not found');
-        navigate('/');
+        navigate('/pdfs');
         return;
       }
 
@@ -220,10 +215,10 @@ const TranslatePDF = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <SEO 
-        title={`${language === 'ar' ? 'ترجمة: ' : 'Translate: '} ${pdfTitle}`}
+        title={`${language === 'ar' ? 'ترجمة: ' : 'Translate: '} ${pdfTitle || 'PDF'}`}
         description={language === 'ar' 
-          ? `ترجمة ملف PDF "${pdfTitle}" إلى لغات متعددة` 
-          : `Translate PDF "${pdfTitle}" to multiple languages`}
+          ? `ترجمة ملف PDF "${pdfTitle || ''}" إلى لغات متعددة` 
+          : `Translate PDF "${pdfTitle || ''}" to multiple languages`}
       />
       <Navbar />
       
@@ -288,7 +283,7 @@ const TranslatePDF = () => {
                   onClick={() => handlePageChange(pageNumber - 1)}
                   disabled={pageNumber <= 1}
                 >
-                  {language === 'ar' ? 'السابق' : 'Previous'}
+                  {language === 'ar' ? 'ا��سابق' : 'Previous'}
                 </Button>
                 
                 <div className="text-sm">

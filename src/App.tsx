@@ -62,11 +62,14 @@ const App = () => {
                     </ProtectedRoute>
                   } 
                 />
-                <Route path="/translate/:id" element={
-                  <ProtectedRoute>
-                    <TranslatePDF />
-                  </ProtectedRoute>
-                } />
+                <Route 
+                  path="/translate/:id" 
+                  element={
+                    <ProtectedRoute>
+                      <TranslatePDF />
+                    </ProtectedRoute>
+                  } 
+                />
                 <Route path="/blog" element={<BlogPage />} />
                 <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
