@@ -1,6 +1,37 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+// Define the SupabasePDF type based on the Supabase database schema
+export interface SupabasePDF {
+  id: string;
+  user_id: string;
+  title: string;
+  summary: string;
+  upload_date: string;
+  pageCount?: number;
+  page_count: number;
+  fileSize?: string;
+  file_size: string;
+  thumbnail?: string;
+  file_path: string;
+  created_at: string;
+  updated_at: string;
+  // Virtual property to store file URL
+  fileUrl?: string;
+  // Add uploadDate for compatibility with PDF interface
+  uploadDate?: string;
+}
+
+export interface PDFChatMessage {
+  id: string;
+  pdf_id: string;
+  is_user: boolean;
+  content: string;
+  timestamp: string;
+  // Add isUser for compatibility
+  isUser?: boolean;
+}
+
 export const getSupabasePDFById = async (id: string) => {
   try {
     const { data, error } = await supabase
@@ -10,29 +41,28 @@ export const getSupabasePDFById = async (id: string) => {
       .single();
 
     if (error) throw error;
+    
+    if (data) {
+      // Get file URL
+      const { data: urlData } = await supabase.storage
+        .from('pdfs')
+        .getPublicUrl(data.file_path);
+        
+      return {
+        ...data,
+        fileUrl: urlData.publicUrl,
+        pageCount: data.page_count,
+        fileSize: data.file_size,
+        uploadDate: data.upload_date
+      } as SupabasePDF;
+    }
+    
     return data;
   } catch (error) {
     console.error('Error fetching PDF from Supabase:', error);
     throw error;
   }
 };
-
-// Define the SupabasePDF type based on the Supabase database schema
-export interface SupabasePDF {
-  id: string;
-  user_id: string;
-  title: string;
-  summary: string;
-  upload_date: string;
-  pageCount: number;
-  page_count: number;
-  fileSize: string;
-  file_size: string;
-  thumbnail?: string;
-  file_path: string;
-  created_at: string;
-  updated_at: string;
-}
 
 export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
   try {
@@ -44,12 +74,21 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
 
     if (error) throw error;
     
-    // Transform data to match the SupabasePDF interface
-    const transformedData = data.map(pdf => ({
-      ...pdf,
-      pageCount: pdf.page_count,
-      fileSize: pdf.file_size,
-    }));
+    // Transform data to match the SupabasePDF interface with additional compatibility properties
+    const transformedData = data.map(pdf => {
+      // Get file URL for each PDF
+      const { data: urlData } = supabase.storage
+        .from('pdfs')
+        .getPublicUrl(pdf.file_path);
+        
+      return {
+        ...pdf,
+        pageCount: pdf.page_count,
+        fileSize: pdf.file_size,
+        uploadDate: pdf.upload_date,
+        fileUrl: urlData.publicUrl
+      };
+    });
 
     return transformedData;
   } catch (error) {
@@ -97,6 +136,8 @@ export const uploadPDFToSupabase = async (file: File, userId: string): Promise<S
       ...data,
       pageCount: data.page_count,
       fileSize: data.file_size,
+      uploadDate: data.upload_date,
+      fileUrl: urlData.publicUrl
     };
   } catch (error) {
     console.error('Error uploading PDF to Supabase:', error);
@@ -163,21 +204,14 @@ export const getPDFById = async (id: string): Promise<SupabasePDF | null> => {
       ...data,
       pageCount: data.page_count,
       fileSize: data.file_size,
-      fileUrl: urlData.publicUrl,
+      uploadDate: data.upload_date,
+      fileUrl: urlData.publicUrl
     };
   } catch (error) {
     console.error('Error fetching PDF from Supabase:', error);
     return null;
   }
 };
-
-export interface PDFChatMessage {
-  id: string;
-  pdf_id: string;
-  is_user: boolean;
-  content: string;
-  timestamp: string;
-}
 
 export const getChatMessagesForPDF = async (pdfId: string): Promise<PDFChatMessage[]> => {
   try {
@@ -188,7 +222,12 @@ export const getChatMessagesForPDF = async (pdfId: string): Promise<PDFChatMessa
       .order('timestamp', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    
+    // Add isUser property for compatibility
+    return data ? data.map(msg => ({
+      ...msg,
+      isUser: msg.is_user
+    })) : [];
   } catch (error) {
     console.error('Error fetching chat messages:', error);
     return [];
@@ -212,7 +251,12 @@ export const addChatMessageToPDF = async (
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Add isUser property for compatibility
+    return data ? {
+      ...data,
+      isUser: data.is_user
+    } : null;
   } catch (error) {
     console.error('Error adding chat message:', error);
     return null;
@@ -225,19 +269,24 @@ export const updatePDFMetadata = async (
 ): Promise<boolean> => {
   try {
     // Convert pageCount to page_count for database
-    const dbMetadata = {
-      ...metadata,
-      page_count: metadata.pageCount,
-      file_size: metadata.fileSize,
-    };
+    const dbMetadata: any = { ...metadata };
+    
+    if (metadata.pageCount !== undefined) {
+      dbMetadata.page_count = metadata.pageCount;
+      delete dbMetadata.pageCount;
+    }
+    
+    if (metadata.fileSize !== undefined) {
+      dbMetadata.file_size = metadata.fileSize;
+      delete dbMetadata.fileSize;
+    }
     
     // Remove fields that should not be updated directly
-    delete dbMetadata.pageCount;
-    delete dbMetadata.fileSize;
     delete dbMetadata.id;
     delete dbMetadata.user_id;
     delete dbMetadata.created_at;
     delete dbMetadata.fileUrl;
+    delete dbMetadata.uploadDate;
 
     const { error } = await supabase
       .from('pdfs')
