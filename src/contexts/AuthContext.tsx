@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, getCurrentUser } from '@/services/authService';
@@ -49,7 +48,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     checkUser();
 
-    // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.id);
       
@@ -66,6 +64,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsAdmin(true);
         } else {
           setIsAdmin(false);
+        }
+
+        // Check subscription status
+        const { data: subscriptionData } = await supabase
+          .from('user_subscriptions')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .eq('status', 'ACTIVE')
+          .single();
+
+        if (subscriptionData) {
+          toast.success(
+            language === 'ar' 
+              ? 'مرحباً بك في Gemi PRO!' 
+              : 'Welcome back to Gemi PRO!'
+          );
         }
         
         toast.success('Signed in successfully');
