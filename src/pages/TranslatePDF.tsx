@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -19,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { getPDFById } from '@/services/pdfStorage';
 import { getSupabasePDFById } from '@/services/pdfSupabaseService';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { extractTextFromPDF, AnalysisProgress } from '@/services/pdfAnalysisService';
 import { translateText, supportedLanguages } from '@/services/translationService';
