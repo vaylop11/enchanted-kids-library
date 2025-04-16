@@ -1,14 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-import SEO from '@/components/SEO';
-import ProSubscriptionCard from '@/components/ProSubscriptionCard';
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { 
   createSubscription, 
@@ -19,6 +10,12 @@ import {
 import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import SEO from '@/components/SEO';
+import ProSubscriptionCard from '@/components/ProSubscriptionCard';
 
 const SubscribePage = () => {
   const navigate = useNavigate();
@@ -29,15 +26,14 @@ const SubscribePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [paypalPlanId, setPaypalPlanId] = useState<string | null>(null);
   const [paypalError, setPaypalError] = useState<string | null>(null);
+  const [paypalLoadError, setPaypalLoadError] = useState<string | null>(null);
   const { refreshSubscription } = useSubscription();
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorDetails, setErrorDetails] = useState('');
   
-  // Check for subscription_id in URL params (returned by PayPal)
   const subscriptionId = searchParams.get('subscription_id');
-  
+
   useEffect(() => {
-    // Handle PayPal return with subscription_id
     const handlePayPalReturn = async () => {
       if (subscriptionId && plan) {
         try {
@@ -50,7 +46,6 @@ const SubscribePage = () => {
           
           await createSubscription(subscriptionId, plan.id);
           
-          // Refresh subscription status
           refreshSubscription();
           
           toast.success(
@@ -89,11 +84,9 @@ const SubscribePage = () => {
         const plans = await getSubscriptionPlans();
         console.log("Loaded plans:", plans);
         if (plans.length > 0) {
-          // Update the plan with the new price
           const updatedPlan = { ...plans[0], price: 4.99 };
           setPlan(updatedPlan);
           
-          // Separately fetch PayPal Plan ID to ensure we have it
           const paypalId = await getPayPalPlanIdFromDatabase();
           if (paypalId) {
             setPaypalPlanId(paypalId);
@@ -127,14 +120,12 @@ const SubscribePage = () => {
     try {
       console.log("Subscription approved:", data);
       
-      // For PayPal in-page flow (not redirect)
       if (data.subscriptionID) {
         await createSubscription(data.subscriptionID, plan.id);
         toast.success(language === 'ar' 
           ? 'تم الاشتراك بنجاح في Gemi PRO!' 
           : 'Successfully subscribed to Gemi PRO!');
         
-        // Refresh subscription status
         refreshSubscription();
         
         navigate('/pdfs');
@@ -151,43 +142,19 @@ const SubscribePage = () => {
     }
   };
 
-  const handlePayPalError = (error: Record<string, unknown>) => {
-    console.error('PayPal error:', error);
-    
-    // Store error details for debugging
-    setErrorDetails(JSON.stringify(error, null, 2));
-    
-    // Show more descriptive error message
-    let errorMessage = language === 'ar' 
-      ? 'خطأ في معالجة الدفع. يرجى المحاولة مرة أخرى.' 
-      : 'Error processing payment. Please try again.';
-      
-    // Check for common PayPal errors
-    if (error.message) {
-      if (typeof error.message === 'string' && error.message.includes('canceled')) {
-        errorMessage = language === 'ar'
-          ? 'تم إلغاء عملية الدفع'
-          : 'Payment was canceled';
-      }
-    }
-    
-    setPaypalError(errorMessage);
-    
+  const handlePayPalError = (error: any) => {
+    console.error('PayPal Button Initialization Error:', error);
+    setPaypalLoadError(error?.message || 'Failed to load PayPal buttons');
     toast.error(language === 'ar' 
-      ? 'خطأ في PayPal. يرجى المحاولة مرة أخرى لاحقًا.' 
-      : 'PayPal error. Please try again later.');
-      
-    // Show error dialog with details for troubleshooting
-    setShowErrorDialog(true);
+      ? 'خطأ في تحميل أزرار PayPal. يرجى المحاولة مرة أخرى.'
+      : 'Error loading PayPal buttons. Please try again.');
   };
 
   const handleTryAgain = () => {
-    // Reset error states
     setPaypalError(null);
     setErrorDetails('');
     setShowErrorDialog(false);
     
-    // Refresh the page to reset PayPal components
     window.location.reload();
   };
 
@@ -247,13 +214,30 @@ const SubscribePage = () => {
                   </div>
                 )}
                 
-                <PayPalScriptProvider options={{ 
-                  clientId: "AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIjy_OcQFqtUxUGN2n1DjHnM4A4u62h",
-                  vault: true,
-                  intent: "subscription",
-                  components: "buttons",
-                  debug: true
-                }}>
+                {paypalLoadError && (
+                  <div className="p-4 mb-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300">
+                    {paypalLoadError}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2 w-full"
+                      onClick={handleTryAgain}
+                    >
+                      {language === 'ar' ? 'حاول مرة أخرى' : 'Try Again'}
+                    </Button>
+                  </div>
+                )}
+                
+                <PayPalScriptProvider 
+                  options={{ 
+                    clientId: "AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIjy_OcQFqtUxUGN2n1DjHnM4A4u62h",
+                    vault: true,
+                    intent: "subscription",
+                    components: "buttons",
+                    debug: true
+                  }}
+                  onError={handlePayPalError}
+                >
                   <PayPalButtons
                     createSubscription={(data, actions) => {
                       console.log("Creating subscription with plan ID: P-8AR43998YB6934043M77H5AI");
