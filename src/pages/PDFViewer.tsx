@@ -48,6 +48,29 @@ import {
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
-const PDFViewer = () => {
-  // Rest of the component code remains unchanged
+const PDFViewer = (): JSX.Element => {
+  const { id } = useParams<{ id: string }>();
+  const { language } = useLanguage();
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="container mx-auto py-6 px-4">
+        <div className="flex justify-center items-center h-[70vh]">
+          <div className="text-center">
+            <FileText className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+            <h1 className="text-2xl font-bold mb-2">
+              {language === 'ar' ? 'جارٍ تحميل ملف PDF' : 'Loading PDF'}
+            </h1>
+            <p className="text-muted-foreground">
+              {language === 'ar' ? 'يرجى الانتظار بينما نقوم بتحميل ملف PDF الخاص بك' : 'Please wait while we load your PDF file'}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
+
+export default PDFViewer;
