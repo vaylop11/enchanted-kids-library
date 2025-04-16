@@ -1,14 +1,16 @@
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, FormEventHandler } from "react";
 import { cn } from "@/lib/utils";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-interface ChatInputProps extends React.HTMLAttributes<HTMLDivElement> {
+// Create a separate interface that doesn't extend HTMLAttributes
+export interface ChatInputProps {
   onSubmit: (message: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  className?: string;
   dir?: "ltr" | "rtl";
   autoFocus?: boolean;
 }
@@ -21,7 +23,7 @@ export function ChatInput({
   dir = "ltr",
   autoFocus = false,
   ...props
-}: ChatInputProps) {
+}: ChatInputProps & Omit<React.HTMLAttributes<HTMLDivElement>, 'onSubmit'>) {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
