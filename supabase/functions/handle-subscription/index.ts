@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { subscriptionId, planId } = await req.json()
+    const { subscriptionId, planId, action } = await req.json()
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     const supabase = createClient(supabaseUrl!, supabaseKey!)
@@ -59,8 +59,80 @@ Deno.serve(async (req) => {
     const subscription = await verifySubscription(subscriptionId, accessToken)
     console.log("Subscription details from PayPal:", subscription)
 
-    if (subscription.status === 'ACTIVE') {
-      // Store subscription in database
+    if (!subscription.id) {
+      throw new Error('Invalid subscription ID or PayPal API error')
+    }
+
+    // Check if this is just a refresh request
+    if (action === 'refresh') {
+      // Just update the status based on PayPal's response
+      const { data: existingSubscription, error: fetchError } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('paypal_subscription_id', subscriptionId)
+        .eq('user_id', user.id)
+        .single()
+      
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is code for "no rows returned"
+        throw fetchError
+      }
+
+      // If no subscription found, return error
+      if (!existingSubscription) {
+        throw new Error('Subscription not found in database')
+      }
+      
+      // Update status based on PayPal data
+      const { data, error } = await supabase
+        .from('user_subscriptions')
+        .update({
+          status: subscription.status,
+          current_period_start: new Date(subscription.start_time),
+          current_period_end: new Date(subscription.billing_info.next_billing_time || subscription.billing_info.last_payment.time),
+          updated_at: new Date(),
+        })
+        .eq('id', existingSubscription.id)
+        .select()
+        .single()
+      
+      if (error) throw error
+      
+      return new Response(JSON.stringify({ success: true, data, refreshed: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // For new subscription creation
+    if (subscription.status === 'ACTIVE' || subscription.status === 'APPROVED') {
+      // Check if subscription already exists
+      const { data: existingSubscription, error: fetchError } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('paypal_subscription_id', subscriptionId)
+        .single()
+      
+      if (existingSubscription) {
+        // Update existing subscription
+        const { data, error } = await supabase
+          .from('user_subscriptions')
+          .update({
+            status: subscription.status,
+            current_period_start: new Date(subscription.start_time),
+            current_period_end: new Date(subscription.billing_info.next_billing_time || subscription.billing_info.last_payment.time),
+            updated_at: new Date(),
+          })
+          .eq('id', existingSubscription.id)
+          .select()
+          .single()
+        
+        if (error) throw error
+        
+        return new Response(JSON.stringify({ success: true, data, updated: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      
+      // Store new subscription in database
       const { data, error } = await supabase
         .from('user_subscriptions')
         .insert({
@@ -69,7 +141,10 @@ Deno.serve(async (req) => {
           paypal_subscription_id: subscriptionId,
           status: subscription.status,
           current_period_start: new Date(subscription.start_time),
-          current_period_end: new Date(subscription.billing_info.next_billing_time),
+          current_period_end: new Date(subscription.billing_info.next_billing_time || 
+                                        (subscription.billing_info.last_payment ? 
+                                         subscription.billing_info.last_payment.time : 
+                                         new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))),
         })
         .select()
         .single()
@@ -81,9 +156,10 @@ Deno.serve(async (req) => {
       })
     }
 
-    throw new Error('Subscription not active')
+    throw new Error(`Subscription not active: ${subscription.status}`)
 
   } catch (error) {
+    console.error("Error handling subscription:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
