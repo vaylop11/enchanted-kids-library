@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FreePlanCard } from '@/components/FreePlanCard';
 
 export const PlanInfo = () => {
   const { limits, loading } = usePlanLimits();
@@ -28,30 +29,7 @@ export const PlanInfo = () => {
   }
 
   if (!limits) {
-    return (
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-1">
-                {language === 'ar' ? 'الخطة المجانية' : 'Free Plan'}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {language === 'ar' ? 'الحد الأقصى 2 PDF' : 'Max 2 PDFs'}
-              </p>
-            </div>
-            
-            <Button
-              onClick={() => navigate('/subscribe')}
-              variant="default"
-              className="bg-purple-800 text-white hover:bg-purple-900"
-            >
-              {language === 'ar' ? 'ترقية إلى Pro' : 'Upgrade to Pro'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <FreePlanCard />;
   }
 
   return (
@@ -62,7 +40,7 @@ export const PlanInfo = () => {
             <h3 className="text-lg font-semibold mb-1">
               {limits.has_paid_subscription 
                 ? (language === 'ar' ? 'خطة Pro' : 'Pro Plan')
-                : (language === 'ar' ? 'الخطة المجانية' : 'Free Plan')}
+                : (language === 'ar' ? 'جيمي المجاني' : 'Gemi Free')}
             </h3>
             <p className="text-sm text-muted-foreground">
               {language === 'ar'
