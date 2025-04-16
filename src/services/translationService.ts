@@ -34,7 +34,7 @@ export const translateText = async (text: string, targetLanguage: string): Promi
 
   try {
     const { data, error } = await supabase.functions.invoke('translate-text', {
-      body: { text, targetLanguage },
+      body: { text, targetLanguage, enhancedFormat: true },
     });
 
     if (error) {
