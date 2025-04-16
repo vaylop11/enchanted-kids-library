@@ -309,6 +309,35 @@ const ChatPage = () => {
     }
   };
 
+  const ReplyPreview = ({ replyToMessage, onCancel }: { replyToMessage: ChatMessageType, onCancel: () => void }) => {
+    return (
+      <div className="mb-2 flex items-center justify-between text-sm bg-muted p-2 rounded">
+        <div className="flex items-center gap-2">
+          <Reply className="h-4 w-4" />
+          <Avatar className={cn(
+            "h-6 w-6",
+            isAdminEmail(replyToMessage.user_email) ? 'bg-amber-100' : 'bg-primary/10'
+          )}>
+            <AvatarFallback className={isAdminEmail(replyToMessage.user_email) ? 'text-amber-600' : ''}>
+              {getInitials(replyToMessage.user_email)}
+            </AvatarFallback>
+          </Avatar>
+          <span className="line-clamp-1">
+            <span className="font-medium">Replying to {replyToMessage.user_email}:</span> {replyToMessage.content}
+          </span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onCancel}
+          className="flex-shrink-0"
+        >
+          Cancel
+        </Button>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -560,22 +589,10 @@ const ChatPage = () => {
             
             <form onSubmit={sendMessage} className="flex flex-col gap-2">
               {replyToMessage && (
-                <div className="mb-2 flex items-center justify-between text-sm bg-muted p-2 rounded">
-                  <div className="flex items-center gap-2">
-                    <Reply className="h-4 w-4" />
-                    <span className="line-clamp-1">
-                      <span className="font-medium">Replying to {replyToMessage.user_email}:</span> {replyToMessage.content}
-                    </span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setReplyToMessage(null)}
-                    className="flex-shrink-0"
-                  >
-                    Cancel
-                  </Button>
-                </div>
+                <ReplyPreview 
+                  replyToMessage={replyToMessage} 
+                  onCancel={() => setReplyToMessage(null)} 
+                />
               )}
               
               <div className="flex gap-2">
