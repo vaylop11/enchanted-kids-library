@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,7 +20,6 @@ import SignUp from "./components/auth/SignUp";
 import AuthPage from "./pages/AuthPage";
 import AdminPage from "./pages/AdminPage";
 import ChatPage from "./pages/ChatPage";
-import SubscribePage from "./pages/SubscribePage";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -64,11 +62,14 @@ const App = () => {
                     </ProtectedRoute>
                   } 
                 />
-                <Route path="/translate/:id" element={
-                  <ProtectedRoute>
-                    <TranslatePDF />
-                  </ProtectedRoute>
-                } />
+                <Route 
+                  path="/translate/:id" 
+                  element={
+                    <ProtectedRoute>
+                      <TranslatePDF />
+                    </ProtectedRoute>
+                  } 
+                />
                 <Route path="/blog" element={<BlogPage />} />
                 <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -76,12 +77,6 @@ const App = () => {
                 <Route path="/signin" element={<AuthPage><SignIn /></AuthPage>} />
                 <Route path="/signup" element={<AuthPage><SignUp /></AuthPage>} />
                 <Route path="/admin" element={<AdminPage />} />
-                <Route 
-                  path="/subscribe" 
-                  element={
-                    <SubscribePage />
-                  } 
-                />
                 <Route 
                   path="/chat" 
                   element={

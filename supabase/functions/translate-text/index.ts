@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +7,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -22,61 +22,45 @@ serve(async (req) => {
       );
     }
     
-    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    // Use Google Translate API
+    const apiKey = Deno.env.get('GOOGLE_TRANSLATE_API_KEY');
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: 'Gemini API key not configured' }),
+        JSON.stringify({ error: 'Translation API key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if text is empty or just whitespace
-    if (!text.trim()) {
+    const url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        q: text,
+        target: targetLanguage,
+        format: 'text'
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (data.error) {
+      console.error('Translation API error:', data.error);
       return new Response(
-        JSON.stringify({ 
-          translatedText: '',
-          detectedSourceLanguage: null,
-          isMarkdown: true
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Failed to translate text' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Using flash model instead of pro for better rate limits
-
-    const prompt = `Translate the following text to ${targetLanguage}. Format the output in markdown to preserve formatting, headings, and structure. Only respond with the translated text in markdown format, nothing else:
-
-${text}`;
-
-    try {
-      const result = await model.generateContent(prompt);
-      const translatedText = result.response.text();
-      
-      return new Response(
-        JSON.stringify({ 
-          translatedText,
-          detectedSourceLanguage: null,
-          isMarkdown: true
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } catch (modelError) {
-      console.error('Gemini API Error:', modelError.message);
-      
-      // Check if it's a quota error
-      if (modelError.message && modelError.message.includes('429')) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'Translation quota exceeded. Please try again in a few moments.',
-            isQuotaError: true 
-          }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      throw modelError;
-    }
+    return new Response(
+      JSON.stringify({ 
+        translatedText: data.data.translations[0].translatedText,
+        detectedSourceLanguage: data.data.translations[0].detectedSourceLanguage 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error('Error in translate-text function:', error);
     return new Response(

@@ -7,8 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserPDFs, uploadPDFToSupabase, SupabasePDF } from '@/services/pdfSupabaseService';
-import { PlanInfo } from '@/components/PlanInfo';
+import { getUserPDFs, uploadPDFToSupabase, SupabasePDF, PDF } from '@/services/pdfSupabaseService';
 
 const PDFs = () => {
   const location = useLocation();
@@ -167,9 +166,18 @@ const PDFs = () => {
               : 'Browse all PDFs you have uploaded. You can search for a specific file or upload a new one.'
             }
           </p>
+          {hasReachedMaxPDFs && (
+            <div className="mt-4 flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-950/20 p-3 rounded-md border border-amber-200 dark:border-amber-800">
+              <AlertTriangle className="h-4 w-4" />
+              <p className="text-sm">
+                {language === 'ar' 
+                  ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
+                  : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.'
+                }
+              </p>
+            </div>
+          )}
         </div>
-        
-        <PlanInfo />
         
         <div className="flex flex-col md:flex-row gap-6 mb-8 items-start">
           <div className="relative flex-grow">

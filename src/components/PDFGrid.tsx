@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { pdfs } from '@/data/pdfs';
-import { getUserPDFs } from '@/services/pdfSupabaseService';
+import { getUserPDFs, SupabasePDF, PDF } from '@/services/pdfSupabaseService';
 import { useAuth } from '@/contexts/AuthContext';
 import { Grid3X3, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import PDFCard from '@/components/PDFCard';
 
 const PDFGrid = () => {
-  const [allPDFs, setAllPDFs] = useState(pdfs);
+  const [allPDFs, setAllPDFs] = useState<SupabasePDF[] | PDF[]>(pdfs);
   const { language } = useLanguage();
   const { user } = useAuth();
 

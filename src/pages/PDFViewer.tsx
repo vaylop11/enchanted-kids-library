@@ -170,8 +170,8 @@ const PDFViewer = () => {
             const convertedMessages: ChatMessage[] = messages.map(msg => ({
               id: msg.id,
               content: msg.content,
-              isUser: msg.isUser,
-              timestamp: msg.timestamp
+              isUser: msg.isUser ?? msg.is_user,
+              timestamp: new Date(msg.timestamp)
             }));
             
             setChatMessages(convertedMessages);
@@ -379,8 +379,8 @@ const PDFViewer = () => {
           savedUserMessage = {
             id: result.id,
             content: result.content,
-            isUser: result.isUser,
-            timestamp: result.timestamp
+            isUser: result.isUser ?? result.is_user,
+            timestamp: new Date(result.timestamp)
           };
         }
       } else {
@@ -482,8 +482,8 @@ const PDFViewer = () => {
             savedAiMessage = {
               id: result.id,
               content: result.content,
-              isUser: result.isUser,
-              timestamp: result.timestamp
+              isUser: result.isUser ?? result.is_user,
+              timestamp: new Date(result.timestamp)
             };
           }
         } else {
@@ -542,8 +542,8 @@ const PDFViewer = () => {
             savedFallbackMessage = {
               id: result.id,
               content: result.content,
-              isUser: result.isUser,
-              timestamp: result.timestamp
+              isUser: result.isUser ?? result.is_user,
+              timestamp: new Date(result.timestamp)
             };
           }
         } else {
