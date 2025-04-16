@@ -7,7 +7,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 const ProSubscriptionCard = () => {
-  const { language, direction } = useLanguage();
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const isSubscribePage = location.pathname === '/subscribe';
@@ -19,15 +19,12 @@ const ProSubscriptionCard = () => {
   }, [language]);
 
   return (
-    <Card 
-      key={key} 
-      className="relative overflow-hidden bg-gradient-to-b from-purple-50 to-purple-100 dark:from-purple-900/10 dark:to-purple-900/5 border-2 border-purple-500/20 hover:border-purple-500/40 transition-all duration-300"
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-purple-600/10 z-0" />
-      <CardContent className={`p-6 relative z-10 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
+    <Card key={key} className="relative overflow-hidden bg-gradient-to-b from-purple-50 to-purple-100 dark:from-purple-900/10 dark:to-purple-900/5 border-2 border-purple-500/20 hover:border-purple-500/40 transition-all duration-300">
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-purple-600/5 z-0" />
+      <CardContent className="p-6 relative z-10">
         <div className="flex flex-col gap-4">
-          <div className={`${direction === 'rtl' ? 'mr-0' : ''}`}>
-            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 text-xs font-medium mb-4 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 text-xs font-medium mb-4">
               <Zap className="h-3 w-3" />
               {language === 'ar' ? 'جيمي برو' : 'Gemi Pro'}
             </div>
@@ -42,7 +39,7 @@ const ProSubscriptionCard = () => {
           </div>
 
           <div className="space-y-4">
-            <div className={`flex items-start gap-3 bg-purple-500/10 p-3 rounded-lg ${direction === 'rtl' ? 'flex-row-reverse text-right' : ''}`}>
+            <div className="flex items-start gap-3 bg-purple-500/5 p-3 rounded-lg">
               <FileText className="h-5 w-5 mt-0.5 text-purple-600 dark:text-purple-400" />
               <div>
                 <p className="text-sm font-medium">
@@ -58,7 +55,7 @@ const ProSubscriptionCard = () => {
               </div>
             </div>
 
-            <div className={`flex items-start gap-3 bg-purple-500/10 p-3 rounded-lg ${direction === 'rtl' ? 'flex-row-reverse text-right' : ''}`}>
+            <div className="flex items-start gap-3 bg-purple-500/5 p-3 rounded-lg">
               <FileText className="h-5 w-5 mt-0.5 text-purple-600 dark:text-purple-400" />
               <div>
                 <p className="text-sm font-medium">
@@ -74,7 +71,7 @@ const ProSubscriptionCard = () => {
               </div>
             </div>
 
-            <div className={`flex items-start gap-3 bg-purple-500/10 p-3 rounded-lg ${direction === 'rtl' ? 'flex-row-reverse text-right' : ''}`}>
+            <div className="flex items-start gap-3 bg-purple-500/5 p-3 rounded-lg">
               <Globe className="h-5 w-5 mt-0.5 text-purple-600 dark:text-purple-400" />
               <div>
                 <p className="text-sm font-medium">
@@ -90,7 +87,7 @@ const ProSubscriptionCard = () => {
               </div>
             </div>
 
-            <div className={`flex items-start gap-3 bg-purple-500/10 p-3 rounded-lg ${direction === 'rtl' ? 'flex-row-reverse text-right' : ''}`}>
+            <div className="flex items-start gap-3 bg-purple-500/5 p-3 rounded-lg">
               <Zap className="h-5 w-5 mt-0.5 text-purple-600 dark:text-purple-400" />
               <div>
                 <p className="text-sm font-medium">
@@ -110,7 +107,7 @@ const ProSubscriptionCard = () => {
           {!isSubscribePage && (
             <Button
               onClick={() => navigate('/subscribe')}
-              className={`w-full bg-purple-600 hover:bg-purple-700 text-white ${direction === 'rtl' ? 'font-[system-ui]' : ''}`}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
             >
               {language === 'ar' ? 'اشترك الآن' : 'Subscribe Now'}
             </Button>

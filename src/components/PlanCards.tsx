@@ -9,25 +9,12 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 export const PlanCards = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const { language, direction } = useLanguage();
+  const { language } = useLanguage();
 
   // Reset carousel position when language changes
   useEffect(() => {
     setCurrentSlide(0);
   }, [language]);
-
-  // Handle navigation based on language direction
-  const navigateNext = () => {
-    setCurrentSlide(currentSlide === 0 ? 1 : 0);
-  };
-
-  const navigatePrevious = () => {
-    setCurrentSlide(currentSlide === 0 ? 1 : 0);
-  };
-
-  // Determine which buttons to use based on direction
-  const LeftButton = direction === 'rtl' ? ChevronRight : ChevronLeft;
-  const RightButton = direction === 'rtl' ? ChevronLeft : ChevronRight;
 
   return (
     <div className="relative max-w-md mx-auto">
@@ -37,7 +24,6 @@ export const PlanCards = () => {
           loop: true,
         }}
         className="w-full"
-        dir={direction}
         setApi={(api) => {
           api?.on('select', () => {
             setCurrentSlide(api.selectedScrollSnap());
@@ -58,19 +44,17 @@ export const PlanCards = () => {
             variant="outline"
             size="icon"
             className="h-8 w-8 rounded-full bg-background shadow-sm"
-            onClick={navigatePrevious}
-            aria-label={language === 'ar' ? 'السابق' : 'Previous'}
+            onClick={() => setCurrentSlide(currentSlide === 0 ? 1 : 0)}
           >
-            <LeftButton className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
             className="h-8 w-8 rounded-full bg-background shadow-sm"
-            onClick={navigateNext}
-            aria-label={language === 'ar' ? 'التالي' : 'Next'}
+            onClick={() => setCurrentSlide(currentSlide === 0 ? 1 : 0)}
           >
-            <RightButton className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </Carousel>
