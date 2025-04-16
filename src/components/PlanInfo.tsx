@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FreePlanCard } from '@/components/FreePlanCard';
+import { PlanCards } from '@/components/PlanCards';
 
 export const PlanInfo = () => {
   const { limits, loading } = usePlanLimits();
@@ -29,7 +29,7 @@ export const PlanInfo = () => {
   }
 
   if (!limits) {
-    return <FreePlanCard />;
+    return <PlanCards />;
   }
 
   return (
