@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -75,13 +74,9 @@ const ChatPage = () => {
         { event: 'DELETE', schema: 'public', table: 'messages' },
         (payload) => {
           const deletedMessageId = payload.old.id;
-          // Handle single message deletion
           if (deletedMessageId) {
             setMessages((prev) => prev.filter(msg => msg.id !== deletedMessageId));
-          } 
-          // If we don't have a specific message ID, it might be a bulk delete
-          // We'll handle that by refreshing messages from the server
-          else {
+          } else {
             fetchMessages();
           }
         }
@@ -178,7 +173,6 @@ const ChatPage = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value);
     
-    // Handle typing indicator
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
@@ -191,7 +185,6 @@ const ChatPage = () => {
 
   const handleReply = (message: ChatMessageType) => {
     setReplyToMessage(message);
-    // Scroll to message input when replying
     setTimeout(() => {
       const input = document.querySelector('input[aria-label="Type a message"]');
       if (input) {
@@ -216,7 +209,6 @@ const ChatPage = () => {
         user_email: user.email || 'Anonymous'
       };
       
-      // If replying to a message, add it to the payload
       if (replyToMessage) {
         messagePayload.reply_to = {
           id: replyToMessage.id,
@@ -259,15 +251,13 @@ const ChatPage = () => {
     if (!isAdmin) return;
     
     try {
-      // Delete all messages with a date greater than 1970-01-01
-      const { error } = await supabaseUntyped
+      const { error } = await supabase
         .from('messages')
         .delete()
         .gte('created_at', '1970-01-01');
         
       if (error) throw error;
       
-      // Clear the messages in the UI immediately
       setMessages([]);
       toast.success('All messages cleared');
     } catch (error) {
@@ -280,8 +270,7 @@ const ChatPage = () => {
     if (!user) return;
     
     try {
-      // Get the current message to check existing reactions
-      const { data: message, error: fetchError } = await supabaseUntyped
+      const { data: message, error: fetchError } = await supabase
         .from('messages')
         .select('*')
         .eq('id', messageId)
@@ -289,38 +278,30 @@ const ChatPage = () => {
 
       if (fetchError) throw fetchError;
       
-      // Initialize or get existing reactions
       let updatedReactions = message?.reactions || [];
       
-      // Find if this emoji reaction already exists
       const existingReactionIndex = updatedReactions.findIndex(r => r.emoji === emoji);
       
       if (existingReactionIndex >= 0) {
-        // Check if user has already reacted with this emoji
         const userIndex = updatedReactions[existingReactionIndex].users.indexOf(user.id);
         
         if (userIndex >= 0) {
-          // Remove user from the reaction
           updatedReactions[existingReactionIndex].users.splice(userIndex, 1);
           
-          // If no users left for this reaction, remove the reaction
           if (updatedReactions[existingReactionIndex].users.length === 0) {
             updatedReactions.splice(existingReactionIndex, 1);
           }
         } else {
-          // Add user to the existing reaction
           updatedReactions[existingReactionIndex].users.push(user.id);
         }
       } else {
-        // Add new reaction with this user
         updatedReactions.push({
           emoji,
           users: [user.id]
         });
       }
 
-      // Update the message with the new reactions
-      const { error: updateError } = await supabaseUntyped
+      const { error: updateError } = await supabase
         .from('messages')
         .update({ reactions: updatedReactions })
         .eq('id', messageId);
