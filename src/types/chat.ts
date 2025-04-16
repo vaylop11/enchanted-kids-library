@@ -5,7 +5,10 @@ export type ChatUser = {
   online_at: string;
 };
 
-export type MessageType = 'public' | 'private';
+export type MessageReaction = {
+  emoji: '👍' | '❤️' | '😂' | '😲' | '😢' | '😡';
+  users: string[];
+};
 
 export type ChatMessage = {
   id: string;
@@ -18,6 +21,6 @@ export type ChatMessage = {
     content: string;
     user_email: string;
   } | null;
-  type: MessageType;
-  to_user_id?: string;
+  reactions?: MessageReaction[];
 };
+

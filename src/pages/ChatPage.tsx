@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import SEO from '@/components/SEO';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
-import { Send, User, ArrowLeft, Crown, Trash2, Eraser, Reply, Mail } from 'lucide-react';
+import { Send, ArrowLeft, Crown, Reply, ThumbsUp, Heart, Laugh, Frown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -19,10 +18,10 @@ import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import type { ChatMessage as ChatMessageType, ChatUser } from '@/types/chat';
 import { cn } from '@/lib/utils';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 type Message = {
   id: string;
@@ -35,8 +34,10 @@ type Message = {
     content: string;
     user_email: string;
   } | null;
-  type: 'public' | 'private';
-  to_user_id?: string;
+  reactions?: {
+    emoji: string;
+    users: string[];
+  }[];
 };
 
 type OnlineUser = {
@@ -44,6 +45,13 @@ type OnlineUser = {
   email: string;
   online_at: string;
 };
+
+const EMOJI_REACTIONS = [
+  { emoji: '👍', icon: ThumbsUp },
+  { emoji: '❤️', icon: Heart },
+  { emoji: '😂', icon: Laugh },
+  { emoji: '😢', icon: Frown },
+] as const;
 
 const ChatPage = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -56,7 +64,6 @@ const ChatPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [replyTo, setReplyTo] = useState<ChatMessageType['reply_to']>(null);
-  const [privateMessageTo, setPrivateMessageTo] = useState<ChatUser | null>(null);
   const { setTyping, getTypingIndicator } = useTypingIndicator('global', user?.id || '', user?.email || '');
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
@@ -170,18 +177,6 @@ const ChatPage = () => {
     return email.substring(0, 2).toUpperCase();
   };
 
-  const maskEmail = (email: string) => {
-    if (!email || email === 'Anonymous') return 'Anonymous';
-    
-    const parts = email.split('@');
-    if (parts.length !== 2) return email;
-    
-    const name = parts[0];
-    if (name.length <= 2) return email;
-    
-    return `${name.substring(0, 2)}***`;
-  };
-
   const isAdminEmail = (email: string) => {
     return email === 'cherifhoucine83@gmail.com';
   };
@@ -208,11 +203,6 @@ const ChatPage = () => {
     });
   };
 
-  const handlePrivateMessage = (toUser: ChatUser) => {
-    setPrivateMessageTo(toUser);
-    toast.info(`Sending private message to ${toUser.email}`);
-  };
-
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -221,26 +211,19 @@ const ChatPage = () => {
     const messageContent = newMessage.trim();
     setNewMessage('');
     setReplyTo(null);
-    setPrivateMessageTo(null);
     
     try {
-      const { error, data } = await supabaseUntyped
+      const { error } = await supabaseUntyped
         .from('messages')
         .insert({
           content: messageContent,
           user_id: user.id,
           user_email: user.email || 'Anonymous',
           reply_to: replyTo,
-          type: privateMessageTo ? 'private' : 'public',
-          to_user_id: privateMessageTo?.id
         })
         .select('*');
 
       if (error) throw error;
-      
-      if (privateMessageTo) {
-        toast.success(`Private message sent to ${privateMessageTo.email}`);
-      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
@@ -301,6 +284,46 @@ const ChatPage = () => {
   const pageDescription = language === 'ar' 
     ? 'تواصل مع مستخدمين آخرين وناقش ملفات PDF ومشاريعك في غرفة دردشة تشات PDF'
     : 'Connect with other users and discuss PDF files and projects in the ChatPDF chat room';
+
+  const handleReaction = async (messageId: string, emoji: string) => {
+    try {
+      const { data: message } = await supabaseUntyped
+        .from('messages')
+        .select('reactions')
+        .eq('id', messageId)
+        .single();
+
+      let updatedReactions = message?.reactions || [];
+      const existingReactionIndex = updatedReactions.findIndex(r => r.emoji === emoji);
+
+      if (existingReactionIndex >= 0) {
+        const userIndex = updatedReactions[existingReactionIndex].users.indexOf(user!.id);
+        if (userIndex >= 0) {
+          updatedReactions[existingReactionIndex].users.splice(userIndex, 1);
+          if (updatedReactions[existingReactionIndex].users.length === 0) {
+            updatedReactions.splice(existingReactionIndex, 1);
+          }
+        } else {
+          updatedReactions[existingReactionIndex].users.push(user!.id);
+        }
+      } else {
+        updatedReactions.push({
+          emoji,
+          users: [user!.id]
+        });
+      }
+
+      const { error } = await supabaseUntyped
+        .from('messages')
+        .update({ reactions: updatedReactions })
+        .eq('id', messageId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating reaction:', error);
+      toast.error('Failed to update reaction');
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -414,8 +437,7 @@ const ChatPage = () => {
                       key={message.id} 
                       className={cn(
                         "flex gap-3",
-                        message.user_id === user?.id ? "justify-end" : "justify-start",
-                        message.type === 'private' ? 'opacity-75' : ''
+                        message.user_id === user?.id ? "justify-end" : "justify-start"
                       )}
                     >
                       {message.user_id !== user?.id && (
@@ -430,21 +452,21 @@ const ChatPage = () => {
                       )}
                       
                       <div className={cn(
-                        "max-w-[75%] rounded-lg p-3 group relative",
+                        "relative max-w-[75%] rounded-lg p-3 group",
                         message.user_id === user?.id 
                           ? "bg-primary text-primary-foreground" 
                           : "bg-muted"
                       )}>
                         {message.reply_to && (
-                          <div className="text-xs opacity-75 mb-2 p-2 rounded bg-background/20">
+                          <div className="text-xs opacity-75 mb-2 p-2 rounded bg-background/20 cursor-pointer"
+                               onClick={() => {
+                                 const replyMessage = messages.find(m => m.id === message.reply_to?.id);
+                                 if (replyMessage) {
+                                   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                                 }
+                               }}>
                             <span className="font-medium">{message.reply_to.user_email}:</span> {message.reply_to.content}
                           </div>
-                        )}
-                        
-                        {message.type === 'private' && (
-                          <Badge variant="outline" className="mb-2">
-                            Private Message
-                          </Badge>
                         )}
                         
                         <div className="whitespace-pre-wrap text-sm">
@@ -457,7 +479,8 @@ const ChatPage = () => {
 
                         <div className={cn(
                           "absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity",
-                          message.user_id === user?.id ? "left-2" : "right-2"
+                          message.user_id === user?.id ? "left-2" : "right-2",
+                          "flex items-center gap-1"
                         )}>
                           <Button
                             variant="ghost"
@@ -467,22 +490,47 @@ const ChatPage = () => {
                           >
                             <Reply className="h-3 w-3" />
                           </Button>
-                          
-                          {message.user_id !== user?.id && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 bg-background/80 backdrop-blur-sm rounded-full ml-1"
-                              onClick={() => handlePrivateMessage({
-                                id: message.user_id,
-                                email: message.user_email,
-                                online_at: new Date().toISOString()
-                              })}
-                            >
-                              <Mail className="h-3 w-3" />
-                            </Button>
-                          )}
+
+                          <HoverCard openDelay={0}>
+                            <HoverCardTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-1 bg-background/80 backdrop-blur-sm rounded-full"
+                              >
+                                😀
+                              </Button>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-auto p-1 flex gap-1" side="top">
+                              {EMOJI_REACTIONS.map(({ emoji }) => (
+                                <Button
+                                  key={emoji}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => handleReaction(message.id, emoji)}
+                                >
+                                  {emoji}
+                                </Button>
+                              ))}
+                            </HoverCardContent>
+                          </HoverCard>
                         </div>
+
+                        {message.reactions && message.reactions.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {message.reactions.map((reaction, idx) => (
+                              <Badge
+                                key={`${reaction.emoji}-${idx}`}
+                                variant="secondary"
+                                className="cursor-pointer"
+                                onClick={() => handleReaction(message.id, reaction.emoji)}
+                              >
+                                {reaction.emoji} {reaction.users.length}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       
                       {message.user_id === user?.id && (
@@ -506,36 +554,23 @@ const ChatPage = () => {
             </ScrollArea>
             
             <form onSubmit={sendMessage} className="flex flex-col gap-2">
-              {(replyTo || privateMessageTo) && (
+              {replyTo && (
                 <div className="mb-2 flex items-center justify-between text-sm bg-muted p-2 rounded">
                   <div className="flex items-center gap-2">
-                    {replyTo && (
-                      <>
-                        <Reply className="h-4 w-4" />
-                        <span>Replying to {replyTo.user_email}</span>
-                      </>
-                    )}
-                    {privateMessageTo && (
-                      <>
-                        <Mail className="h-4 w-4" />
-                        <span>Private message to {privateMessageTo.email}</span>
-                      </>
-                    )}
+                    <Reply className="h-4 w-4" />
+                    <span>Replying to {replyTo.user_email}</span>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      setReplyTo(null);
-                      setPrivateMessageTo(null);
-                    }}
+                    onClick={() => setReplyTo(null)}
                   >
                     Cancel
                   </Button>
                 </div>
               )}
               
-              <div className="flex gap-2 w-full">
+              <div className="flex gap-2">
                 <Input
                   value={newMessage}
                   onChange={handleInputChange}
