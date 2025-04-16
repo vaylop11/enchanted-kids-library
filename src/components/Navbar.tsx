@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { BookOpen, Menu, X, MessageCircle, Languages } from 'lucide-react';
+import { BookOpen, Menu, X, Languages } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -103,20 +103,6 @@ const Navbar = () => {
                 {user && (
                   <>
                     <NavigationMenuItem>
-                      <Link to="/chat">
-                        <NavigationMenuLink 
-                          className={cn(
-                            navigationMenuTriggerStyle(),
-                            location.pathname === '/chat' && "bg-accent text-accent-foreground",
-                            "px-3 py-2 text-sm font-medium rounded-full"
-                          )}
-                        >
-                          <MessageCircle className="h-4 w-4 mr-1" />
-                          {t('chat')}
-                        </NavigationMenuLink>
-                      </Link>
-                    </NavigationMenuItem>
-                    <NavigationMenuItem>
                       <Link to="/translate">
                         <NavigationMenuLink 
                           className={cn(
@@ -216,17 +202,6 @@ const Navbar = () => {
                       </Link>
                       {user && (
                         <>
-                          <Link 
-                            to="/chat"
-                            onClick={() => setIsDrawerOpen(false)}
-                            className={cn(
-                              "w-full px-4 py-3 text-lg font-medium rounded-lg transition-colors flex items-center justify-center gap-2",
-                              location.pathname === '/chat' ? "bg-accent text-accent-foreground" : "hover:bg-muted"
-                            )}
-                          >
-                            <MessageCircle className="h-5 w-5" />
-                            {t('chat')}
-                          </Link>
                           <Link 
                             to="/translate"
                             onClick={() => setIsDrawerOpen(false)}

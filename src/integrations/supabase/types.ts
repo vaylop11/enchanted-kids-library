@@ -80,6 +80,8 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          reactions: Json[] | null
+          reply_to: Json | null
           user_email: string
           user_id: string
         }
@@ -87,6 +89,8 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          reactions?: Json[] | null
+          reply_to?: Json | null
           user_email: string
           user_id: string
         }
@@ -94,6 +98,8 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          reactions?: Json[] | null
+          reply_to?: Json | null
           user_email?: string
           user_id?: string
         }
@@ -136,6 +142,7 @@ export type Database = {
           created_at: string | null
           file_path: string
           file_size: string | null
+          file_size_bytes: number | null
           id: string
           page_count: number | null
           summary: string | null
@@ -149,6 +156,7 @@ export type Database = {
           created_at?: string | null
           file_path: string
           file_size?: string | null
+          file_size_bytes?: number | null
           id?: string
           page_count?: number | null
           summary?: string | null
@@ -162,6 +170,7 @@ export type Database = {
           created_at?: string | null
           file_path?: string
           file_size?: string | null
+          file_size_bytes?: number | null
           id?: string
           page_count?: number | null
           summary?: string | null
@@ -194,6 +203,42 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          created_at: string | null
+          currency: string
+          description: string | null
+          id: string
+          interval: string
+          name: string
+          paypal_plan_id: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          currency?: string
+          description?: string | null
+          id?: string
+          interval?: string
+          name: string
+          paypal_plan_id: string
+          price: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string
+          description?: string | null
+          id?: string
+          interval?: string
+          name?: string
+          paypal_plan_id?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           created_at: string | null
@@ -218,12 +263,70 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          cancel_at: string | null
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          paypal_subscription_id: string
+          plan_id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cancel_at?: string | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          paypal_subscription_id: string
+          plan_id: string
+          status: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cancel_at?: string | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          paypal_subscription_id?: string
+          plan_id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_user_pdf_limits: {
+        Args: { user_id: string }
+        Returns: Json
+      }
+      cleanup_excess_pdfs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      has_active_subscription: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
