@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 const SignIn = () => {
   const { language } = useLanguage();
@@ -14,16 +15,29 @@ const SignIn = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     
     try {
       const user = await signIn(email, password);
       if (user) {
+        console.log("Sign in successful, navigating to PDFs page");
         navigate('/pdfs');
+      } else {
+        setError(language === 'ar' 
+          ? 'فشل تسجيل الدخول. يرجى التحقق من بريدك الإلكتروني وكلمة المرور.'
+          : 'Sign in failed. Please check your email and password.');
       }
+    } catch (error: any) {
+      console.error("Sign in error:", error);
+      setError(error.message || 
+        (language === 'ar' 
+          ? 'حدث خطأ أثناء تسجيل الدخول'
+          : 'An error occurred during sign in'));
     } finally {
       setLoading(false);
     }
@@ -43,6 +57,11 @@ const SignIn = () => {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
+          {error && (
+            <div className="p-3 text-sm bg-red-50 border border-red-200 text-red-600 rounded-md">
+              {error}
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="email">
               {language === 'ar' ? 'البريد الإلكتروني' : 'Email'}

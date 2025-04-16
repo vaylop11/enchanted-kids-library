@@ -652,6 +652,13 @@ const PDFViewer = () => {
     setPdfRotation(prevRotation => (prevRotation - 90 + 360) % 360);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleChatSubmit(e);
+    }
+  };
+
   if (!pdf) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -1126,6 +1133,7 @@ const PDFViewer = () => {
                     <Textarea
                       value={chatInput}
                       onChange={e => setChatInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
                       placeholder={language === 'ar' 
                         ? "اكتب سؤالك حول محتوى الملف..."
                         : "Type your question about the PDF content..."
