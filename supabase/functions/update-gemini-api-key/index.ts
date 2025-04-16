@@ -22,7 +22,6 @@ serve(async (req) => {
     // Get the JWT from the request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error("No authorization header");
       return new Response(JSON.stringify({ error: "Not authorized" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
@@ -43,7 +42,6 @@ serve(async (req) => {
     
     // Check if user is admin (has a specific email)
     if (user.email !== 'cherifhoucine83@gmail.com') {
-      console.error("Not admin:", user.email);
       return new Response(JSON.stringify({ error: "Not authorized - admin access required" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 403,
@@ -53,25 +51,14 @@ serve(async (req) => {
     // Parse the request body to get the api key
     const { apiKey } = await req.json();
     if (!apiKey) {
-      console.error("No API key provided");
       return new Response(JSON.stringify({ error: "API key is required" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
       });
     }
     
-    console.log("Updating API key for admin:", user.email);
-    
-    // Store the API key in secrets storage
-    const { error: secretError } = await supabase.rpc('set_secret', {
-      name: 'GEMINI_API_KEY',
-      value: apiKey
-    });
-    
-    if (secretError) {
-      console.error("Error setting secret:", secretError);
-      throw secretError;
-    }
+    // Update the API key using Deno KV
+    await Deno.env.set("GEMINI_API_KEY", apiKey);
     
     // Return success response
     return new Response(JSON.stringify({ success: true }), {

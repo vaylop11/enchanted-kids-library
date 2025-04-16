@@ -94,7 +94,6 @@ const AdminPanel = () => {
         }
       } catch (error) {
         console.error('Error fetching API key:', error);
-        toast.error('Error fetching current API key');
       }
     };
     
@@ -301,22 +300,11 @@ const AdminPanel = () => {
     setIsSavingApiKey(true);
     
     try {
-      console.log('Updating API key...');
-      const { data, error } = await supabaseUntyped.functions.invoke('update-gemini-api-key', {
+      const { error } = await supabaseUntyped.functions.invoke('update-gemini-api-key', {
         body: { apiKey: values.geminiApiKey }
       });
       
-      if (error) {
-        console.error('Error response:', error);
-        throw new Error(`API error: ${error.message || 'Unknown error'}`);
-      }
-
-      if (!data || data.error) {
-        console.error('Response data error:', data?.error || 'No data returned');
-        throw new Error(data?.error || 'Failed to update API key');
-      }
-      
-      console.log('API key update response:', data);
+      if (error) throw error;
       
       // Update the displayed masked key
       const maskedKey = values.geminiApiKey.substring(0, 4) + '...' + 
@@ -336,7 +324,7 @@ const AdminPanel = () => {
       toast.error(
         language === 'ar'
           ? 'حدث خطأ أثناء تحديث مفتاح API'
-          : `Error updating API key: ${error instanceof Error ? error.message : 'Unknown error'}`
+          : 'Error updating API key'
       );
     } finally {
       setIsSavingApiKey(false);
