@@ -57,8 +57,24 @@ export const createSubscription = async (subscriptionId: string, planId: string)
 };
 
 export const getPayPalPlanIdFromDatabase = async (): Promise<string> => {
-  // Always return the specific PayPal plan ID
-  return 'P-8AR43998YB6934043M77H5AI';
+  try {
+    const { data, error } = await supabase
+      .from('subscription_plans')
+      .select('paypal_plan_id')
+      .single();
+      
+    if (error) {
+      console.error('Error fetching PayPal plan ID:', error);
+      // Fall back to hardcoded ID
+      return 'P-8AR43998YB6934043M77H5AI';
+    }
+    
+    return data?.paypal_plan_id || 'P-8AR43998YB6934043M77H5AI';
+  } catch (error) {
+    console.error('Error fetching PayPal plan ID:', error);
+    // Fall back to hardcoded ID
+    return 'P-8AR43998YB6934043M77H5AI';
+  }
 };
 
 export const verifySubscription = async (): Promise<boolean> => {

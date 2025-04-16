@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -16,6 +17,7 @@ import {
   getPayPalPlanIdFromDatabase 
 } from '@/services/subscriptionService';
 import { toast } from 'sonner';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const SubscribePage = () => {
   const navigate = useNavigate();
@@ -26,6 +28,52 @@ const SubscribePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [paypalPlanId, setPaypalPlanId] = useState<string | null>(null);
   const [paypalError, setPaypalError] = useState<string | null>(null);
+  const { refreshSubscription } = useSubscription();
+  
+  // Check for subscription_id in URL params (returned by PayPal)
+  const subscriptionId = searchParams.get('subscription_id');
+  
+  useEffect(() => {
+    // Handle PayPal return with subscription_id
+    const handlePayPalReturn = async () => {
+      if (subscriptionId && plan) {
+        try {
+          setIsLoading(true);
+          toast.info(
+            language === 'ar' 
+              ? 'جاري التحقق من الاشتراك...' 
+              : 'Verifying subscription...'
+          );
+          
+          await createSubscription(subscriptionId, plan.id);
+          
+          // Refresh subscription status
+          refreshSubscription();
+          
+          toast.success(
+            language === 'ar' 
+              ? 'تم الاشتراك بنجاح في Gemi PRO!' 
+              : 'Successfully subscribed to Gemi PRO!'
+          );
+          
+          navigate('/pdfs');
+        } catch (error) {
+          console.error('Error processing subscription:', error);
+          toast.error(
+            language === 'ar'
+              ? 'حدث خطأ أثناء معالجة الاشتراك'
+              : 'Error processing subscription'
+          );
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    if (subscriptionId) {
+      handlePayPalReturn();
+    }
+  }, [subscriptionId, plan, language, navigate, refreshSubscription]);
   
   useEffect(() => {
     const loadPlan = async () => {
@@ -71,11 +119,19 @@ const SubscribePage = () => {
     
     try {
       console.log("Subscription approved:", data);
-      await createSubscription(data.subscriptionID, plan.id);
-      toast.success(language === 'ar' 
-        ? 'تم الاشتراك بنجاح في Gemi PRO!' 
-        : 'Successfully subscribed to Gemi PRO!');
-      navigate('/pdfs');
+      
+      // For PayPal in-page flow (not redirect)
+      if (data.subscriptionID) {
+        await createSubscription(data.subscriptionID, plan.id);
+        toast.success(language === 'ar' 
+          ? 'تم الاشتراك بنجاح في Gemi PRO!' 
+          : 'Successfully subscribed to Gemi PRO!');
+        
+        // Refresh subscription status
+        refreshSubscription();
+        
+        navigate('/pdfs');
+      }
     } catch (error) {
       console.error('Error processing subscription:', error);
       toast.error(language === 'ar'
@@ -146,7 +202,11 @@ const SubscribePage = () => {
                     createSubscription={(data, actions) => {
                       console.log("Creating subscription with plan ID: P-8AR43998YB6934043M77H5AI");
                       return actions.subscription.create({
-                        'plan_id': 'P-8AR43998YB6934043M77H5AI'
+                        'plan_id': 'P-8AR43998YB6934043M77H5AI',
+                        'application_context': {
+                          'user_action': 'SUBSCRIBE_NOW',
+                          'return_url': `${window.location.origin}/subscribe?subscription_id={id}`
+                        }
                       });
                     }}
                     style={{
