@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { File, AlertTriangle } from 'lucide-react';
@@ -10,6 +9,7 @@ import { uploadPDFToSupabase, getUserPDFs } from '@/services/pdfSupabaseService'
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
+import PDFAnalysisProgress from './PDFAnalysisProgress';
 
 const UploadZone = () => {
   const { language } = useLanguage();
@@ -22,8 +22,14 @@ const UploadZone = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [userPDFCount, setUserPDFCount] = useState(0);
   const { limits, loading: limitsLoading } = usePlanLimits();
+  const [uploadState, setUploadState] = useState<{
+    progress: number;
+    fileSize: number;
+  }>({
+    progress: 0,
+    fileSize: 0
+  });
 
-  // Subscribe to PDF changes
   useEffect(() => {
     const channel = supabase
       .channel('schema-db-changes')
@@ -36,7 +42,6 @@ const UploadZone = () => {
         },
         (payload) => {
           if (user) {
-            // Update count based on the event type
             if (payload.eventType === 'DELETE') {
               setUserPDFCount(prev => Math.max(0, prev - 1));
             } else if (payload.eventType === 'INSERT') {
@@ -116,15 +121,14 @@ const UploadZone = () => {
 
     try {
       setIsUploading(true);
+      setUploadState({ progress: 0, fileSize: file.size });
 
+      let lastProgress = 0;
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
+        if (lastProgress < 95) {
+          lastProgress += Math.random() * 10;
+          setUploadState(prev => ({ ...prev, progress: Math.min(lastProgress, 95) }));
+        }
       }, 200);
 
       if (user) {
@@ -132,20 +136,20 @@ const UploadZone = () => {
         const pdf = await uploadPDFToSupabase(file, user.id);
 
         clearInterval(progressInterval);
-        setUploadProgress(100);
+        setUploadState(prev => ({ ...prev, progress: 100 }));
 
         if (pdf) {
           toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
           
           setUserPDFCount(prev => {
             const newCount = prev + 1;
-            console.log(`Updated PDF count: ${newCount}/4`);
+            console.log(`Updated PDF count: ${newCount}/${limits?.max_pdfs ?? 2}`);
             return newCount;
           });
 
           setTimeout(() => {
             setIsUploading(false);
-            setUploadProgress(0);
+            setUploadState({ progress: 0, fileSize: 0 });
             if (fileInputRef.current) {
               fileInputRef.current.value = '';
             }
@@ -155,7 +159,7 @@ const UploadZone = () => {
         } else {
           clearInterval(progressInterval);
           setIsUploading(false);
-          setUploadProgress(0);
+          setUploadState({ progress: 0, fileSize: 0 });
           setUploadError(language === 'ar'
             ? 'فشل في تحميل الملف. يرجى المحاولة مرة أخرى.'
             : 'Failed to upload file. Please try again.');
@@ -183,13 +187,13 @@ const UploadZone = () => {
               }));
 
               clearInterval(progressInterval);
-              setUploadProgress(100);
+              setUploadState(prev => ({ ...prev, progress: 100 }));
 
               toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
 
               setTimeout(() => {
                 setIsUploading(false);
-                setUploadProgress(0);
+                setUploadState({ progress: 0, fileSize: 0 });
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';
                 }
@@ -204,7 +208,7 @@ const UploadZone = () => {
           console.error('Error reading file:', error);
           clearInterval(progressInterval);
           setIsUploading(false);
-          setUploadProgress(0);
+          setUploadState({ progress: 0, fileSize: 0 });
           setUploadError(language === 'ar'
             ? 'فشل في قراءة الملف. يرجى المحاولة مرة أخرى.'
             : 'Failed to read file. Please try again.');
@@ -213,7 +217,7 @@ const UploadZone = () => {
     } catch (error) {
       console.error('Upload error:', error);
       setIsUploading(false);
-      setUploadProgress(0);
+      setUploadState({ progress: 0, fileSize: 0 });
       setUploadError(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
       toast.error(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
     }
@@ -378,16 +382,16 @@ const UploadZone = () => {
             </div>
 
             {isUploading ? (
-              <div className="w-full max-w-xs">
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-purple-800 transition-all duration-300 ease-out"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {uploadProgress}% {language === 'ar' ? 'تم التحميل' : 'Uploaded'}
-                </p>
+              <div className="w-full max-w-md">
+                <PDFAnalysisProgress
+                  analysis={{ 
+                    stage: 'extracting',
+                    progress: 0,
+                    message: language === 'ar' ? 'جارٍ تحليل الملف...' : 'Analyzing file...'
+                  }}
+                  uploadProgress={uploadState.progress}
+                  totalSize={uploadState.fileSize}
+                />
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
