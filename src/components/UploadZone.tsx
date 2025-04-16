@@ -21,6 +21,35 @@ const UploadZone = () => {
   const [userPDFCount, setUserPDFCount] = useState(0);
   const { limits, loading: limitsLoading } = usePlanLimits();
 
+  // Subscribe to PDF changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pdfs'
+        },
+        (payload) => {
+          if (user) {
+            // Update count based on the event type
+            if (payload.eventType === 'DELETE') {
+              setUserPDFCount(prev => Math.max(0, prev - 1));
+            } else if (payload.eventType === 'INSERT') {
+              setUserPDFCount(prev => prev + 1);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   useEffect(() => {
     if (user) {
       const checkUserPDFs = async () => {
