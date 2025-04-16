@@ -136,6 +136,7 @@ export type Database = {
           created_at: string | null
           file_path: string
           file_size: string | null
+          file_size_bytes: number | null
           id: string
           page_count: number | null
           summary: string | null
@@ -149,6 +150,7 @@ export type Database = {
           created_at?: string | null
           file_path: string
           file_size?: string | null
+          file_size_bytes?: number | null
           id?: string
           page_count?: number | null
           summary?: string | null
@@ -162,6 +164,7 @@ export type Database = {
           created_at?: string | null
           file_path?: string
           file_size?: string | null
+          file_size_bytes?: number | null
           id?: string
           page_count?: number | null
           summary?: string | null
@@ -306,7 +309,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_user_pdf_limits: {
+        Args: { user_id: string }
+        Returns: Json
+      }
+      cleanup_excess_pdfs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      has_active_subscription: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

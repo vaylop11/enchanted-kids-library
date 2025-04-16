@@ -13,6 +13,7 @@ export interface SubscriptionPlan {
 }
 
 export const getSubscriptionPlans = async (): Promise<SubscriptionPlan[]> => {
+  console.log("Fetching subscription plans...");
   const { data, error } = await supabase
     .from('subscription_plans')
     .select('*')
@@ -20,25 +21,42 @@ export const getSubscriptionPlans = async (): Promise<SubscriptionPlan[]> => {
 
   if (error) {
     console.error('Error fetching subscription plans:', error);
+    toast.error('Failed to fetch subscription plans');
     return [];
   }
 
+  console.log("Retrieved subscription plans:", data);
   return data;
 };
 
 export const createSubscription = async (subscriptionId: string, planId: string) => {
+  console.log("Creating subscription with ID:", subscriptionId, "for plan:", planId);
+  
   try {
     const { data, error } = await supabase.functions.invoke('handle-subscription', {
-      body: { subscriptionId, planId }
+      body: { 
+        subscriptionId,
+        planId,
+        paypalPlanId: 'P-8AR43998YB6934043M77H5AI' // Using the specific PayPal plan ID
+      }
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase function error:", error);
+      toast.error('Failed to create subscription');
+      throw error;
+    }
     
-    toast.success('Successfully subscribed to Gemi PRO!');
+    console.log("Subscription created successfully:", data);
     return data;
   } catch (error) {
     console.error('Error creating subscription:', error);
-    toast.error('Failed to process subscription');
+    toast.error('Error creating subscription');
     throw error;
   }
+};
+
+export const getPayPalPlanIdFromDatabase = async (): Promise<string> => {
+  // Always return the specific PayPal plan ID
+  return 'P-8AR43998YB6934043M77H5AI';
 };
