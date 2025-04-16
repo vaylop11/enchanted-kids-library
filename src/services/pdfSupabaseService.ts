@@ -1,11 +1,13 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { formatFileSize } from './pdfStorage';
 import * as pdfjs from 'pdfjs-dist';
 
-// Initialize PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Initialize PDF.js worker with a blob URL or local path
+const pdfjsWorker = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url);
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker.toString();
 
 export interface SupabasePDF {
   id: string;
