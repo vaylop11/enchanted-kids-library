@@ -1,7 +1,7 @@
 
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { FreePlanCard } from '@/components/FreePlanCard';
-import { ProSubscriptionCard } from '@/components/ProSubscriptionCard';
+import ProSubscriptionCard from '@/components/ProSubscriptionCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
