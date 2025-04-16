@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,14 +29,14 @@ export const usePlanLimits = () => {
     try {
       console.log("Checking plan limits for user:", user.id);
       
-      // If admin, set maximum limits directly without database call
+      // If admin, set translation access without requiring subscription
       if (isAdmin) {
         const adminLimits: PlanLimits = {
-          has_paid_subscription: true,
+          has_paid_subscription: false,
           current_pdf_count: 0,  // This will be updated with the actual count
-          max_pdfs: 999,         // Unlimited for admin
-          max_file_size_mb: 100, // Large limit for admin
-          can_translate: true    // All features enabled for admin
+          max_pdfs: 10,          // Regular limits for admin
+          max_file_size_mb: 20,  // Regular limits for admin
+          can_translate: true    // Enable translation for admin
         };
         
         // Still need to get the PDF count
