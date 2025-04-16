@@ -381,8 +381,8 @@ const UploadZone = () => {
                 {user && (
                   <p className="text-xs text-muted-foreground mt-2">
                     {language === 'ar'
-                      ? `${userPDFCount}/4 ملفات تم تحميلها`
-                      : `${userPDFCount}/4 PDFs uploaded`
+                      ? `${userPDFCount}/${limits?.max_pdfs ?? 2} ملفات تم تحميلها`
+                      : `${userPDFCount}/${limits?.max_pdfs ?? 2} PDFs uploaded`
                     }
                   </p>
                 )}
