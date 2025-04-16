@@ -383,8 +383,8 @@ const UploadZone = () => {
       <div className="mt-4 text-center">
         <p className="text-sm text-muted-foreground mb-2">
           {language === 'ar'
-            ? `يمكنك تحميل ${limits?.max_pdfs ?? 2} ملفات PDF بحد أقصى ${limits?.max_file_size_mb ?? 5} ميجابايت`
-            : `You can upload ${limits?.max_pdfs ?? 2} PDFs with a max of ${limits?.max_file_size_mb ?? 5}MB`
+            ? 'يمكنك التحدث مع مستندك بمجرد التحميل'
+            : 'You can chat with your document once uploaded'
           }
         </p>
 
