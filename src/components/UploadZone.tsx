@@ -6,10 +6,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { uploadPDFToSupabase, getUserPDFs } from '@/services/pdfSupabaseService';
-import { usePlanLimits } from '@/hooks/usePlanLimits';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { supabase } from '@/integrations/supabase/client';
-import PDFAnalysisProgress from './PDFAnalysisProgress';
 
 const UploadZone = () => {
   const { language } = useLanguage();
@@ -21,42 +17,7 @@ const UploadZone = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [userPDFCount, setUserPDFCount] = useState(0);
-  const { limits, loading: limitsLoading } = usePlanLimits();
-  const [uploadState, setUploadState] = useState<{
-    progress: number;
-    fileSize: number;
-  }>({
-    progress: 0,
-    fileSize: 0
-  });
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'pdfs'
-        },
-        (payload) => {
-          if (user) {
-            if (payload.eventType === 'DELETE') {
-              setUserPDFCount(prev => Math.max(0, prev - 1));
-            } else if (payload.eventType === 'INSERT') {
-              setUserPDFCount(prev => prev + 1);
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
+  
   useEffect(() => {
     if (user) {
       const checkUserPDFs = async () => {
@@ -67,7 +28,7 @@ const UploadZone = () => {
           console.error('Error checking user PDFs:', error);
         }
       };
-
+      
       checkUserPDFs();
     }
   }, [user]);
@@ -80,36 +41,20 @@ const UploadZone = () => {
   };
 
   const handleFileUpload = async (file: File) => {
-    if (!user) {
-      toast.error(language === 'ar' ? 'يرجى تسجيل الدخول لتحميل الملفات' : 'Please sign in to upload files');
-      navigate('/signin');
+    setUploadError(null);
+    
+    if (user && userPDFCount >= 4) {
+      const errorMsg = language === 'ar' 
+        ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
+        : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.';
+      toast.error(errorMsg);
+      setUploadError(errorMsg);
       return;
     }
     
-    if (userPDFCount >= (limits?.max_pdfs ?? 2)) {
-      const message = language === 'ar'
-        ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${limits?.max_pdfs ?? 2}). يرجى حذف بعض الملفات لتحميل المزيد.`
-        : `You have reached the maximum number of PDFs (${limits?.max_pdfs ?? 2}). Please delete some files to upload more.`;
-      
-      toast.error(message);
-      navigate('/pdfs');
-      return;
-    }
-
-    const fileSizeMB = file.size / (1024 * 1024);
-    const maxSizeMB = limits?.has_paid_subscription ? (limits?.max_file_size_mb ?? 20) : 5;
-
-    if (fileSizeMB > maxSizeMB) {
-      toast.error(
-        language === 'ar'
-          ? `حجم الملف كبير جدًا (الحد الأقصى ${maxSizeMB} ميجابايت)`
-          : `File size too large (max ${maxSizeMB}MB)`
-      );
-      return;
-    }
-
     if (file.type !== 'application/pdf') {
       toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
+      setUploadError(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       return;
     }
 
@@ -121,47 +66,43 @@ const UploadZone = () => {
 
     try {
       setIsUploading(true);
-      setUploadState({ progress: 0, fileSize: file.size });
-
-      let lastProgress = 0;
+      
       const progressInterval = setInterval(() => {
-        if (lastProgress < 95) {
-          lastProgress += Math.random() * 10;
-          setUploadState(prev => ({ ...prev, progress: Math.min(lastProgress, 95) }));
-        }
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
       }, 200);
 
       if (user) {
         console.log('Uploading PDF for authenticated user:', user.id);
         const pdf = await uploadPDFToSupabase(file, user.id);
-
+        
         clearInterval(progressInterval);
-        setUploadState(prev => ({ ...prev, progress: 100 }));
-
+        setUploadProgress(100);
+        
         if (pdf) {
           toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
+          setUserPDFCount(prev => prev + 1);
           
-          setUserPDFCount(prev => {
-            const newCount = prev + 1;
-            console.log(`Updated PDF count: ${newCount}/${limits?.max_pdfs ?? 2}`);
-            return newCount;
-          });
-
           setTimeout(() => {
             setIsUploading(false);
-            setUploadState({ progress: 0, fileSize: 0 });
+            setUploadProgress(0);
             if (fileInputRef.current) {
               fileInputRef.current.value = '';
             }
-
+            
             navigate(`/pdf/${pdf.id}`);
           }, 500);
         } else {
           clearInterval(progressInterval);
           setIsUploading(false);
-          setUploadState({ progress: 0, fileSize: 0 });
-          setUploadError(language === 'ar'
-            ? 'فشل في تحميل الملف. يرجى المحاولة مرة أخرى.'
+          setUploadProgress(0);
+          setUploadError(language === 'ar' 
+            ? 'فشل في تحميل الملف. يرجى المحاولة مرة أخرى.' 
             : 'Failed to upload file. Please try again.');
         }
       } else {
@@ -180,44 +121,44 @@ const UploadZone = () => {
                 dataUrl: event.target.result as string,
                 chatMessages: []
               };
-
+              
               sessionStorage.setItem('tempPdfFile', JSON.stringify({
                 fileData: fileData,
                 timestamp: Date.now()
               }));
-
+              
               clearInterval(progressInterval);
-              setUploadState(prev => ({ ...prev, progress: 100 }));
-
+              setUploadProgress(100);
+              
               toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-
+              
               setTimeout(() => {
                 setIsUploading(false);
-                setUploadState({ progress: 0, fileSize: 0 });
+                setUploadProgress(0);
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';
                 }
-
+                
                 navigate(`/pdf/temp/${tempId}`);
               }, 500);
             }
           };
-
+          
           fileReader.readAsDataURL(file);
         } catch (error) {
           console.error('Error reading file:', error);
           clearInterval(progressInterval);
           setIsUploading(false);
-          setUploadState({ progress: 0, fileSize: 0 });
-          setUploadError(language === 'ar'
-            ? 'فشل في قراءة الملف. يرجى المحاولة مرة أخرى.'
+          setUploadProgress(0);
+          setUploadError(language === 'ar' 
+            ? 'فشل في قراءة الملف. يرجى المحاولة مرة أخرى.' 
             : 'Failed to read file. Please try again.');
         }
       }
     } catch (error) {
       console.error('Upload error:', error);
       setIsUploading(false);
-      setUploadState({ progress: 0, fileSize: 0 });
+      setUploadProgress(0);
       setUploadError(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
       toast.error(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
     }
@@ -241,7 +182,7 @@ const UploadZone = () => {
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-
+    
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       await handleFileUpload(files[0]);
@@ -250,14 +191,14 @@ const UploadZone = () => {
 
   const triggerFileInput = () => {
     if (user && userPDFCount >= 4) {
-      const errorMsg = language === 'ar'
-        ? 'لقد وصلت إلى ��لحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
+      const errorMsg = language === 'ar' 
+        ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
         : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.';
       toast.error(errorMsg);
       setUploadError(errorMsg);
       return;
     }
-
+    
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
@@ -269,7 +210,7 @@ const UploadZone = () => {
       fileInputRef.current.value = '';
     }
   };
-
+  
   const handleNavigateToPDFs = () => {
     navigate('/pdfs');
   };
@@ -282,25 +223,13 @@ const UploadZone = () => {
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {userPDFCount >= (limits?.max_pdfs ?? 2) ? (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            {language === 'ar'
-              ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${limits?.max_pdfs ?? 2}). يرجى حذف بعض الملفات لتحميل المزيد.`
-              : `You have reached the maximum number of PDFs (${limits?.max_pdfs ?? 2}). Please delete some files to upload more.`
-            }
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
       {uploadError ? (
         <div className="p-8 border-2 border-amber-300 rounded-xl bg-amber-50 dark:bg-amber-950/20">
           <div className="flex flex-col items-center justify-center text-center space-y-4">
             <div className="h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
               <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-500" />
             </div>
-
+            
             <div>
               <h3 className="text-lg font-medium mb-1">
                 {language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Upload Error'}
@@ -309,14 +238,14 @@ const UploadZone = () => {
                 {uploadError}
               </p>
               <div className="flex flex-wrap gap-3 justify-center">
-                <Button
-                  variant="outline"
+                <Button 
+                  variant="outline" 
                   onClick={handleClearError}
                 >
                   {language === 'ar' ? 'حاول مرة أخرى' : 'Try Again'}
                 </Button>
                 {user && (
-                  <Button
+                  <Button 
                     variant="default"
                     onClick={handleNavigateToPDFs}
                   >
@@ -342,14 +271,14 @@ const UploadZone = () => {
               <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800 max-w-sm text-center">
                 <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-500 mx-auto mb-2" />
                 <p className="text-sm text-amber-800 dark:text-amber-300">
-                  {language === 'ar'
+                  {language === 'ar' 
                     ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
                     : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.'
                   }
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
+                <Button 
+                  variant="outline" 
+                  size="sm" 
                   className="mt-2"
                   onClick={handleNavigateToPDFs}
                 >
@@ -358,7 +287,7 @@ const UploadZone = () => {
               </div>
             </div>
           )}
-
+          
           <input
             ref={fileInputRef}
             type="file"
@@ -367,12 +296,12 @@ const UploadZone = () => {
             onChange={handleFileChange}
             disabled={isUploading || hasReachedMaxPDFs}
           />
-
+          
           <div className="flex flex-col items-center justify-center gap-6 text-center">
             <div className="w-full max-w-[280px] mb-4">
-              <img
-                src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/Generated%20Image%20April%2006,%202025%20-%2012_51AM%20(1).png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvR2VuZXJhdGVkIEltYWdlIEFwcmlsIDA2LCAyMDI1IC0gMTJfNTFBTSAoMSkucG5nIiwiaWF0IjoxNzQzODk5NDAyLCJleHAiOjE3NzU0MzU0MDJ9.E_gIvYsWG6SPy7xc-wdvo4lXLEWkB4G_AreBPy-xyWY"
-                alt="PDF Chat Illustration"
+              <img 
+                src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/Generated%20Image%20April%2006,%202025%20-%2012_51AM%20(1).png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvR2VuZXJhdGVkIEltYWdlIEFwcmlsIDA2LCAyMDI1IC0gMTJfNTFBTSAoMSkucG5nIiwiaWF0IjoxNzQzODk5NDAyLCJleHAiOjE3NzU0MzU0MDJ9.E_gIvYsWG6SPy7xc-wdvo4lXLEWkB4G_AreBPy-xyWY" 
+                alt="PDF Chat Illustration" 
                 className="max-w-full h-auto rounded-lg"
                 onError={(e) => {
                   console.error("Image failed to load");
@@ -380,28 +309,26 @@ const UploadZone = () => {
                 }}
               />
             </div>
-
+            
             {isUploading ? (
-              <div className="w-full max-w-md">
-                <PDFAnalysisProgress
-                  analysis={{ 
-                    stage: 'extracting',
-                    progress: 0,
-                    message: language === 'ar' ? 'جارٍ تحليل الملف...' : 'Analyzing file...'
-                  }}
-                  uploadProgress={uploadState.progress}
-                  totalSize={uploadState.fileSize}
-                />
+              <div className="w-full max-w-xs">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-purple-800 transition-all duration-300 ease-out"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {uploadProgress}% {language === 'ar' ? 'تم التحميل' : 'Uploaded'}
+                </p>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <p className="text-sm text-purple-800 font-medium">
-                  {language === 'ar'
-                    ? `الحد الأقصى ${limits?.has_paid_subscription ? 20 : 5} ميجابايت`
-                    : `Max ${limits?.has_paid_subscription ? 20 : 5}MB`}
+                  {language === 'ar' ? 'الحد الأقصى 10 ميجابايت' : 'Max 10MB'}
                 </p>
-                <Button
-                  variant="outline"
+                <Button 
+                  variant="outline" 
                   className="border-purple-800 text-purple-800 hover:bg-purple-50"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -412,12 +339,19 @@ const UploadZone = () => {
                   <File className="mr-2 h-4 w-4" />
                   {language === 'ar' ? 'اختر ملف' : 'Select File'}
                 </Button>
-
-                {user && (
+                
+                {user ? (
                   <p className="text-xs text-muted-foreground mt-2">
                     {language === 'ar'
-                      ? `${userPDFCount}/${limits?.max_pdfs ?? 2} ملفات تم تحميلها`
-                      : `${userPDFCount}/${limits?.max_pdfs ?? 2} PDFs uploaded`
+                      ? `${userPDFCount}/4 ملفات تم تحميلها`
+                      : `${userPDFCount}/4 PDFs uploaded`
+                    }
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-600 mt-2">
+                    {language === 'ar'
+                      ? 'ملاحظة: سجل الدخول لحفظ الملفات'
+                      : 'Note: Sign in to save files'
                     }
                   </p>
                 )}
@@ -426,7 +360,7 @@ const UploadZone = () => {
           </div>
         </div>
       )}
-
+      
       <div className="mt-4 text-center">
         <p className="text-sm text-muted-foreground mb-2">
           {language === 'ar'
@@ -434,10 +368,10 @@ const UploadZone = () => {
             : 'You can chat with your document once uploaded'
           }
         </p>
-
+        
         {!user && (
-          <Button
-            variant="link"
+          <Button 
+            variant="link" 
             onClick={handleSignIn}
             className="text-xs text-purple-800 hover:text-purple-900"
           >

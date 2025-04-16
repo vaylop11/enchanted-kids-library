@@ -72,15 +72,12 @@
       }
     </script>
     
-    <!-- Updated CSP meta tag to allow PayPal resources -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.paypal.com https://*.paypalobjects.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.gpteng.co https://*.paypal.com https://www.paypalobjects.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://* http://*; connect-src 'self' https://* wss://*; frame-src 'self' https://*.paypal.com;">
   </head>
 
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    <!-- Move gptengineer.js script to bottom for better loading order -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <script type="module" src="/src/main.tsx"></script>
     <noscript>
       <p>Please enable JavaScript to use Gemi ChatPDF - the free AI PDF chat and reader application.</p>
     </noscript>
