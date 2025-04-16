@@ -23,9 +23,6 @@ export interface TranslationResult {
   isMarkdown?: boolean;
 }
 
-let isTranslationCoolingDown = false;
-const COOLDOWN_TIME = 3000; // 3 seconds cooldown
-
 export const translateText = async (text: string, targetLanguage: string): Promise<TranslationResult> => {
   // If text is empty or whitespace, return empty result immediately
   if (!text || !text.trim()) {
@@ -35,15 +32,9 @@ export const translateText = async (text: string, targetLanguage: string): Promi
     };
   }
 
-  // Check if we're in cooldown period
-  if (isTranslationCoolingDown) {
-    toast.warning('Please wait a moment before trying again.');
-    throw new Error('Translation cooldown period. Please wait a moment before trying again.');
-  }
-
   try {
     const { data, error } = await supabase.functions.invoke('translate-text', {
-      body: { text, targetLanguage },
+      body: { text, targetLanguage, enhancedFormat: true },
     });
 
     if (error) {
@@ -57,21 +48,7 @@ export const translateText = async (text: string, targetLanguage: string): Promi
       throw new Error('Invalid response from translation service');
     }
 
-    // Check for specific quota error
-    if (data.error && data.isQuotaError) {
-      console.warn('Translation quota exceeded, cooling down');
-      isTranslationCoolingDown = true;
-      
-      // Set a timer to reset the cooldown
-      setTimeout(() => {
-        isTranslationCoolingDown = false;
-      }, COOLDOWN_TIME);
-      
-      toast.warning('Translation quota exceeded. Please try again in a few moments.');
-      throw new Error('Translation quota exceeded');
-    }
-
-    // Handle case where error might be in data but not detected above
+    // Handle case where error might be in data
     if (data.error) {
       toast.error('Translation error: ' + data.error);
       throw new Error(data.error);
@@ -84,12 +61,7 @@ export const translateText = async (text: string, targetLanguage: string): Promi
     };
   } catch (error) {
     console.error('Error translating text:', error);
-    
-    // Don't show toast if it's a cooldown error (already shown above)
-    if (!isTranslationCoolingDown) {
-      toast.error('Failed to translate text. Please try again.');
-    }
-    
+    toast.error('Failed to translate text. Please try again.');
     throw error;
   }
 };

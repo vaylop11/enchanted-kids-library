@@ -10,7 +10,6 @@ import UploadZone from '@/components/UploadZone';
 import PDFGrid from '@/components/PDFGrid';
 import SEO from '@/components/SEO';
 import { Languages } from 'lucide-react';
-import { PlanCards } from '@/components/PlanCards';
 
 const Index = () => {
   const { language } = useLanguage();
@@ -79,33 +78,32 @@ const Index = () => {
           </div>
         </section>
         
-        {/* Subscription Plan Section */}
-        <section className="py-16 bg-gradient-to-b from-muted/20 to-background">
-          <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl font-bold tracking-tight mb-4">
-                {language === 'ar' ? 'اختر خطة Gemi المناسبة لك' : 'Choose the Right Gemi Plan for You'}
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-                {language === 'ar'
-                  ? 'استكشف خيارات الاشتراك لدينا وابدأ مع Gemi مجانًا أو اختر خطة Pro للحصول على ميزات متقدمة'
-                  : 'Explore our subscription options and get started with Gemi Free or choose our Pro plan for advanced features'}
-              </p>
-            </div>
-            
-            <div className="max-w-md mx-auto">
-              <PlanCards />
-            </div>
-          </div>
-        </section>
-        
         {/* All PDFs grid section */}
         <PDFGrid />
         
         <FeaturesSection />
         <BlogSection />
         <FAQSection />
-      </main>      
+      </main>
+      
+      <section className="bg-muted/10 py-8">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-lg font-medium mb-4 text-primary">
+            {language === 'ar' 
+              ? 'ادعم Gemi ChatPDF واستمرارية تطويره' 
+              : 'Support Gemi ChatPDF and its continued development'}
+          </p>
+          <a 
+            href="https://ko-fi.com/gemichatpdf" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-block px-6 py-3 text-white bg-pink-600 hover:bg-pink-500 transition-colors duration-200 rounded-2xl font-semibold shadow-md"
+          >
+            ☕ {language === 'ar' ? 'اشترِ لنا قهوة على Ko-fi' : 'Buy us a Coffee on Ko-fi'}
+          </a>
+        </div>
+      </section>
+      
       <Footer />
     </div>
   );
