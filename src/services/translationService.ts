@@ -23,6 +23,28 @@ export interface TranslationResult {
   isMarkdown?: boolean;
 }
 
+export const detectLanguage = async (text: string): Promise<string> => {
+  if (!text || !text.trim()) {
+    return 'en'; // Default to English for empty text
+  }
+
+  try {
+    const { data, error } = await supabase.functions.invoke('translate-text', {
+      body: { text, targetLanguage: 'en', detectionOnly: true },
+    });
+
+    if (error) {
+      console.error('Language detection error:', error);
+      return 'en'; // Default to English on error
+    }
+
+    return data?.detectedSourceLanguage || 'en';
+  } catch (error) {
+    console.error('Error detecting language:', error);
+    return 'en';
+  }
+};
+
 export const translateText = async (text: string, targetLanguage: string): Promise<TranslationResult> => {
   // If text is empty or whitespace, return empty result immediately
   if (!text || !text.trim()) {
