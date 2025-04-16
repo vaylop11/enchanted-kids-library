@@ -67,7 +67,6 @@ const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
         const success = await deletePDF(pdf.id);
         if (success) {
           toast.success(language === 'ar' ? 'تم حذف الملف بنجاح' : 'PDF deleted successfully');
-          // Call onDelete callback to update parent component's state
           if (onDelete) {
             onDelete(pdf.id);
           }
