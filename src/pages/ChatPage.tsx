@@ -15,7 +15,7 @@ import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { ChatMessageSkeleton } from '@/components/ui/skeleton';
 import { useTypingIndicator } from '@/hooks/useTypingIndicator';
-import type { ChatMessage as ChatMessageType, ChatUser } from '@/types/chat';
+import type { ChatMessage as ChatMessageType, ChatUser, MessageReaction } from '@/types/chat';
 import { cn } from '@/lib/utils';
 import {
   HoverCard,
@@ -30,10 +30,10 @@ type OnlineUser = {
 };
 
 const EMOJI_REACTIONS = [
-  { emoji: '👍', icon: ThumbsUp },
-  { emoji: '❤️', icon: Heart },
-  { emoji: '😂', icon: Laugh },
-  { emoji: '😢', icon: Frown },
+  { emoji: '👍' as const, icon: ThumbsUp },
+  { emoji: '❤️' as const, icon: Heart },
+  { emoji: '😂' as const, icon: Laugh },
+  { emoji: '😢' as const, icon: Frown },
 ] as const;
 
 const ChatPage = () => {
@@ -194,7 +194,7 @@ const ChatPage = () => {
     }, 100);
   };
 
-  const handleReaction = async (messageId: string, emoji: string) => {
+  const handleReaction = async (messageId: string, emoji: '👍' | '❤️' | '😂' | '😢' | '😡') => {
     if (!user) return;
     
     try {
@@ -206,7 +206,8 @@ const ChatPage = () => {
 
       if (fetchError) throw fetchError;
       
-      let updatedReactions = message?.reactions || [];
+      let updatedReactions: MessageReaction[] = message?.reactions as MessageReaction[] || [];
+      
       const existingReactionIndex = updatedReactions.findIndex(r => r.emoji === emoji);
       
       if (existingReactionIndex >= 0) {
