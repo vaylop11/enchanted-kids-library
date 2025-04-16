@@ -1,5 +1,5 @@
 
-import { Archive } from 'lucide-react';
+import { Pot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WaterPotLoaderProps {
@@ -10,9 +10,9 @@ interface WaterPotLoaderProps {
 const WaterPotLoader = ({ progress = 0, className }: WaterPotLoaderProps) => {
   return (
     <div className={cn("relative w-16 h-16 mx-auto", className)}>
-      {/* Archive Icon Container */}
+      {/* Pot Icon Container */}
       <div className="relative z-10">
-        <Archive className="w-16 h-16 text-primary/80" strokeWidth={1.5} />
+        <Pot className="w-16 h-16 text-primary/80" strokeWidth={1.5} />
       </div>
       
       {/* Water Fill Effect */}
@@ -20,7 +20,7 @@ const WaterPotLoader = ({ progress = 0, className }: WaterPotLoaderProps) => {
         className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary/40 to-primary/20 rounded-b-full transition-all duration-1000 ease-in-out"
         style={{ 
           height: `${progress}%`,
-          maxHeight: '80%', // Don't fill completely to leave space for container neck
+          maxHeight: '80%', // Don't fill completely to leave space for pot neck
         }}
       >
         {/* Animated Wave Effect */}
