@@ -1,13 +1,11 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import SEO from '@/components/SEO';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
-import { Send, User, ArrowLeft, Crown, Trash2, Eraser } from 'lucide-react';
+import { User, ArrowLeft, Crown, Trash2, Eraser } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -15,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { ChatMessageSkeleton } from '@/components/ui/skeleton';
+import { ChatInput } from '@/components/ui/chat-input';
+import { MarkdownMessage } from '@/components/ui/markdown-message';
 
 type Message = {
   id: string;
@@ -65,13 +65,9 @@ const ChatPage = () => {
         { event: 'DELETE', schema: 'public', table: 'messages' },
         (payload) => {
           const deletedMessageId = payload.old.id;
-          // Handle single message deletion
           if (deletedMessageId) {
             setMessages((prev) => prev.filter(msg => msg.id !== deletedMessageId));
-          } 
-          // If we don't have a specific message ID, it might be a bulk delete
-          // We'll handle that by refreshing messages from the server
-          else {
+          } else {
             fetchMessages();
           }
         }
@@ -140,18 +136,12 @@ const ChatPage = () => {
     };
   }, [user]);
 
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const sendMessage = async (message: string) => {
+    if (!user || !message) return;
     
-    if (!user || !newMessage.trim()) return;
-
-    const messageContent = newMessage.trim();
-    setNewMessage('');
-    
-    // Optimistic update for better UX
     const optimisticMessage: Message = {
       id: `temp-${Date.now()}`,
-      content: messageContent,
+      content: message,
       user_id: user.id,
       user_email: user.email || 'Anonymous',
       created_at: new Date().toISOString(),
@@ -161,14 +151,13 @@ const ChatPage = () => {
 
     try {
       const { error, data } = await supabaseUntyped.from('messages').insert({
-        content: messageContent,
+        content: message,
         user_id: user.id,
         user_email: user.email || 'Anonymous',
       }).select('*');
 
       if (error) throw error;
       
-      // Replace optimistic message with real one if needed
       if (data && data.length > 0) {
         setMessages((prev) => 
           prev.map((msg) => 
@@ -180,7 +169,6 @@ const ChatPage = () => {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
       
-      // Remove the optimistic message on error
       setMessages((prev) => prev.filter(msg => msg.id !== optimisticMessage.id));
     }
   };
@@ -206,7 +194,6 @@ const ChatPage = () => {
     if (!isAdmin) return;
     
     try {
-      // Delete all messages with a date greater than 1970-01-01
       const { error } = await supabaseUntyped
         .from('messages')
         .delete()
@@ -214,7 +201,6 @@ const ChatPage = () => {
         
       if (error) throw error;
       
-      // Clear the messages in the UI immediately
       setMessages([]);
       toast.success('All messages cleared');
     } catch (error) {
@@ -399,7 +385,9 @@ const ChatPage = () => {
                             )}
                           </div>
                         )}
-                        <p className="break-words">{message.content}</p>
+                        
+                        <MarkdownMessage content={message.content} />
+                        
                         <p className="text-xs opacity-70 text-right mt-1">
                           {formatTime(message.created_at)}
                         </p>
@@ -430,23 +418,12 @@ const ChatPage = () => {
               </div>
             </ScrollArea>
             
-            <form onSubmit={sendMessage} className="flex gap-2">
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder={t('typeMessage')}
-                className="flex-1"
-                aria-label="Type a message"
-              />
-              <Button 
-                type="submit" 
-                disabled={!newMessage.trim()}
-                aria-label="Send message"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                {t('send')}
-              </Button>
-            </form>
+            <ChatInput 
+              onSubmit={sendMessage}
+              placeholder={t('typeMessage')}
+              dir={language === 'ar' ? 'rtl' : 'ltr'}
+              autoFocus
+            />
           </Card>
         </div>
       </main>
