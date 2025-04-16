@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import * as pdfjs from "pdfjs-dist";
 import { toast } from "sonner";
@@ -124,15 +125,16 @@ export const extractTextFromPDF = async (
 
 /**
  * Analyzes PDF content and answers a user question using Gemini AI
+ * Modified to skip extraction and directly send the query to Gemini
  */
 export const analyzePDFWithGemini = async (
-  pdfText: string, 
+  pdfText: string | null, 
   userQuestion: string,
   updateProgress?: (progress: AnalysisProgress) => void,
   previousChat: any[] = []
 ): Promise<string> => {
   try {
-    // First set the waiting state before starting the analysis
+    // Set the waiting state before starting the analysis
     updateProgress?.({
       stage: 'waiting',
       progress: 20,
@@ -144,12 +146,18 @@ export const analyzePDFWithGemini = async (
     
     updateProgress?.({
       stage: 'analyzing',
-      progress: 30,
-      message: 'Sending PDF content to Gemini AI...'
+      progress: 50,
+      message: 'Analyzing your question...'
     });
     
+    // Now we skip extraction and directly send the question
     const { data, error } = await supabase.functions.invoke('analyze-pdf-with-gemini', {
-      body: { pdfText, userQuestion, previousChat },
+      body: { 
+        pdfText: pdfText || "", 
+        userQuestion, 
+        previousChat,
+        skipExtraction: true  // New flag to indicate skipping extraction
+      },
     });
 
     if (error) {
@@ -164,7 +172,7 @@ export const analyzePDFWithGemini = async (
     
     updateProgress?.({
       stage: 'generating',
-      progress: 70,
+      progress: 75,
       message: 'Generating response...'
     });
     

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { ArrowLeft, FileText, Share, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw, Languages } from 'lucide-react';
@@ -406,43 +406,16 @@ const PDFViewer = () => {
       scrollToLatestMessage();
       
       try {
-        let textContent = pdfTextContent;
-        if (!textContent) {
-          setAnalysisProgress({
-            stage: 'extracting',
-            progress: 25,
-            message: language === 'ar'
-              ? 'استخراج النص من ملف PDF...'
-              : 'Extracting text from PDF...'
-          });
-          
-          textContent = await extractPDFContent();
-          
-          if (!textContent) {
-            throw new Error(language === 'ar'
-              ? 'فشل في استخراج النص من الملف'
-              : 'Failed to extract text from PDF');
-          }
-        }
-        
-        setAnalysisProgress({
-          stage: 'analyzing',
-          progress: 50,
-          message: language === 'ar'
-            ? 'تحليل محتوى الملف...'
-            : 'Analyzing PDF content...'
-        });
-        
         setAnalysisProgress({
           stage: 'generating',
-          progress: 75,
+          progress: 50,
           message: language === 'ar'
             ? 'إنشاء إجابة دقيقة...'
-            : 'Generating accurate answer...'
+            : 'Generating answer...'
         });
         
         const aiContent = await analyzePDFWithGemini(
-          textContent, 
+          null, // No PDF text needed anymore
           message, 
           updateAnalysisProgress, 
           chatMessages.filter(m => m.isUser === false).slice(-5)
