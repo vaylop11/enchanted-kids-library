@@ -5,7 +5,7 @@ import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileUp, Languages, Zap } from 'lucide-react';
 import SEO from '@/components/SEO';
 import ProSubscriptionCard from '@/components/ProSubscriptionCard';
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
@@ -127,6 +127,60 @@ const SubscribePage = () => {
         
         <div className="grid md:grid-cols-2 gap-8">
           <div className="order-2 md:order-1">
+            <h2 className="text-xl font-semibold mb-4">
+              {language === 'ar' ? 'ما الذي تحصل عليه مع Gemi PRO:' : 'What you get with Gemi PRO:'}
+            </h2>
+            
+            <div className="space-y-5 mb-8">
+              <div className="flex gap-4 items-start">
+                <div className="bg-primary/10 p-3 rounded-full text-primary">
+                  <FileUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-lg">
+                    {language === 'ar' ? 'تحميل ما يصل إلى 20 ملف PDF' : 'Upload up to 20 PDFs'}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {language === 'ar' 
+                      ? 'احتفظ بمستنداتك المتعددة في مكان واحد وتفاعل معها بسهولة'
+                      : 'Keep your multiple documents in one place and interact with them easily'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-4 items-start">
+                <div className="bg-primary/10 p-3 rounded-full text-primary">
+                  <Languages className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-lg">
+                    {language === 'ar' ? 'ميزة الترجمة الفورية' : 'Translation Feature'}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {language === 'ar' 
+                      ? 'ترجم ملفات PDF والردود إلى أي لغة تريدها على الفور'
+                      : 'Instantly translate your PDFs and responses to any language you want'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-4 items-start">
+                <div className="bg-primary/10 p-3 rounded-full text-primary">
+                  <Zap className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-lg">
+                    {language === 'ar' ? 'استجابة أسرع 10 مرات' : '10× Faster Response'}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {language === 'ar' 
+                      ? 'استمتع بمعالجة ذات أولوية واحصل على إجابات في ثوانٍ'
+                      : 'Enjoy priority processing and get answers in seconds'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
             {isLoading ? (
               <div className="flex items-center justify-center p-6 border rounded-lg bg-background">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -134,6 +188,13 @@ const SubscribePage = () => {
               </div>
             ) : plan ? (
               <div className="bg-background rounded-lg border p-4 mb-4">
+                <h3 className="font-medium text-lg mb-2">
+                  {language === 'ar' ? 'تفاصيل الاشتراك:' : 'Subscription Details:'}
+                </h3>
+                <p className="text-lg font-semibold mb-4">
+                  {plan.name} - ${plan.price}/{plan.interval}
+                </p>
+                
                 <PayPalScriptProvider options={{ 
                   clientId: "AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIuHBIjy_OcQFqtUxUGN2n1DjHnM4A4u62h",
                   vault: true,

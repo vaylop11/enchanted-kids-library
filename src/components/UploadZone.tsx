@@ -7,7 +7,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { uploadPDFToSupabase, getUserPDFs } from '@/services/pdfSupabaseService';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const UploadZone = () => {
   const { language } = useLanguage();
@@ -50,8 +49,9 @@ const UploadZone = () => {
       return;
     }
 
+    // Check file size against plan limits
     const fileSizeMB = file.size / (1024 * 1024);
-    const maxSizeMB = limits?.has_paid_subscription ? (limits?.max_file_size_mb ?? 20) : 5;
+    const maxSizeMB = limits?.max_file_size_mb ?? 5;
 
     if (fileSizeMB > maxSizeMB) {
       toast.error(
@@ -62,11 +62,11 @@ const UploadZone = () => {
       return;
     }
 
+    // Check PDF count against plan limits
     if (userPDFCount >= (limits?.max_pdfs ?? 2)) {
-      navigate('/pdfs');
       const message = language === 'ar'
-        ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${limits?.max_pdfs ?? 2}). يرجى حذف بعض الملفات لتحميل المزيد.`
-        : `You have reached the maximum number of PDFs (${limits?.max_pdfs ?? 2}). Please delete some files to upload more.`;
+        ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${limits?.max_pdfs ?? 2}). يرجى الترقية للحصول على المزيد من المساحة.`
+        : `You have reached the maximum number of PDFs (${limits?.max_pdfs ?? 2}). Please upgrade for more storage.`;
 
       toast.error(message);
       return;
@@ -105,12 +105,7 @@ const UploadZone = () => {
 
         if (pdf) {
           toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-          
-          setUserPDFCount(prev => {
-            const newCount = prev + 1;
-            console.log(`Updated PDF count: ${newCount}/4`);
-            return newCount;
-          });
+          setUserPDFCount(prev => prev + 1);
 
           setTimeout(() => {
             setIsUploading(false);
@@ -216,7 +211,7 @@ const UploadZone = () => {
   const triggerFileInput = () => {
     if (user && userPDFCount >= 4) {
       const errorMsg = language === 'ar'
-        ? 'لقد وصلت إلى ��لحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
+        ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
         : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.';
       toast.error(errorMsg);
       setUploadError(errorMsg);
@@ -247,18 +242,6 @@ const UploadZone = () => {
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {userPDFCount >= (limits?.max_pdfs ?? 2) ? (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            {language === 'ar'
-              ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${limits?.max_pdfs ?? 2}). يرجى حذف بعض الملفات لتحميل المزيد.`
-              : `You have reached the maximum number of PDFs (${limits?.max_pdfs ?? 2}). Please delete some files to upload more.`
-            }
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
       {uploadError ? (
         <div className="p-8 border-2 border-amber-300 rounded-xl bg-amber-50 dark:bg-amber-950/20">
           <div className="flex flex-col items-center justify-center text-center space-y-4">
@@ -361,9 +344,7 @@ const UploadZone = () => {
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <p className="text-sm text-purple-800 font-medium">
-                  {language === 'ar'
-                    ? `الحد الأقصى ${limits?.has_paid_subscription ? 20 : 5} ميجابايت`
-                    : `Max ${limits?.has_paid_subscription ? 20 : 5}MB`}
+                  {language === 'ar' ? 'الحد الأقصى 10 ميجابايت' : 'Max 10MB'}
                 </p>
                 <Button
                   variant="outline"
@@ -378,11 +359,18 @@ const UploadZone = () => {
                   {language === 'ar' ? 'اختر ملف' : 'Select File'}
                 </Button>
 
-                {user && (
+                {user ? (
                   <p className="text-xs text-muted-foreground mt-2">
                     {language === 'ar'
                       ? `${userPDFCount}/4 ملفات تم تحميلها`
                       : `${userPDFCount}/4 PDFs uploaded`
+                    }
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-600 mt-2">
+                    {language === 'ar'
+                      ? 'ملاحظة: سجل الدخول لحفظ الملفات'
+                      : 'Note: Sign in to save files'
                     }
                   </p>
                 )}

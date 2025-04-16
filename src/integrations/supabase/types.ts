@@ -313,10 +313,6 @@ export type Database = {
         Args: { user_id: string }
         Returns: Json
       }
-      cleanup_excess_pdfs: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       has_active_subscription: {
         Args: { user_id: string }
         Returns: boolean
