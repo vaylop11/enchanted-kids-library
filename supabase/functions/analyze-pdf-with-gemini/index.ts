@@ -1,5 +1,6 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Gemini } from "https://esm.sh/@google/generative-ai";
+import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 
 // Set up CORS headers
 const corsHeaders = {
@@ -23,9 +24,9 @@ serve(async (req) => {
   }
 
   try {
-    const { text, query, previousResponses = [], responseLanguage = 'en' } = await req.json();
+    const { text, query, previousResponses = [], responseLanguage = 'en', skipExtraction = false } = await req.json();
 
-    if (!text || !query) {
+    if ((!text && !skipExtraction) || !query) {
       return new Response(
         JSON.stringify({ error: 'Missing text or query' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -38,13 +39,36 @@ serve(async (req) => {
     // Check if we should format the response in the detected language
     const formattingPrompt = generateFormattingPrompt(responseLanguage);
 
-    const model = new Gemini(apiKey);
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     // Build context from previous AI responses
     const conversationContext = previousResponses.length 
       ? "\n\nHere are some previous questions and responses from our conversation that may provide context:\n" + 
         previousResponses.map((resp, i) => `Response ${i+1}: ${resp}`).join('\n\n')
       : "";
+
+    // Handle case where we're skipping extraction
+    if (skipExtraction && !text) {
+      const response = await model.generateContent(
+        `You are an AI assistant helping with a PDF document. The user has asked: "${query}"
+        
+        Since I don't have access to the document content yet, please explain that you're still processing or
+        don't have enough information to provide a specific answer related to the document content.
+        
+        ${formattingPrompt}
+        
+        Keep your response professional, helpful, and suggest that the user can ask again after the document processing is complete.
+        Respond in the same language as the user query (${responseLanguage}).`
+      );
+      
+      const responseText = response.response.text();
+      
+      return new Response(
+        JSON.stringify({ response: responseText }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Construct the prompt with the text, query, and instructions
     const promptText = `You are an advanced document analysis assistant that provides informative and accurate responses based on document content.
@@ -75,24 +99,8 @@ serve(async (req) => {
     5. Respond in the same language as the user query (${responseLanguage}).
     6. If providing page numbers, note they are approximate.`;
 
-    const response = await model.post({
-      model: "models/gemini-pro-latest", // Using latest pro model for highest quality
-      messages: [
-        {
-          role: "user",
-          parts: [{ text: promptText }]
-        }
-      ],
-      temperature: 0.2,
-      topP: 0.95,
-      topK: 40,
-    });
-
-    if (!response.candidates || !response.candidates[0]) {
-      throw new Error('Invalid response from Gemini API');
-    }
-
-    const responseText = response.candidates[0].content.parts[0].text;
+    const result = await model.generateContent(promptText);
+    const responseText = result.response.text();
 
     return new Response(
       JSON.stringify({ response: responseText }),
