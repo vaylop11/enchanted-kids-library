@@ -51,7 +51,8 @@ const UploadZone = () => {
     }
 
     const fileSizeMB = file.size / (1024 * 1024);
-    const maxSizeMB = limits?.max_file_size_mb ?? 5;
+    // Update the max file size to 5MB for free/non-signed-in users
+    const maxSizeMB = limits?.has_paid_subscription ? (limits?.max_file_size_mb ?? 20) : 5;
 
     if (fileSizeMB > maxSizeMB) {
       toast.error(
@@ -356,7 +357,9 @@ const UploadZone = () => {
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <p className="text-sm text-purple-800 font-medium">
-                  {language === 'ar' ? 'الحد الأقصى 10 ميجابايت' : 'Max 10MB'}
+                  {language === 'ar'
+                    ? `الحد الأقصى ${limits?.has_paid_subscription ? 20 : 5} ميجابايت`
+                    : `Max ${limits?.has_paid_subscription ? 20 : 5}MB`}
                 </p>
                 <Button
                   variant="outline"
