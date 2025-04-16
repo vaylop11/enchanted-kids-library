@@ -3,7 +3,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, getCurrentUser } from '@/services/authService';
 import { toast } from 'sonner';
-import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AuthContextType {
   user: User | null;
@@ -25,7 +24,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const { language } = useLanguage();
 
   const checkUser = async () => {
     setLoading(true);
@@ -39,6 +37,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setIsAdmin(false);
       }
+      
+      console.log('Current user:', currentUser);
     } catch (error) {
       console.error('Error checking user:', error);
     } finally {
@@ -47,10 +47,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // First check for current user
     checkUser();
 
-    // Then set up the auth listener
+    // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.id);
       
@@ -68,42 +67,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setIsAdmin(false);
         }
-
-        // Use setTimeout to avoid potential deadlocks with Supabase client
-        setTimeout(async () => {
-          // Check subscription status
-          const { data: subscriptionData } = await supabase
-            .from('user_subscriptions')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .eq('status', 'ACTIVE')
-            .maybeSingle();  // Using maybeSingle instead of single to prevent errors
-
-          if (subscriptionData) {
-            toast.success(
-              language === 'ar' 
-                ? 'مرحباً بك في Gemi PRO!' 
-                : 'Welcome back to Gemi PRO!'
-            );
-          } else {
-            toast.success(language === 'ar' 
-              ? 'تم تسجيل الدخول بنجاح' 
-              : 'Signed in successfully');
-          }
-        }, 0);
+        
+        toast.success('Signed in successfully');
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAdmin(false);
-        toast.success(language === 'ar' 
-          ? 'تم تسجيل الخروج بنجاح' 
-          : 'Signed out successfully');
+        toast.success('Signed out successfully');
       }
     });
 
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [language]);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading, checkUser, isAdmin }}>
