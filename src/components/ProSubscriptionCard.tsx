@@ -1,10 +1,12 @@
-
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { FileText, Zap, Globe } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const ProSubscriptionCard = () => {
   const { language } = useLanguage();
+  const navigate = useNavigate();
 
   return (
     <Card className="relative overflow-hidden bg-gradient-to-b from-purple-50 to-purple-100 dark:from-purple-900/10 dark:to-purple-900/5 border-2 border-purple-500/20 hover:border-purple-500/40 transition-all duration-300">
@@ -91,6 +93,13 @@ const ProSubscriptionCard = () => {
               </div>
             </div>
           </div>
+
+          <Button
+            onClick={() => navigate('/subscribe')}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            {language === 'ar' ? 'اشترك الآن' : 'Subscribe Now'}
+          </Button>
         </div>
       </CardContent>
     </Card>
