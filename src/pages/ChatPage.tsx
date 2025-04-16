@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import SEO from '@/components/SEO';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
-import { Send, ArrowLeft, Crown, Reply, ThumbsUp, Heart, Laugh, Frown } from 'lucide-react';
+import { Send, ArrowLeft, Crown, Reply, ThumbsUp, Heart, Laugh, Frown, Eraser } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/contexts/LanguageContext';
