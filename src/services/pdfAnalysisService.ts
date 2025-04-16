@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import * as pdfjs from "pdfjs-dist";
 import { toast } from "sonner";
@@ -32,13 +31,14 @@ export const extractTextFromPDF = async (
   pdfId: string,
   updateProgress?: (progress: AnalysisProgress) => void,
   extractionOptions: {
-    quickMode?: boolean; // If true, only extracts a portion of the document for faster response
-    maxPages?: number;   // Maximum pages to extract in quick mode
+    quickMode?: boolean;
+    maxPages?: number;
+    specificPage?: number;
   } = {}
 ): Promise<string> => {
   try {
-    // Check if we already have the text for this PDF
-    if (cachedPDFText[pdfId]) {
+    // Only use cache if we're not extracting a specific page
+    if (!extractionOptions.specificPage && cachedPDFText[pdfId]) {
       console.log('Using cached PDF text');
       updateProgress?.({
         stage: 'extracting',
@@ -57,41 +57,52 @@ export const extractTextFromPDF = async (
     const pdf = await pdfjs.getDocument(pdfUrl).promise;
     let fullText = '';
     
-    // Total pages for progress calculation
-    const totalPages = pdf.numPages;
-    const { quickMode, maxPages } = extractionOptions;
+    const { quickMode, maxPages, specificPage } = extractionOptions;
     
-    // Always process all pages unless quickMode is explicitly set to true
-    const pagesToProcess = quickMode && maxPages ? Math.min(maxPages, totalPages) : totalPages;
-    
-    for (let i = 1; i <= pagesToProcess; i++) {
-      updateProgress?.({
-        stage: 'extracting',
-        progress: Math.round((i - 1) / pagesToProcess * 100),
-        message: `Extracting text from page ${i} of ${quickMode ? `${pagesToProcess} (quick mode)` : totalPages}...`
-      });
-      
-      const page = await pdf.getPage(i);
+    // If specificPage is provided, only extract that page
+    if (specificPage && specificPage > 0 && specificPage <= pdf.numPages) {
+      const page = await pdf.getPage(specificPage);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items.map((item: any) => item.str).join(' ');
-      fullText += pageText + ' ';
+      fullText = textContent.items.map((item: any) => item.str).join(' ');
+    } else {
+      // Total pages for progress calculation
+      const totalPages = pdf.numPages;
+      const { quickMode, maxPages } = extractionOptions;
       
-      // Update progress after each page
-      updateProgress?.({
-        stage: 'extracting',
-        progress: Math.round(i / pagesToProcess * 100),
-        message: `Extracted page ${i}`
-      });
+      // Always process all pages unless quickMode is explicitly set to true
+      const pagesToProcess = quickMode && maxPages ? Math.min(maxPages, totalPages) : totalPages;
       
-      // Only break early if quickMode is explicitly set to true
-      if (quickMode && fullText.length > 5000 && i >= Math.min(5, pagesToProcess)) {
-        fullText += `\n\n[Note: Only the first ${i} pages were analyzed for quick response]`;
-        break;
+      for (let i = 1; i <= pagesToProcess; i++) {
+        updateProgress?.({
+          stage: 'extracting',
+          progress: Math.round((i - 1) / pagesToProcess * 100),
+          message: `Extracting text from page ${i} of ${quickMode ? `${pagesToProcess} (quick mode)` : totalPages}...`
+        });
+        
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(' ');
+        fullText += pageText + ' ';
+        
+        // Update progress after each page
+        updateProgress?.({
+          stage: 'extracting',
+          progress: Math.round(i / pagesToProcess * 100),
+          message: `Extracted page ${i}`
+        });
+        
+        // Only break early if quickMode is explicitly set to true
+        if (quickMode && fullText.length > 5000 && i >= Math.min(5, pagesToProcess)) {
+          fullText += `\n\n[Note: Only the first ${i} pages were analyzed for quick response]`;
+          break;
+        }
       }
     }
     
-    // Cache the extracted text
-    cachedPDFText[pdfId] = fullText.trim();
+    // Only cache if we're not extracting a specific page
+    if (!specificPage) {
+      cachedPDFText[pdfId] = fullText.trim();
+    }
     
     updateProgress?.({
       stage: 'analyzing',
