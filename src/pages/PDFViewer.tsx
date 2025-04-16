@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -53,7 +54,7 @@ const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const { language, direction } = useLanguage();
+  const { language } = useLanguage();
   const { user } = useAuth();
   
   const [isLoaded, setIsLoaded] = useState(false);
@@ -677,7 +678,7 @@ const PDFViewer = () => {
               to={isTempPdf ? "/" : "/pdfs"} 
               className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft className={`h-4 w-4 ${direction === 'rtl' ? 'ml-2 rotate-180' : 'mr-2'}`} />
+              <ArrowLeft className={`h-4 w-4 ${language === 'ar' ? 'ml-2 rotate-180' : 'mr-2'}`} />
               {language === 'ar' 
                 ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
                 : isTempPdf ? 'Back to Home' : 'Back to PDFs'}
