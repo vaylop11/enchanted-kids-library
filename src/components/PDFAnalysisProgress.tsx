@@ -2,7 +2,7 @@
 import { Progress } from "@/components/ui/progress";
 import { AnalysisProgress } from "@/services/pdfAnalysisService";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { FileText, Brain, Sparkles, CheckCircle, AlertTriangle, Loader, FileSearch, Dices } from "lucide-react";
+import { FileText, Sparkles, CheckCircle, AlertTriangle, Loader, FileSearch, Dices } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
