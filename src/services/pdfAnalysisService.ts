@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import * as pdfjs from "pdfjs-dist";
 import { toast } from "sonner";
@@ -12,7 +11,8 @@ export type AnalysisStage =
   | 'analyzing' 
   | 'generating' 
   | 'complete' 
-  | 'error';
+  | 'error'
+  | 'waiting'; // Added waiting stage
 
 export interface AnalysisProgress {
   stage: AnalysisStage;
@@ -20,14 +20,34 @@ export interface AnalysisProgress {
   message: string;
 }
 
+let cachedPDFText: Record<string, string> = {};
+
 /**
  * Extracts text content from a PDF file
+ * Added cache to prevent re-extraction of PDFs that were already processed
  */
 export const extractTextFromPDF = async (
   pdfUrl: string, 
-  updateProgress?: (progress: AnalysisProgress) => void
+  pdfId: string,
+  updateProgress?: (progress: AnalysisProgress) => void,
+  extractionOptions: {
+    quickMode?: boolean;
+    maxPages?: number;
+    specificPage?: number;
+  } = {}
 ): Promise<string> => {
   try {
+    // Only use cache if we're not extracting a specific page
+    if (!extractionOptions.specificPage && cachedPDFText[pdfId]) {
+      console.log('Using cached PDF text');
+      updateProgress?.({
+        stage: 'extracting',
+        progress: 100,
+        message: 'Using cached PDF text'
+      });
+      return cachedPDFText[pdfId];
+    }
+    
     updateProgress?.({
       stage: 'extracting',
       progress: 0,
@@ -37,27 +57,51 @@ export const extractTextFromPDF = async (
     const pdf = await pdfjs.getDocument(pdfUrl).promise;
     let fullText = '';
     
-    // Total pages for progress calculation
-    const totalPages = pdf.numPages;
+    const { quickMode, maxPages, specificPage } = extractionOptions;
     
-    for (let i = 1; i <= totalPages; i++) {
-      updateProgress?.({
-        stage: 'extracting',
-        progress: Math.round((i - 1) / totalPages * 100),
-        message: `Extracting text from page ${i} of ${totalPages}...`
-      });
-      
-      const page = await pdf.getPage(i);
+    // If specificPage is provided, only extract that page
+    if (specificPage && specificPage > 0 && specificPage <= pdf.numPages) {
+      const page = await pdf.getPage(specificPage);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items.map((item: any) => item.str).join(' ');
-      fullText += pageText + ' ';
+      fullText = textContent.items.map((item: any) => item.str).join(' ');
+    } else {
+      // Total pages for progress calculation
+      const totalPages = pdf.numPages;
+      const { quickMode, maxPages } = extractionOptions;
       
-      // Update progress after each page
-      updateProgress?.({
-        stage: 'extracting',
-        progress: Math.round(i / totalPages * 100),
-        message: `Extracted page ${i} of ${totalPages}`
-      });
+      // Always process all pages unless quickMode is explicitly set to true
+      const pagesToProcess = quickMode && maxPages ? Math.min(maxPages, totalPages) : totalPages;
+      
+      for (let i = 1; i <= pagesToProcess; i++) {
+        updateProgress?.({
+          stage: 'extracting',
+          progress: Math.round((i - 1) / pagesToProcess * 100),
+          message: `Extracting text from page ${i} of ${quickMode ? `${pagesToProcess} (quick mode)` : totalPages}...`
+        });
+        
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(' ');
+        fullText += pageText + ' ';
+        
+        // Update progress after each page
+        updateProgress?.({
+          stage: 'extracting',
+          progress: Math.round(i / pagesToProcess * 100),
+          message: `Extracted page ${i}`
+        });
+        
+        // Only break early if quickMode is explicitly set to true
+        if (quickMode && fullText.length > 5000 && i >= Math.min(5, pagesToProcess)) {
+          fullText += `\n\n[Note: Only the first ${i} pages were analyzed for quick response]`;
+          break;
+        }
+      }
+    }
+    
+    // Only cache if we're not extracting a specific page
+    if (!specificPage) {
+      cachedPDFText[pdfId] = fullText.trim();
     }
     
     updateProgress?.({
@@ -84,9 +128,20 @@ export const extractTextFromPDF = async (
 export const analyzePDFWithGemini = async (
   pdfText: string, 
   userQuestion: string,
-  updateProgress?: (progress: AnalysisProgress) => void
+  updateProgress?: (progress: AnalysisProgress) => void,
+  previousChat: any[] = []
 ): Promise<string> => {
   try {
+    // First set the waiting state before starting the analysis
+    updateProgress?.({
+      stage: 'waiting',
+      progress: 20,
+      message: 'Preparing your request...'
+    });
+    
+    // Short delay to show the waiting state
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
     updateProgress?.({
       stage: 'analyzing',
       progress: 30,
@@ -94,10 +149,11 @@ export const analyzePDFWithGemini = async (
     });
     
     const { data, error } = await supabase.functions.invoke('analyze-pdf-with-gemini', {
-      body: { pdfText, userQuestion },
+      body: { pdfText, userQuestion, previousChat },
     });
 
     if (error) {
+      console.error('Gemini API error:', error);
       updateProgress?.({
         stage: 'error',
         progress: 0,
@@ -111,9 +167,6 @@ export const analyzePDFWithGemini = async (
       progress: 70,
       message: 'Generating response...'
     });
-    
-    // Simulate a slight delay for the UI to show the generating stage
-    await new Promise(resolve => setTimeout(resolve, 500));
     
     updateProgress?.({
       stage: 'complete',
@@ -130,5 +183,14 @@ export const analyzePDFWithGemini = async (
       message: error instanceof Error ? error.message : 'Failed to analyze PDF content'
     });
     throw new Error('Failed to analyze PDF content');
+  }
+};
+
+// Clear the cache for a specific PDF or all PDFs
+export const clearPDFTextCache = (pdfId?: string) => {
+  if (pdfId) {
+    delete cachedPDFText[pdfId];
+  } else {
+    cachedPDFText = {};
   }
 };
