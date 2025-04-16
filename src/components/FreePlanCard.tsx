@@ -4,18 +4,28 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { FileText, X, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export const FreePlanCard = () => {
-  const { language } = useLanguage();
+  const { language, direction } = useLanguage();
   const navigate = useNavigate();
+  const [key, setKey] = useState(Date.now());
+
+  // Force re-render when language changes
+  useEffect(() => {
+    setKey(Date.now());
+  }, [language]);
 
   return (
-    <Card className="relative overflow-hidden bg-gradient-to-b from-background to-muted/20 border-2 hover:border-primary/20 transition-all duration-300">
+    <Card 
+      key={key}
+      className="relative overflow-hidden bg-gradient-to-b from-background to-muted/20 border-2 hover:border-primary/20 transition-all duration-300"
+    >
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 z-0" />
-      <CardContent className="p-6 relative z-10">
+      <CardContent className={`p-6 relative z-10 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
         <div className="flex flex-col gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
+            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
               <Zap className="h-3 w-3" />
               {language === 'ar' ? 'مجاني' : 'Free'}
             </div>
@@ -30,7 +40,7 @@ export const FreePlanCard = () => {
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-start gap-3 bg-muted/50 p-3 rounded-lg">
+            <div className={`flex items-start gap-3 bg-muted/50 p-3 rounded-lg ${direction === 'rtl' ? 'flex-row-reverse text-right' : ''}`}>
               <FileText className="h-5 w-5 mt-0.5 text-primary" />
               <div>
                 <p className="text-sm font-medium">
@@ -46,7 +56,7 @@ export const FreePlanCard = () => {
               </div>
             </div>
 
-            <div className="flex items-start gap-3 bg-muted/50 p-3 rounded-lg">
+            <div className={`flex items-start gap-3 bg-muted/50 p-3 rounded-lg ${direction === 'rtl' ? 'flex-row-reverse text-right' : ''}`}>
               <FileText className="h-5 w-5 mt-0.5 text-primary" />
               <div>
                 <p className="text-sm font-medium">
@@ -62,7 +72,7 @@ export const FreePlanCard = () => {
               </div>
             </div>
 
-            <div className="flex items-start gap-3 bg-destructive/10 p-3 rounded-lg">
+            <div className={`flex items-start gap-3 bg-destructive/10 p-3 rounded-lg ${direction === 'rtl' ? 'flex-row-reverse text-right' : ''}`}>
               <X className="h-5 w-5 mt-0.5 text-destructive" />
               <div>
                 <p className="text-sm font-medium">
@@ -78,7 +88,7 @@ export const FreePlanCard = () => {
               </div>
             </div>
 
-            <div className="flex items-start gap-3 bg-muted/50 p-3 rounded-lg">
+            <div className={`flex items-start gap-3 bg-muted/50 p-3 rounded-lg ${direction === 'rtl' ? 'flex-row-reverse text-right' : ''}`}>
               <Zap className="h-5 w-5 mt-0.5 text-primary" />
               <div>
                 <p className="text-sm font-medium">
@@ -98,7 +108,7 @@ export const FreePlanCard = () => {
           <Button
             onClick={() => navigate('/subscribe')}
             variant="outline"
-            className="mt-4 w-full"
+            className={`mt-4 w-full ${direction === 'rtl' ? 'font-[system-ui]' : ''}`}
           >
             {language === 'ar' ? 'ترقية إلى Pro' : 'Upgrade to Pro'}
           </Button>
