@@ -9,9 +9,9 @@
     result := jsonb_build_object(
         'has_paid_subscription', has_subscription,
         'current_pdf_count', pdf_count,
-        'max_pdfs', CASE WHEN has_subscription THEN 4 ELSE 2 END,
+        'max_pdfs', CASE WHEN has_subscription THEN 20 ELSE 2 END,
         'max_file_size_mb', CASE WHEN has_subscription THEN 10 ELSE 5 END,
-        'can_translate', true  -- Changed from has_subscription to true
+        'can_translate', has_subscription
     );
 
     RETURN result;

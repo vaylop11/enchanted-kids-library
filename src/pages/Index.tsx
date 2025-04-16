@@ -10,7 +10,7 @@ import UploadZone from '@/components/UploadZone';
 import PDFGrid from '@/components/PDFGrid';
 import SEO from '@/components/SEO';
 import { Languages } from 'lucide-react';
-import ProSubscriptionCard from '@/components/ProSubscriptionCard';
+import { PlanCards } from '@/components/PlanCards';
 
 const Index = () => {
   const { language } = useLanguage();
@@ -84,17 +84,17 @@ const Index = () => {
           <div className="container mx-auto px-4 md:px-6 max-w-7xl">
             <div className="text-center mb-10">
               <h2 className="text-3xl font-bold tracking-tight mb-4">
-                {language === 'ar' ? 'ارتقِ بتجربتك مع Gemi PRO' : 'Upgrade Your Experience with Gemi PRO'}
+                {language === 'ar' ? 'اختر خطة Gemi المناسبة لك' : 'Choose the Right Gemi Plan for You'}
               </h2>
               <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
                 {language === 'ar'
-                  ? 'احصل على ميزات متقدمة وقدرات محسّنة مع خطة Gemi PRO الخاصة بنا'
-                  : 'Unlock advanced features and enhanced capabilities with our Gemi PRO plan'}
+                  ? 'استكشف خيارات الاشتراك لدينا وابدأ مع Gemi مجانًا أو اختر خطة Pro للحصول على ميزات متقدمة'
+                  : 'Explore our subscription options and get started with Gemi Free or choose our Pro plan for advanced features'}
               </p>
             </div>
             
             <div className="max-w-md mx-auto">
-              <ProSubscriptionCard />
+              <PlanCards />
             </div>
           </div>
         </section>
