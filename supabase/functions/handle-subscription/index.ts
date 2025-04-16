@@ -70,9 +70,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { subscriptionId, planId, action, paypalPlanId } = await req.json()
+    const { subscriptionId, planId, action } = await req.json()
     
-    console.log("Received request:", { subscriptionId, planId, action, paypalPlanId })
+    console.log("Received request:", { subscriptionId, planId, action })
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -104,163 +104,41 @@ Deno.serve(async (req) => {
       throw new Error('Invalid subscription ID or PayPal API error')
     }
 
-    // Check if this is just a refresh request
-    if (action === 'refresh') {
-      console.log("Processing refresh request")
-      
-      // Just update the status based on PayPal's response
-      const { data: existingSubscription, error: fetchError } = await supabase
-        .from('user_subscriptions')
-        .select('*')
-        .eq('paypal_subscription_id', subscriptionId)
-        .eq('user_id', user.id)
-        .single()
-      
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is code for "no rows returned"
-        console.error("Error fetching existing subscription:", fetchError)
-        throw fetchError
-      }
-
-      // If no subscription found, return error
-      if (!existingSubscription) {
-        console.error("Subscription not found in database")
-        throw new Error('Subscription not found in database')
-      }
-      
-      console.log("Updating existing subscription status:", subscription.status)
-      
-      // Get dates to use
-      const currentPeriodStart = new Date(subscription.start_time)
-      let currentPeriodEnd
-      
-      if (subscription.billing_info?.next_billing_time) {
-        currentPeriodEnd = new Date(subscription.billing_info.next_billing_time)
-      } else if (subscription.billing_info?.last_payment?.time) {
-        // If no next billing time, add 30 days to last payment
-        currentPeriodEnd = new Date(subscription.billing_info.last_payment.time)
-        currentPeriodEnd.setDate(currentPeriodEnd.getDate() + 30)
-      } else {
-        // Fallback: 30 days from now
-        currentPeriodEnd = new Date()
-        currentPeriodEnd.setDate(currentPeriodEnd.getDate() + 30)
-      }
-      
-      // Update status based on PayPal data
-      const { data, error } = await supabase
-        .from('user_subscriptions')
-        .update({
-          status: subscription.status,
-          current_period_start: currentPeriodStart,
-          current_period_end: currentPeriodEnd,
-          updated_at: new Date(),
-        })
-        .eq('id', existingSubscription.id)
-        .select()
-        .single()
-      
-      if (error) {
-        console.error("Error updating subscription:", error)
-        throw error
-      }
-      
-      console.log("Subscription refreshed successfully:", data)
-      
-      return new Response(JSON.stringify({ success: true, data, refreshed: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
     // For new subscription creation
     if (subscription.status === 'ACTIVE' || subscription.status === 'APPROVED') {
       console.log("Processing active subscription")
       
-      // Check if subscription already exists
-      const { data: existingSubscription, error: fetchError } = await supabase
-        .from('user_subscriptions')
-        .select('*')
-        .eq('paypal_subscription_id', subscriptionId)
-        .single()
-      
-      if (existingSubscription) {
-        console.log("Updating existing subscription:", existingSubscription.id)
-        
-        // Get dates to use
-        const currentPeriodStart = new Date(subscription.start_time)
-        let currentPeriodEnd
-        
-        if (subscription.billing_info?.next_billing_time) {
-          currentPeriodEnd = new Date(subscription.billing_info.next_billing_time)
-        } else if (subscription.billing_info?.last_payment?.time) {
-          currentPeriodEnd = new Date(subscription.billing_info.last_payment.time)
-          currentPeriodEnd.setDate(currentPeriodEnd.getDate() + 30)
-        } else {
-          currentPeriodEnd = new Date()
-          currentPeriodEnd.setDate(currentPeriodEnd.getDate() + 30)
-        }
-        
-        // Update existing subscription
-        const { data, error } = await supabase
-          .from('user_subscriptions')
-          .update({
-            status: subscription.status,
-            current_period_start: currentPeriodStart,
-            current_period_end: currentPeriodEnd,
-            updated_at: new Date(),
-          })
-          .eq('id', existingSubscription.id)
-          .select()
-          .single()
-        
-        if (error) {
-          console.error("Error updating existing subscription:", error)
-          throw error
-        }
-        
-        console.log("Existing subscription updated:", data)
-        
-        return new Response(JSON.stringify({ success: true, data, updated: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-      }
-      
-      console.log("Creating new subscription for user:", user.id)
-      
-      // Get dates for new subscription
+      // Get subscription dates
       const currentPeriodStart = new Date(subscription.start_time)
-      let currentPeriodEnd
+      let currentPeriodEnd = new Date(subscription.billing_info?.next_billing_time || Date.now())
       
-      if (subscription.billing_info?.next_billing_time) {
-        currentPeriodEnd = new Date(subscription.billing_info.next_billing_time)
-      } else if (subscription.billing_info?.last_payment?.time) {
-        currentPeriodEnd = new Date(subscription.billing_info.last_payment.time)
-        currentPeriodEnd.setDate(currentPeriodEnd.getDate() + 30)
-      } else {
-        currentPeriodEnd = new Date()
+      // If next_billing_time is not available, add 30 days
+      if (!subscription.billing_info?.next_billing_time) {
         currentPeriodEnd.setDate(currentPeriodEnd.getDate() + 30)
       }
-      
-      // Store new subscription in database
-      const { data, error } = await supabase
+
+      // Create or update subscription
+      const { data: subData, error: subError } = await supabase
         .from('user_subscriptions')
-        .insert({
+        .upsert({
           user_id: user.id,
           plan_id: planId,
           paypal_subscription_id: subscriptionId,
           status: subscription.status,
-          current_period_start: currentPeriodStart,
-          current_period_end: currentPeriodEnd,
+          current_period_start: currentPeriodStart.toISOString(),
+          current_period_end: currentPeriodEnd.toISOString(),
         })
         .select()
         .single()
 
-      if (error) {
-        console.error("Error inserting new subscription:", error)
-        throw error
+      if (subError) {
+        console.error("Error creating/updating subscription:", subError)
+        throw subError
       }
 
-      console.log("New subscription created successfully:", data)
+      console.log("Subscription created/updated successfully:", subData)
       
-      return new Response(JSON.stringify({ success: true, data }), {
+      return new Response(JSON.stringify({ success: true, data: subData }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }

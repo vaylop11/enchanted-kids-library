@@ -9,10 +9,10 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import SEO from '@/components/SEO';
 import ProSubscriptionCard from '@/components/ProSubscriptionCard';
-import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { 
   createSubscription, 
-  getSubscriptionPlans, 
+  getSubscriptionPlans,
   type SubscriptionPlan,
   getPayPalPlanIdFromDatabase 
 } from '@/services/subscriptionService';
@@ -25,16 +25,15 @@ const SubscribePage = () => {
   const { user } = useAuth();
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [paypalPlanId, setPaypalPlanId] = useState<string | null>(null);
+  const [paypalPlanId, setPaypalPlanId] = useState<string>('P-8AR43998YB6934043M77H5AI');
   const [paypalError, setPaypalError] = useState<string | null>(null);
-  const [key, setKey] = useState(Date.now()); // Add key for forced re-render
+  const [key, setKey] = useState(Date.now());
   const [processingPayment, setProcessingPayment] = useState(false);
   
-  // Force re-render when language changes
   useEffect(() => {
     setKey(Date.now());
   }, [language]);
-  
+
   useEffect(() => {
     const loadPlan = async () => {
       setIsLoading(true);
@@ -50,13 +49,11 @@ const SubscribePage = () => {
           setPlan(updatedPlan);
           console.log("Selected plan:", updatedPlan);
           
-          // Separately fetch PayPal Plan ID to ensure we have it
+          // Get PayPal Plan ID
           const paypalId = await getPayPalPlanIdFromDatabase();
           if (paypalId) {
             setPaypalPlanId(paypalId);
             console.log("Set PayPal Plan ID:", paypalId);
-          } else {
-            setPaypalError("Missing PayPal plan ID. Please contact support.");
           }
         }
       } catch (error) {
@@ -84,10 +81,7 @@ const SubscribePage = () => {
     try {
       setProcessingPayment(true);
       console.log("Subscription approved:", data);
-      
-      // Log more detailed information about the subscription
       console.log("Subscription ID:", data.subscriptionID);
-      console.log("Plan ID:", plan.id);
       
       // Process the subscription
       const result = await createSubscription(data.subscriptionID, plan.id);
@@ -109,16 +103,6 @@ const SubscribePage = () => {
     } finally {
       setProcessingPayment(false);
     }
-  };
-
-  const handlePayPalError = (error: Record<string, unknown>) => {
-    console.error('PayPal error:', error);
-    setPaypalError(language === 'ar' 
-      ? 'خطأ في معالجة الدفع. يرجى المحاولة مرة أخرى.' 
-      : 'Error processing payment. Please try again.');
-    toast.error(language === 'ar' 
-      ? 'خطأ في PayPal. يرجى المحاولة مرة أخرى لاحقًا.' 
-      : 'PayPal error. Please try again later.');
   };
 
   return (
@@ -175,7 +159,7 @@ const SubscribePage = () => {
               </div>
             ) : plan ? (
               <div className="bg-background rounded-lg border p-4 mb-4">
-                <PayPalScriptProvider options={{ 
+                <PayPalScriptProvider options={{
                   clientId: "AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIuHBIjy_OcQFqtUxUGN2n1DjHnM4A4u62h",
                   vault: true,
                   intent: "subscription",
@@ -183,10 +167,8 @@ const SubscribePage = () => {
                 }}>
                   <PayPalButtons
                     createSubscription={(data, actions) => {
-                      const planIdToUse = paypalPlanId || 'P-8AR43998YB6934043M77H5AI';
-                      console.log("Creating subscription with plan ID:", planIdToUse);
                       return actions.subscription.create({
-                        'plan_id': planIdToUse
+                        plan_id: paypalPlanId
                       });
                     }}
                     style={{

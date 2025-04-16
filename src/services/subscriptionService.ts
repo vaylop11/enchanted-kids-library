@@ -37,7 +37,7 @@ export const createSubscription = async (subscriptionId: string, planId: string)
       body: { 
         subscriptionId,
         planId,
-        paypalPlanId: 'P-8AR43998YB6934043M77H5AI' // Using the specific PayPal plan ID
+        paypalPlanId: 'P-8AR43998YB6934043M77H5AI'
       }
     });
 
