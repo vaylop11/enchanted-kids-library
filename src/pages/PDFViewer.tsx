@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw, Languages } from 'lucide-react';
+import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -170,8 +170,8 @@ const PDFViewer = () => {
             const convertedMessages: ChatMessage[] = messages.map(msg => ({
               id: msg.id,
               content: msg.content,
-              isUser: msg.isUser ?? msg.is_user,
-              timestamp: new Date(msg.timestamp)
+              isUser: msg.isUser,
+              timestamp: msg.timestamp
             }));
             
             setChatMessages(convertedMessages);
@@ -379,8 +379,8 @@ const PDFViewer = () => {
           savedUserMessage = {
             id: result.id,
             content: result.content,
-            isUser: result.isUser ?? result.is_user,
-            timestamp: new Date(result.timestamp)
+            isUser: result.isUser,
+            timestamp: result.timestamp
           };
         }
       } else {
@@ -482,8 +482,8 @@ const PDFViewer = () => {
             savedAiMessage = {
               id: result.id,
               content: result.content,
-              isUser: result.isUser ?? result.is_user,
-              timestamp: new Date(result.timestamp)
+              isUser: result.isUser,
+              timestamp: result.timestamp
             };
           }
         } else {
@@ -542,8 +542,8 @@ const PDFViewer = () => {
             savedFallbackMessage = {
               id: result.id,
               content: result.content,
-              isUser: result.isUser ?? result.is_user,
-              timestamp: new Date(result.timestamp)
+              isUser: result.isUser,
+              timestamp: result.timestamp
             };
           }
         } else {
@@ -605,51 +605,6 @@ const PDFViewer = () => {
     toast.success(language === 'ar' 
       ? 'تم نسخ الرسالة إلى الحافظة'
       : 'Message copied to clipboard');
-  };
-
-  const handlePrevPage = () => {
-    if (pageNumber > 1) {
-      setPageNumber(pageNumber - 1);
-      setPageInputValue(String(pageNumber - 1));
-    }
-  };
-
-  const handleNextPage = () => {
-    if (numPages && pageNumber < numPages) {
-      setPageNumber(pageNumber + 1);
-      setPageInputValue(String(pageNumber + 1));
-    }
-  };
-
-  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPageInputValue(e.target.value);
-  };
-
-  const handlePageInputSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    
-    const pageNum = parseInt(pageInputValue, 10);
-    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= (numPages || 1)) {
-      setPageNumber(pageNum);
-    } else {
-      setPageInputValue(String(pageNumber));
-    }
-  };
-
-  const handleZoomIn = () => {
-    setPdfScale(prevScale => Math.min(prevScale + 0.25, 3.0));
-  };
-
-  const handleZoomOut = () => {
-    setPdfScale(prevScale => Math.max(prevScale - 0.25, 0.5));
-  };
-
-  const handleRotateClockwise = () => {
-    setPdfRotation(prevRotation => (prevRotation + 90) % 360);
-  };
-
-  const handleRotateCounterClockwise = () => {
-    setPdfRotation(prevRotation => (prevRotation - 90 + 360) % 360);
   };
 
   if (!pdf) {
