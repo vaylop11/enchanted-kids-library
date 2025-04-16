@@ -62,16 +62,9 @@ serve(async (req) => {
     
     console.log("Updating API key for admin:", user.email);
     
-    // Store the API key in secrets storage
-    const { error: secretError } = await supabase.rpc('set_secret', {
-      name: 'GEMINI_API_KEY',
-      value: apiKey
-    });
-    
-    if (secretError) {
-      console.error("Error setting secret:", secretError);
-      throw secretError;
-    }
+    // Update the API key directly using Deno env
+    // This will update the key for this execution context
+    await Deno.env.set("GEMINI_API_KEY", apiKey);
     
     // Return success response
     return new Response(JSON.stringify({ success: true }), {
