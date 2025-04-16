@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -26,6 +27,12 @@ const SubscribePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [paypalPlanId, setPaypalPlanId] = useState<string | null>(null);
   const [paypalError, setPaypalError] = useState<string | null>(null);
+  const [key, setKey] = useState(Date.now()); // Add key for forced re-render
+  
+  // Force re-render when language changes
+  useEffect(() => {
+    setKey(Date.now());
+  }, [language]);
   
   useEffect(() => {
     const loadPlan = async () => {
@@ -95,7 +102,7 @@ const SubscribePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background via-muted/5">
+    <div key={key} className="min-h-screen bg-gradient-to-b from-background to-background via-muted/5">
       <SEO 
         title={language === 'ar' ? 'Gemi PRO - اشتراك' : 'Subscribe to Gemi PRO'}
         description={language === 'ar' 

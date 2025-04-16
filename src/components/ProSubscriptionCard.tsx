@@ -1,17 +1,25 @@
+
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { FileText, Zap, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 
 const ProSubscriptionCard = () => {
   const { language } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const isSubscribePage = location.pathname === '/subscribe';
+  const [key, setKey] = useState(Date.now()); // Add key state for forced re-render
+
+  // Force re-render when language changes to ensure all translations are applied correctly
+  useEffect(() => {
+    setKey(Date.now());
+  }, [language]);
 
   return (
-    <Card className="relative overflow-hidden bg-gradient-to-b from-purple-50 to-purple-100 dark:from-purple-900/10 dark:to-purple-900/5 border-2 border-purple-500/20 hover:border-purple-500/40 transition-all duration-300">
+    <Card key={key} className="relative overflow-hidden bg-gradient-to-b from-purple-50 to-purple-100 dark:from-purple-900/10 dark:to-purple-900/5 border-2 border-purple-500/20 hover:border-purple-500/40 transition-all duration-300">
       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-purple-600/5 z-0" />
       <CardContent className="p-6 relative z-10">
         <div className="flex flex-col gap-4">

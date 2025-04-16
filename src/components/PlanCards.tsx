@@ -4,10 +4,17 @@ import { FreePlanCard } from '@/components/FreePlanCard';
 import ProSubscriptionCard from '@/components/ProSubscriptionCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export const PlanCards = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const { language } = useLanguage();
+
+  // Reset carousel position when language changes
+  useEffect(() => {
+    setCurrentSlide(0);
+  }, [language]);
 
   return (
     <div className="relative max-w-md mx-auto">
