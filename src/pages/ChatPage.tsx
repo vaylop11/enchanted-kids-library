@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import SEO from '@/components/SEO';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
-import { Send, ArrowLeft, Crown, Reply, ThumbsUp, Heart, Laugh, Frown } from 'lucide-react';
+import { Send, User, ArrowLeft, Crown, Trash2, Eraser } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -14,14 +15,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { ChatMessageSkeleton } from '@/components/ui/skeleton';
-import { useTypingIndicator } from '@/hooks/useTypingIndicator';
-import type { ChatMessage as ChatMessageType, ChatUser } from '@/types/chat';
-import { cn } from '@/lib/utils';
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
 
 type Message = {
   id: string;
@@ -29,15 +22,6 @@ type Message = {
   user_id: string;
   user_email: string;
   created_at: string;
-  reply_to?: {
-    id: string;
-    content: string;
-    user_email: string;
-  } | null;
-  reactions?: {
-    emoji: string;
-    users: string[];
-  }[];
 };
 
 type OnlineUser = {
@@ -45,13 +29,6 @@ type OnlineUser = {
   email: string;
   online_at: string;
 };
-
-const EMOJI_REACTIONS = [
-  { emoji: '👍', icon: ThumbsUp },
-  { emoji: '❤️', icon: Heart },
-  { emoji: '😂', icon: Laugh },
-  { emoji: '😢', icon: Frown },
-] as const;
 
 const ChatPage = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -63,9 +40,6 @@ const ChatPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const [replyTo, setReplyTo] = useState<ChatMessageType['reply_to']>(null);
-  const { setTyping, getTypingIndicator } = useTypingIndicator('global', user?.id || '', user?.email || '');
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -166,43 +140,6 @@ const ChatPage = () => {
     };
   }, [user]);
 
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit'
-    });
-  };
-
-  const getInitials = (email: string) => {
-    return email.substring(0, 2).toUpperCase();
-  };
-
-  const isAdminEmail = (email: string) => {
-    return email === 'cherifhoucine83@gmail.com';
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewMessage(e.target.value);
-    
-    // Handle typing indicator
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    
-    setTyping(true);
-    typingTimeoutRef.current = setTimeout(() => {
-      setTyping(false);
-    }, 2000);
-  };
-
-  const handleReply = (message: Message) => {
-    setReplyTo({
-      id: message.id,
-      content: message.content,
-      user_email: message.user_email
-    });
-  };
-
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -210,23 +147,41 @@ const ChatPage = () => {
 
     const messageContent = newMessage.trim();
     setNewMessage('');
-    setReplyTo(null);
     
+    // Optimistic update for better UX
+    const optimisticMessage: Message = {
+      id: `temp-${Date.now()}`,
+      content: messageContent,
+      user_id: user.id,
+      user_email: user.email || 'Anonymous',
+      created_at: new Date().toISOString(),
+    };
+    
+    setMessages((prev) => [...prev, optimisticMessage]);
+
     try {
-      const { error } = await supabaseUntyped
-        .from('messages')
-        .insert({
-          content: messageContent,
-          user_id: user.id,
-          user_email: user.email || 'Anonymous',
-          reply_to: replyTo,
-        })
-        .select('*');
+      const { error, data } = await supabaseUntyped.from('messages').insert({
+        content: messageContent,
+        user_id: user.id,
+        user_email: user.email || 'Anonymous',
+      }).select('*');
 
       if (error) throw error;
+      
+      // Replace optimistic message with real one if needed
+      if (data && data.length > 0) {
+        setMessages((prev) => 
+          prev.map((msg) => 
+            msg.id === optimisticMessage.id ? data[0] : msg
+          )
+        );
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
+      
+      // Remove the optimistic message on error
+      setMessages((prev) => prev.filter(msg => msg.id !== optimisticMessage.id));
     }
   };
 
@@ -268,6 +223,33 @@ const ChatPage = () => {
     }
   };
 
+  const formatTime = (timestamp: string) => {
+    return new Date(timestamp).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit'
+    });
+  };
+
+  const getInitials = (email: string) => {
+    return email.substring(0, 2).toUpperCase();
+  };
+
+  const maskEmail = (email: string) => {
+    if (!email || email === 'Anonymous') return 'Anonymous';
+    
+    const parts = email.split('@');
+    if (parts.length !== 2) return email;
+    
+    const name = parts[0];
+    if (name.length <= 2) return email;
+    
+    return `${name.substring(0, 2)}***`;
+  };
+
+  const isAdminEmail = (email: string) => {
+    return email === 'cherifhoucine83@gmail.com';
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -284,46 +266,6 @@ const ChatPage = () => {
   const pageDescription = language === 'ar' 
     ? 'تواصل مع مستخدمين آخرين وناقش ملفات PDF ومشاريعك في غرفة دردشة تشات PDF'
     : 'Connect with other users and discuss PDF files and projects in the ChatPDF chat room';
-
-  const handleReaction = async (messageId: string, emoji: string) => {
-    try {
-      const { data: message } = await supabaseUntyped
-        .from('messages')
-        .select('reactions')
-        .eq('id', messageId)
-        .single();
-
-      let updatedReactions = message?.reactions || [];
-      const existingReactionIndex = updatedReactions.findIndex(r => r.emoji === emoji);
-
-      if (existingReactionIndex >= 0) {
-        const userIndex = updatedReactions[existingReactionIndex].users.indexOf(user!.id);
-        if (userIndex >= 0) {
-          updatedReactions[existingReactionIndex].users.splice(userIndex, 1);
-          if (updatedReactions[existingReactionIndex].users.length === 0) {
-            updatedReactions.splice(existingReactionIndex, 1);
-          }
-        } else {
-          updatedReactions[existingReactionIndex].users.push(user!.id);
-        }
-      } else {
-        updatedReactions.push({
-          emoji,
-          users: [user!.id]
-        });
-      }
-
-      const { error } = await supabaseUntyped
-        .from('messages')
-        .update({ reactions: updatedReactions })
-        .eq('id', messageId);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error updating reaction:', error);
-      toast.error('Failed to update reaction');
-    }
-  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -435,107 +377,48 @@ const ChatPage = () => {
                   messages.map((message) => (
                     <div 
                       key={message.id} 
-                      className={cn(
-                        "flex gap-3",
-                        message.user_id === user?.id ? "justify-end" : "justify-start"
-                      )}
+                      className={`flex gap-3 ${message.user_id === user.id ? 'justify-end' : 'justify-start'}`}
                     >
-                      {message.user_id !== user?.id && (
-                        <Avatar className={cn(
-                          "h-8 w-8",
-                          isAdminEmail(message.user_email) ? 'bg-amber-100' : 'bg-primary/10'
-                        )}>
-                          <AvatarFallback>
+                      {message.user_id !== user.id && (
+                        <Avatar className={`h-8 w-8 ${isAdminEmail(message.user_email) ? 'bg-amber-100' : 'bg-primary/10'}`}>
+                          <AvatarFallback className={isAdminEmail(message.user_email) ? 'text-amber-600' : 'text-primary'}>
                             {getInitials(message.user_email)}
                           </AvatarFallback>
                         </Avatar>
                       )}
-                      
-                      <div className={cn(
-                        "relative max-w-[75%] rounded-lg p-3 group",
-                        message.user_id === user?.id 
-                          ? "bg-primary text-primary-foreground" 
-                          : "bg-muted"
-                      )}>
-                        {message.reply_to && (
-                          <div className="text-xs opacity-75 mb-2 p-2 rounded bg-background/20 cursor-pointer"
-                               onClick={() => {
-                                 const replyMessage = messages.find(m => m.id === message.reply_to?.id);
-                                 if (replyMessage) {
-                                   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                                 }
-                               }}>
-                            <span className="font-medium">{message.reply_to.user_email}:</span> {message.reply_to.content}
+                      <div className={`max-w-[75%] ${message.user_id === user.id ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg p-3 group relative`}>
+                        {message.user_id !== user.id && (
+                          <div className="flex items-center gap-1 text-xs font-medium mb-1">
+                            {isAdminEmail(message.user_email) ? (
+                              <>
+                                <Crown className="h-3 w-3 text-amber-500" />
+                                <span className="font-medium text-amber-600">Admin</span>
+                              </>
+                            ) : (
+                              <span>User {message.user_id.substring(0, 4)}</span>
+                            )}
                           </div>
                         )}
-                        
-                        <div className="whitespace-pre-wrap text-sm">
-                          {message.content}
-                        </div>
-                        
-                        <div className="text-xs opacity-70 mt-1">
+                        <p className="break-words">{message.content}</p>
+                        <p className="text-xs opacity-70 text-right mt-1">
                           {formatTime(message.created_at)}
-                        </div>
-
-                        <div className={cn(
-                          "absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity",
-                          message.user_id === user?.id ? "left-2" : "right-2",
-                          "flex items-center gap-1"
-                        )}>
+                        </p>
+                        
+                        {isAdmin && message.user_id !== user.id && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 bg-background/80 backdrop-blur-sm rounded-full"
-                            onClick={() => handleReply(message)}
+                            className="absolute -right-2 -top-2 h-6 w-6 bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => deleteMessage(message.id)}
+                            title="Delete message"
                           >
-                            <Reply className="h-3 w-3" />
+                            <Trash2 className="h-3 w-3" />
                           </Button>
-
-                          <HoverCard openDelay={0}>
-                            <HoverCardTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-1 bg-background/80 backdrop-blur-sm rounded-full"
-                              >
-                                😀
-                              </Button>
-                            </HoverCardTrigger>
-                            <HoverCardContent className="w-auto p-1 flex gap-1" side="top">
-                              {EMOJI_REACTIONS.map(({ emoji }) => (
-                                <Button
-                                  key={emoji}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => handleReaction(message.id, emoji)}
-                                >
-                                  {emoji}
-                                </Button>
-                              ))}
-                            </HoverCardContent>
-                          </HoverCard>
-                        </div>
-
-                        {message.reactions && message.reactions.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {message.reactions.map((reaction, idx) => (
-                              <Badge
-                                key={`${reaction.emoji}-${idx}`}
-                                variant="secondary"
-                                className="cursor-pointer"
-                                onClick={() => handleReaction(message.id, reaction.emoji)}
-                              >
-                                {reaction.emoji} {reaction.users.length}
-                              </Badge>
-                            ))}
-                          </div>
                         )}
                       </div>
-                      
-                      {message.user_id === user?.id && (
+                      {message.user_id === user.id && (
                         <Avatar className="h-8 w-8 bg-primary/10">
-                          <AvatarFallback>
+                          <AvatarFallback className="text-primary">
                             {getInitials(message.user_email)}
                           </AvatarFallback>
                         </Avatar>
@@ -543,59 +426,26 @@ const ChatPage = () => {
                     </div>
                   ))
                 )}
-                
-                {getTypingIndicator() && (
-                  <div className="text-sm text-muted-foreground animate-pulse">
-                    {getTypingIndicator()}
-                  </div>
-                )}
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
             
-            <form onSubmit={sendMessage} className="flex flex-col gap-2">
-              {replyTo && (
-                <div className="mb-2 flex items-center justify-between text-sm bg-muted p-2 rounded">
-                  <div className="flex items-center gap-2">
-                    <Reply className="h-4 w-4" />
-                    <span>Replying to {replyTo.user_email}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setReplyTo(null)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              )}
-              
-              <div className="flex gap-2">
-                <Input
-                  value={newMessage}
-                  onChange={handleInputChange}
-                  placeholder={language === 'ar' 
-                    ? "اكتب رسالتك..."
-                    : "Type your message..."
-                  }
-                  className="flex-1"
-                  aria-label="Type a message"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      sendMessage(e);
-                    }
-                  }}
-                />
-                <Button 
-                  type="submit" 
-                  disabled={!newMessage.trim()}
-                  aria-label="Send message"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {t('send')}
-                </Button>
-              </div>
+            <form onSubmit={sendMessage} className="flex gap-2">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder={t('typeMessage')}
+                className="flex-1"
+                aria-label="Type a message"
+              />
+              <Button 
+                type="submit" 
+                disabled={!newMessage.trim()}
+                aria-label="Send message"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {t('send')}
+              </Button>
             </form>
           </Card>
         </div>

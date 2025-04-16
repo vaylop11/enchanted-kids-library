@@ -1,42 +1,16 @@
 
 import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { CalendarDays, CreditCard, RefreshCw } from 'lucide-react';
+import { CalendarDays, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { manuallyRefreshSubscription } from '@/services/subscriptionService';
-import { useState } from 'react';
 
 export const SubscriptionManagement = () => {
-  const { isSubscribed, subscriptionData, loading, refreshSubscription } = useSubscription();
+  const { isSubscribed, subscriptionData, loading } = useSubscription();
   const { language } = useLanguage();
   const navigate = useNavigate();
-  const [refreshing, setRefreshing] = useState(false);
-
-  const handleManualRefresh = async () => {
-    if (!subscriptionData?.paypal_subscription_id) {
-      refreshSubscription();
-      return;
-    }
-    
-    setRefreshing(true);
-    try {
-      await manuallyRefreshSubscription(subscriptionData.paypal_subscription_id);
-      refreshSubscription();
-      toast.success(
-        language === 'ar' 
-          ? 'تم تحديث حالة الاشتراك' 
-          : 'Subscription status refreshed'
-      );
-    } catch (error) {
-      console.error("Error manually refreshing:", error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   if (loading) {
     return <div className="flex items-center justify-center p-4">
@@ -93,20 +67,6 @@ export const SubscriptionManagement = () => {
           </Button>
         )}
       </CardContent>
-      {subscriptionData && (
-        <CardFooter>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={refreshing}
-            onClick={handleManualRefresh}
-            className="flex items-center gap-2 ml-auto"
-          >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {language === 'ar' ? 'تحديث الحالة' : 'Refresh Status'}
-          </Button>
-        </CardFooter>
-      )}
     </Card>
   );
 };

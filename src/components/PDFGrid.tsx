@@ -9,13 +9,11 @@ import { Grid3X3, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import PDFCard from '@/components/PDFCard';
-import { usePlanLimits } from '@/hooks/usePlanLimits';
 
 const PDFGrid = () => {
   const [allPDFs, setAllPDFs] = useState(pdfs);
   const { language } = useLanguage();
   const { user } = useAuth();
-  const { limits, loading: limitsLoading } = usePlanLimits();
 
   useEffect(() => {
     const loadPDFs = async () => {
@@ -31,14 +29,6 @@ const PDFGrid = () => {
 
     loadPDFs();
   }, [user]);
-
-  // Handle PDF deletion with immediate count update
-  const handlePDFDelete = (deletedPdfId: string) => {
-    setAllPDFs(prevPDFs => {
-      const updatedPDFs = prevPDFs.filter(pdf => pdf.id !== deletedPdfId);
-      return updatedPDFs;
-    });
-  };
 
   // Don't render anything if user is not signed in
   if (!user) {
@@ -60,8 +50,8 @@ const PDFGrid = () => {
             </h2>
             <p className="text-muted-foreground">
               {language === 'ar'
-                ? `${allPDFs.length}/${limits?.max_pdfs ?? 2} ملفات مستخدمة`
-                : `${allPDFs.length}/${limits?.max_pdfs ?? 2} PDFs used`}
+                ? 'استعرض وتصفح جميع ملفات PDF المتاحة'
+                : 'Browse and explore all available PDF documents'}
             </p>
           </div>
           
@@ -78,7 +68,7 @@ const PDFGrid = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 min-w-max pr-4">
               {allPDFs.map((pdf, index) => (
                 <div key={pdf.id} className="w-[280px]">
-                  <PDFCard pdf={pdf} index={index} onDelete={handlePDFDelete} />
+                  <PDFCard pdf={pdf} index={index} />
                 </div>
               ))}
             </div>
