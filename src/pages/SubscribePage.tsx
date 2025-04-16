@@ -34,7 +34,9 @@ const SubscribePage = () => {
         const plans = await getSubscriptionPlans();
         console.log("Loaded plans:", plans);
         if (plans.length > 0) {
-          setPlan(plans[0]); // Get the first plan (our PRO plan)
+          // Update the plan with the new price
+          const updatedPlan = { ...plans[0], price: 4.99 };
+          setPlan(updatedPlan);
           
           // Separately fetch PayPal Plan ID to ensure we have it
           const paypalId = await getPayPalPlanIdFromDatabase();

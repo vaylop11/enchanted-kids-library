@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { FileText, Zap, Globe } from 'lucide-react';
@@ -16,7 +17,7 @@ const ProSubscriptionCard = () => {
               {language === 'ar' ? 'جيمي برو' : 'Gemi Pro'}
             </div>
             <h3 className="text-2xl font-semibold mb-2">
-              $9.99 <span className="text-sm text-muted-foreground font-normal">/mo</span>
+              $4.99 <span className="text-sm text-muted-foreground font-normal">/mo</span>
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
               {language === 'ar' 
