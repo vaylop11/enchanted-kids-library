@@ -1,3 +1,4 @@
+
 import { supabaseUntyped } from "@/integrations/supabase/client";
 import { ChatMessage } from "@/services/pdfStorage";
 
@@ -51,21 +52,22 @@ export const extractTextFromPDF = async (
 };
 
 export const analyzePDFWithGemini = async (
-  text: string,
+  text: string | null,
   query: string,
   updateProgress?: (progress: AnalysisProgress) => void,
   previousMessages: ChatMessage[] = [],
-  detectedLanguage: string = 'en'
+  detectedLanguage: string = 'en',
+  skipExtraction: boolean = false
 ): Promise<string> => {
-  if (!text || !query) {
-    throw new Error('Missing PDF text or query');
+  if (!query) {
+    throw new Error('Missing query');
   }
 
   try {
     // Update progress if the callback is provided
     if (updateProgress) {
       updateProgress({
-        stage: 'analyzing',
+        stage: skipExtraction ? 'analyzing' : 'analyzing',
         progress: 60,
         message: 'Sending query to AI model...'
       });
@@ -76,7 +78,8 @@ export const analyzePDFWithGemini = async (
         text,
         query,
         previousResponses: previousMessages.map(m => m.content),
-        responseLanguage: detectedLanguage
+        responseLanguage: detectedLanguage,
+        skipExtraction
       }
     });
 

@@ -428,47 +428,23 @@ const PDFViewer = () => {
       scrollToLatestMessage();
       
       try {
-        let textContent = pdfTextContent;
-        if (!textContent) {
-          setAnalysisProgress({
-            stage: 'extracting',
-            progress: 25,
-            message: language === 'ar'
-              ? 'استخراج النص من ملف PDF...'
-              : 'Extracting text from PDF...'
-          });
-          
-          textContent = await extractPDFContent();
-          
-          if (!textContent) {
-            throw new Error(language === 'ar'
-              ? 'فشل في استخراج النص من الملف'
-              : 'Failed to extract text from PDF');
-          }
-        }
-        
+        // Fast mode: Skip text extraction and send query directly to Gemini
         setAnalysisProgress({
           stage: 'analyzing',
           progress: 50,
           message: language === 'ar'
-            ? 'تحليل محتوى الملف...'
-            : 'Analyzing PDF content...'
+            ? 'تحليل السؤال وإنشاء إجابة...'
+            : 'Analyzing query and generating answer...'
         });
-        
-        setAnalysisProgress({
-          stage: 'generating',
-          progress: 75,
-          message: language === 'ar'
-            ? 'إنشاء إجابة دقيقة...'
-            : 'Generating accurate answer...'
-        });
-        
+
+        // We pass null for the text to skip extraction and set skipExtraction to true
         const aiContent = await analyzePDFWithGemini(
-          textContent, 
+          null, // Skip extraction by passing null
           message, 
           updateAnalysisProgress, 
           chatMessages.filter(m => m.isUser === false).slice(-5),
-          detectedLanguage // Pass detected language to response generator
+          detectedLanguage,
+          true // Set skipExtraction flag to true
         );
         
         let savedAiMessage: ChatMessage | null = null;
@@ -523,13 +499,13 @@ const PDFViewer = () => {
           stage: 'error',
           progress: 0,
           message: language === 'ar'
-            ? 'حدث خطأ أثناء تحليل الملف'
-            : 'Error during PDF analysis'
+            ? 'حدث خطأ أثناء معالجة السؤال'
+            : 'Error processing your question'
         });
           
         const fallbackResponse = language === 'ar'
-          ? "عذرًا، حدث خطأ أثناء تحليل الملف. يرجى المحاولة مرة أخرى لاحقًا."
-          : "Sorry, there was an error analyzing the PDF. Please try again later.";
+          ? "عذرًا، حدث خطأ أثناء معالجة السؤال. يرجى المحاولة مرة أخرى لاحقًا."
+          : "Sorry, there was an error processing your question. Please try again later.";
           
         let savedFallbackMessage: ChatMessage | null = null;
         
