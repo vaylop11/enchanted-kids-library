@@ -1,145 +1,176 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Gemini } from "https://esm.sh/@google/generative-ai";
 
-// Set up CORS headers
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+
+const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Get API key from environment variable
-const apiKey = Deno.env.get("GEMINI_API_KEY");
-
-if (!apiKey) {
-  console.error("GEMINI_API_KEY environment variable not set");
-}
-
-// Handle the request
 serve(async (req) => {
-  // Handle OPTIONS for CORS
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { text, query, previousResponses = [], responseLanguage = 'en' } = await req.json();
-
-    if (!text || !query) {
-      return new Response(
-        JSON.stringify({ error: 'Missing text or query' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const { pdfText, userQuestion, previousChat } = await req.json();
+    
+    if (!GEMINI_API_KEY) {
+      throw new Error('Missing Gemini API Key');
     }
 
-    // Determine if we should format the response as markdown
-    const useMarkdown = true; // Always use markdown formatting for better structured responses
+    // Calculate text length for processing strategy
+    const textLength = pdfText.length;
+    console.log(`Processing PDF with text length: ${textLength} characters`);
 
-    // Check if we should format the response in the detected language
-    const formattingPrompt = generateFormattingPrompt(responseLanguage);
-
-    const model = new Gemini(apiKey);
-
-    // Build context from previous AI responses
-    const conversationContext = previousResponses.length 
-      ? "\n\nHere are some previous questions and responses from our conversation that may provide context:\n" + 
-        previousResponses.map((resp, i) => `Response ${i+1}: ${resp}`).join('\n\n')
-      : "";
-
-    // Construct the prompt with the text, query, and instructions
-    const promptText = `You are an advanced document analysis assistant that provides informative and accurate responses based on document content.
-
-    DOCUMENT CONTENT:
-    """
-    ${text}
-    """
+    // Use a chunking approach for very large documents
+    let processedText = pdfText;
+    const maxTextLength = 30000; // Increased limit for more comprehensive analysis
     
-    ${conversationContext}
+    if (textLength > maxTextLength) {
+      console.log(`PDF text exceeds ${maxTextLength} characters, using smart chunking strategy`);
+      
+      // Split text into chunks focused around relevant keywords from the question
+      const keywords = extractKeywords(userQuestion);
+      processedText = smartChunkText(pdfText, keywords, maxTextLength);
+    }
     
-    USER QUERY:
-    """
-    ${query}
-    """
-    
-    ${formattingPrompt}
-    
-    IMPORTANT INSTRUCTIONS:
-    1. Answer ONLY based on the document content.
-    2. If the answer isn't in the document, say "I don't see information about that in the document."
-    3. Be concise yet thorough.
-    4. Format your response using markdown for better readability:
-       - Use **bold** for section headers and key concepts
-       - Use bullet points for lists
-       - Break long paragraphs into shorter ones
-       - Use proper headings where appropriate
-    5. Respond in the same language as the user query (${responseLanguage}).
-    6. If providing page numbers, note they are approximate.`;
+    // Build context with optional previous chat messages
+    let chatContext = "";
+    if (previousChat && previousChat.length > 0) {
+      // Include up to 10 recent exchanges for context (increased from 5)
+      const recentMessages = previousChat.slice(-10);
+      chatContext = "Previous conversation:\n" + 
+        recentMessages.map(m => `${m.isUser ? "User" : "Assistant"}: ${m.content}`).join("\n") +
+        "\n\n";
+    }
 
-    const response = await model.post({
-      model: "models/gemini-pro-latest", // Using latest pro model for highest quality
-      messages: [
-        {
-          role: "user",
-          parts: [{ text: promptText }]
+    // Build prompt with improved instructions
+    const prompt = `
+      You are an AI assistant that helps users analyze PDF documents and answer questions about them.
+      
+      ${chatContext}
+      
+      Here is the text content from a PDF document:
+      """
+      ${processedText}
+      """
+      
+      User question: ${userQuestion}
+      
+      Provide a relevant, accurate, and comprehensive response based on the PDF content. If the answer cannot be determined from the PDF content, clearly state that. 
+      Make sure your response is well-structured and easy to understand. Include specific information from the document when relevant.
+    `;
+
+    console.log(`Processing question: "${userQuestion}"`);
+    console.log(`Using ${processedText.length} characters of processed text`);
+
+    // Call Gemini API with optimized parameters for comprehensive analysis
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          temperature: 0.2, // Slightly increased for more natural responses
+          topK: 40,         // Increased for more diversity
+          topP: 0.95,       // Adjusted for better quality
+          maxOutputTokens: 1500, // Increased for more comprehensive responses
         }
-      ],
-      temperature: 0.2,
-      topP: 0.95,
-      topK: 40,
+      }),
     });
 
-    if (!response.candidates || !response.candidates[0]) {
-      throw new Error('Invalid response from Gemini API');
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('Gemini API error response:', data);
+      throw new Error(`Gemini API error: ${JSON.stringify(data)}`);
     }
 
-    const responseText = response.candidates[0].content.parts[0].text;
+    // Extract the response text
+    const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 
+                        "Sorry, I couldn't generate a response based on the PDF content.";
 
-    return new Response(
-      JSON.stringify({ response: responseText }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.log(`Generated response of ${generatedText.length} characters`);
+
+    return new Response(JSON.stringify({ response: generatedText }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-    console.error('Error processing request:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Unknown error occurred' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('Error in analyze-pdf-with-gemini function:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
 
-// Helper function to generate formatting instructions based on language
-function generateFormattingPrompt(language: string): string {
-  // Adapt the formatting instructions based on detected language
-  switch (language) {
-    case 'ar':
-      return `قم بتنسيق إجابتك بشكل احترافي:
-      - استخدم **الخط العريض** للعناوين والمفاهيم الرئيسية
-      - قسم الفقرات الطويلة إلى فقرات أقصر
-      - استخدم النقاط للقوائم
-      - حافظ على لغة واضحة ومهنية`;
-    case 'fr':
-      return `Formatez votre réponse de manière professionnelle:
-      - Utilisez le **gras** pour les titres et concepts clés
-      - Divisez les longs paragraphes en paragraphes plus courts
-      - Utilisez des puces pour les listes
-      - Maintenez un langage clair et professionnel`;
-    case 'es':
-      return `Da formato a tu respuesta de manera profesional:
-      - Usa **negrita** para títulos y conceptos clave
-      - Divide los párrafos largos en párrafos más cortos
-      - Usa viñetas para las listas
-      - Mantén un lenguaje claro y profesional`;
-    case 'zh':
-      return `请专业地格式化您的回答:
-      - 使用**粗体**表示标题和关键概念
-      - 将长段落分成更短的段落
-      - 使用项目符号列表
-      - 保持清晰和专业的语言`;
-    default:
-      return `Format your response professionally:
-      - Use **bold** for headings and key concepts
-      - Break long paragraphs into shorter ones
-      - Use bullet points for lists
-      - Maintain clear, professional language`;
+/**
+ * Extract potential keywords from the user question
+ */
+function extractKeywords(question: string): string[] {
+  // Remove common words and punctuation
+  const stopWords = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'were', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'about', 'like', 'what', 'who', 'where', 'when', 'why', 'how']);
+  
+  return question
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '')
+    .split(/\s+/)
+    .filter(word => word.length > 2 && !stopWords.has(word));
+}
+
+/**
+ * Smart chunking strategy that prioritizes text relevant to the user's question
+ */
+function smartChunkText(text: string, keywords: string[], maxLength: number): string {
+  // Split document into paragraphs
+  const paragraphs = text.split(/\n\n+/);
+  
+  // Score paragraphs based on keyword matches
+  const scoredParagraphs = paragraphs.map(para => {
+    const lowerPara = para.toLowerCase();
+    const score = keywords.reduce((count, keyword) => {
+      const regex = new RegExp(keyword, 'gi');
+      const matches = (lowerPara.match(regex) || []).length;
+      return count + matches;
+    }, 0);
+    return { paragraph: para, score };
+  });
+  
+  // Sort paragraphs by score (highest first)
+  scoredParagraphs.sort((a, b) => b.score - a.score);
+  
+  // Build result with introduction, most relevant paragraphs, and conclusion if available
+  let result = "";
+  let currentLength = 0;
+  
+  // Always include the first paragraph (likely introduction)
+  if (paragraphs[0]) {
+    result += paragraphs[0] + "\n\n";
+    currentLength += paragraphs[0].length;
   }
+  
+  // Add most relevant paragraphs until we approach the limit
+  for (const { paragraph, score } of scoredParagraphs) {
+    if (score > 0 && currentLength + paragraph.length < maxLength * 0.95) {
+      result += paragraph + "\n\n";
+      currentLength += paragraph.length + 2;
+    }
+  }
+  
+  // Add conclusion if space permits (likely last paragraph)
+  const lastParagraph = paragraphs[paragraphs.length - 1];
+  if (lastParagraph && !result.includes(lastParagraph) && currentLength + lastParagraph.length < maxLength) {
+    result += lastParagraph;
+  }
+  
+  return result.trim();
 }
