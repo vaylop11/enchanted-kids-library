@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -11,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
-import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ChatInput } from '@/components/ui/chat-input';
 import { MarkdownMessage } from '@/components/ui/markdown-message';
 import {
@@ -49,7 +50,7 @@ import {
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
-const PDFViewer = () => {
+const PDFViewer = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -63,7 +64,6 @@ const PDFViewer = () => {
   const [pdfScale, setPdfScale] = useState(1.0);
   const [pdfRotation, setPdfRotation] = useState(0);
   const [showPdfControls, setShowPdfControls] = useState(true);
-  const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [showChat, setShowChat] = useState(true);
   const [pdf, setPdf] = useState<UploadedPDF | null>(null);
@@ -154,11 +154,11 @@ const PDFViewer = () => {
           const newPdf: UploadedPDF = {
             id: supabasePdf.id,
             title: supabasePdf.title,
-            summary: supabasePdf.summary,
+            summary: supabasePdf.summary || '',
             uploadDate: supabasePdf.uploadDate,
-            pageCount: supabasePdf.pageCount,
-            fileSize: supabasePdf.fileSize,
-            dataUrl: supabasePdf.fileUrl,
+            pageCount: supabasePdf.pageCount || 0,
+            fileSize: supabasePdf.fileSize || '0 KB',
+            dataUrl: supabasePdf.fileUrl, // Map fileUrl to dataUrl
             chatMessages: []
           };
           
@@ -172,7 +172,7 @@ const PDFViewer = () => {
               id: msg.id,
               content: msg.content,
               isUser: msg.isUser,
-              timestamp: msg.timestamp
+              timestamp: new Date(msg.timestamp)
             }));
             
             setChatMessages(convertedMessages);
@@ -290,10 +290,6 @@ const PDFViewer = () => {
     }
   };
 
-  const handleTranslate = () => {
-    navigate(`/translate/${id}`);
-  };
-
   const handleRetryLoading = () => {
     setIsLoadingPdf(true);
     setPdfError(null);
@@ -377,7 +373,7 @@ const PDFViewer = () => {
             id: result.id,
             content: result.content,
             isUser: result.isUser,
-            timestamp: result.timestamp
+            timestamp: new Date(result.timestamp)
           };
         }
       } else {
@@ -480,7 +476,7 @@ const PDFViewer = () => {
               id: result.id,
               content: result.content,
               isUser: result.isUser,
-              timestamp: result.timestamp
+              timestamp: new Date(result.timestamp)
             };
           }
         } else {
@@ -540,7 +536,7 @@ const PDFViewer = () => {
               id: result.id,
               content: result.content,
               isUser: result.isUser,
-              timestamp: result.timestamp
+              timestamp: new Date(result.timestamp)
             };
           }
         } else {
