@@ -1,5 +1,6 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Gemini } from "https://esm.sh/gemini-ai@1.0.5";
+import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.2.1";
 
 const apiKey = Deno.env.get("API_KEY");
 
@@ -87,34 +88,25 @@ export const translateText = async (
   }
 
   try {
+    // Initialize Gemini API
+    const genAI = new GoogleGenerativeAI(apiKey);
+    
     // For detection only, just use a sample of the text
     if (detectionOnly) {
       // Use a sample of the text to detect language efficiently
       const sampleText = text.substring(0, 500);
-      const model = new Gemini(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
       
-      const response = await model.post({
-        model: "models/gemini-1.5-pro-latest",
-        messages: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: `Detect the language of the following text and respond with ONLY the language code (e.g. 'en', 'fr', 'ar', etc.):
+      const result = await model.generateContent(`
+        Detect the language of the following text and respond with ONLY the language code (e.g. 'en', 'fr', 'ar', etc.):
                       
-                "${sampleText}"
-                
-                Return ONLY the language code, nothing else.`
-              }
-            ]
-          }
-        ],
-        temperature: 0,
-        topP: 1,
-        topK: 1,
-      });
+        "${sampleText}"
+        
+        Return ONLY the language code, nothing else.
+      `);
       
-      let detectedLanguage = response.candidates[0].content.parts[0].text.trim().toLowerCase();
+      const response = await result.response;
+      let detectedLanguage = response.text().trim().toLowerCase();
       
       // Clean up response if needed
       if (detectedLanguage.includes('\n')) {
@@ -133,7 +125,7 @@ export const translateText = async (
     const translatedChunks: string[] = [];
     
     for (const chunk of chunks) {
-      const model = new Gemini(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
       
       let prompt = enhancedFormat 
         ? `Translate the following text from its original language to ${targetLanguage}. 
@@ -153,20 +145,9 @@ export const translateText = async (
         : `Translate the following text to ${targetLanguage}: "${chunk}"`;
       
       try {
-        const response = await model.post({
-          model: "models/gemini-1.5-pro-latest",
-          messages: [
-            {
-              role: "user",
-              parts: [{ text: prompt }]
-            }
-          ],
-          temperature: 0.2,
-          topP: 0.8,
-          topK: 40,
-        });
-        
-        let translatedText = response.candidates[0].content.parts[0].text;
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        let translatedText = response.text();
         
         // Clean up the response if needed
         translatedText = translatedText.replace(/^['"]|['"]$/g, '');
@@ -183,32 +164,14 @@ export const translateText = async (
           
           try {
             // Process first half
-            const response1 = await model.post({
-              model: "models/gemini-1.5-pro-latest",
-              messages: [
-                {
-                  role: "user",
-                  parts: [{ text: `Translate the following text to ${targetLanguage}: "${firstHalf}"` }]
-                }
-              ],
-              temperature: 0.2,
-            });
-            
-            translatedChunks.push(response1.candidates[0].content.parts[0].text.replace(/^['"]|['"]$/g, ''));
+            const resultFirstHalf = await model.generateContent(`Translate the following text to ${targetLanguage}: "${firstHalf}"`);
+            const responseFirstHalf = await resultFirstHalf.response;
+            translatedChunks.push(responseFirstHalf.text().replace(/^['"]|['"]$/g, ''));
             
             // Process second half
-            const response2 = await model.post({
-              model: "models/gemini-1.5-pro-latest",
-              messages: [
-                {
-                  role: "user",
-                  parts: [{ text: `Translate the following text to ${targetLanguage}: "${secondHalf}"` }]
-                }
-              ],
-              temperature: 0.2,
-            });
-            
-            translatedChunks.push(response2.candidates[0].content.parts[0].text.replace(/^['"]|['"]$/g, ''));
+            const resultSecondHalf = await model.generateContent(`Translate the following text to ${targetLanguage}: "${secondHalf}"`);
+            const responseSecondHalf = await resultSecondHalf.response;
+            translatedChunks.push(responseSecondHalf.text().replace(/^['"]|['"]$/g, ''));
           } catch (subError) {
             // If even smaller chunks fail, add an error notice
             translatedChunks.push(`[Translation error for part of the text]`);
@@ -229,31 +192,19 @@ export const translateText = async (
     let detectedLanguage = '';
     if (chunks.length > 0) {
       try {
-        const model = new Gemini(apiKey);
         const sampleText = chunks[0].substring(0, 500);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
         
-        const response = await model.post({
-          model: "models/gemini-1.5-pro-latest",
-          messages: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: `Detect the language of the following text and respond with ONLY the language code (e.g. 'en', 'fr', 'ar', etc.):
-                        
-                  "${sampleText}"
-                  
-                  Return ONLY the language code, nothing else.`
-                }
-              ]
-            }
-          ],
-          temperature: 0,
-          topP: 1,
-          topK: 1,
-        });
+        const result = await model.generateContent(`
+          Detect the language of the following text and respond with ONLY the language code (e.g. 'en', 'fr', 'ar', etc.):
+                
+          "${sampleText}"
+          
+          Return ONLY the language code, nothing else.
+        `);
         
-        detectedLanguage = response.candidates[0].content.parts[0].text.trim().toLowerCase();
+        const response = await result.response;
+        detectedLanguage = response.text().trim().toLowerCase();
         
         // Clean up response
         if (detectedLanguage.includes('\n')) {
@@ -311,40 +262,3 @@ serve(async (req) => {
     });
   }
 });
-
-// Helper function to generate formatting instructions based on language
-function generateFormattingPrompt(language: string): string {
-  // Adapt the formatting instructions based on detected language
-  switch (language) {
-    case 'ar':
-      return `قم بتنسيق إجابتك بشكل احترافي:
-      - استخدم **الخط العريض** للعناوين والمفاهيم الرئيسية
-      - قسم الفقرات الطويلة إلى فقرات أقصر
-      - استخدم النقاط للقوائم
-      - حافظ على لغة واضحة ومهنية`;
-    case 'fr':
-      return `Formatez votre réponse de manière professionnelle:
-      - Utilisez le **gras** pour les titres et concepts clés
-      - Divisez les longs paragraphes en paragraphes plus courts
-      - Utilisez des puces pour les listes
-      - Maintenez un langage clair et professionnel`;
-    case 'es':
-      return `Da formato a tu respuesta de manera profesional:
-      - Usa **negrita** para títulos y conceptos clave
-      - Divide los párrafos largos en párrafos más cortos
-      - Usa viñetas para las listas
-      - Mantén un lenguaje claro y profesional`;
-    case 'zh':
-      return `请专业地格式化您的回答:
-      - 使用**粗体**表示标题和关键概念
-      - 将长段落分成更短的段落
-      - 使用项目符号列表
-      - 保持清晰和专业的语言`;
-    default:
-      return `Format your response professionally:
-      - Use **bold** for headings and key concepts
-      - Break long paragraphs into shorter ones
-      - Use bullet points for lists
-      - Maintain clear, professional language`;
-  }
-}
