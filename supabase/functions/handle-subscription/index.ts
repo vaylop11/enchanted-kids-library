@@ -12,51 +12,27 @@ const PAYPAL_SECRET_KEY = Deno.env.get('PAYPAL_SECRET_KEY')
 
 async function getPayPalAccessToken() {
   const auth = btoa(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET_KEY}`)
-  try {
-    const response = await fetch(`${PAYPAL_API_URL}/v1/oauth2/token`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'grant_type=client_credentials',
-    })
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error fetching PayPal access token: ${response.status} ${errorText}`);
-      throw new Error(`PayPal token error: ${response.status}`);
-    }
-    
-    const data = await response.json()
-    return data.access_token
-  } catch (error) {
-    console.error("Error getting PayPal access token:", error);
-    throw error;
-  }
+  const response = await fetch(`${PAYPAL_API_URL}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials',
+  })
+  const data = await response.json()
+  return data.access_token
 }
 
 async function verifySubscription(subscriptionId: string, accessToken: string) {
   console.log("Verifying subscription:", subscriptionId);
-  try {
-    const response = await fetch(`${PAYPAL_API_URL}/v1/billing/subscriptions/${subscriptionId}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    })
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error verifying subscription: ${response.status} ${errorText}`);
-      throw new Error(`PayPal subscription verification error: ${response.status}`);
-    }
-    
-    return await response.json()
-  } catch (error) {
-    console.error("Error verifying PayPal subscription:", error);
-    throw error;
-  }
+  const response = await fetch(`${PAYPAL_API_URL}/v1/billing/subscriptions/${subscriptionId}`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  })
+  return await response.json()
 }
 
 Deno.serve(async (req) => {
@@ -66,19 +42,9 @@ Deno.serve(async (req) => {
 
   try {
     const { subscriptionId, planId, action } = await req.json()
-    
-    if (!subscriptionId) {
-      throw new Error('Subscription ID is required')
-    }
-    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase credentials missing')
-    }
-    
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = createClient(supabaseUrl!, supabaseKey!)
 
     // Get user from auth header
     const authHeader = req.headers.get('Authorization')?.split(' ')[1]
@@ -87,26 +53,16 @@ Deno.serve(async (req) => {
     if (userError || !user) {
       throw new Error('Unauthorized')
     }
-    
-    console.log("Processing subscription for user:", user.id);
 
     // Verify subscription with PayPal
     const accessToken = await getPayPalAccessToken()
-    console.log("Got PayPal access token");
-    
     const subscription = await verifySubscription(subscriptionId, accessToken)
-    console.log("Subscription details from PayPal:", subscription);
+    console.log("Subscription details from PayPal:", subscription)
 
     if (!subscription.id) {
       throw new Error('Invalid subscription ID or PayPal API error')
     }
 
-    // Handle different subscription statuses
-    const allowedStatuses = ['ACTIVE', 'APPROVED', 'SUSPENDED'];
-    if (!allowedStatuses.includes(subscription.status)) {
-      throw new Error(`Subscription not in allowed status: ${subscription.status}`)
-    }
-    
     // Check if this is just a refresh request
     if (action === 'refresh') {
       // Just update the status based on PayPal's response
@@ -114,10 +70,10 @@ Deno.serve(async (req) => {
         .from('user_subscriptions')
         .select('*')
         .eq('paypal_subscription_id', subscriptionId)
-        .maybeSingle()
+        .eq('user_id', user.id)
+        .single()
       
-      if (fetchError) {
-        console.error("Error fetching subscription:", fetchError);
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is code for "no rows returned"
         throw fetchError
       }
 
@@ -126,116 +82,81 @@ Deno.serve(async (req) => {
         throw new Error('Subscription not found in database')
       }
       
-      // Determine next billing time or end date
-      let periodEnd = new Date();
-      if (subscription.billing_info?.next_billing_time) {
-        periodEnd = new Date(subscription.billing_info.next_billing_time);
-      } else if (subscription.billing_info?.last_payment?.time) {
-        periodEnd = new Date(subscription.billing_info.last_payment.time);
-        // Add 1 month if we're using last payment time
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
-      } else {
-        // Default to 1 month from now
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
-      }
-      
       // Update status based on PayPal data
       const { data, error } = await supabase
         .from('user_subscriptions')
         .update({
           status: subscription.status,
           current_period_start: new Date(subscription.start_time),
-          current_period_end: periodEnd,
+          current_period_end: new Date(subscription.billing_info.next_billing_time || subscription.billing_info.last_payment.time),
           updated_at: new Date(),
         })
         .eq('id', existingSubscription.id)
         .select()
         .single()
       
-      if (error) {
-        console.error("Error updating subscription:", error);
-        throw error;
-      }
+      if (error) throw error
       
-      console.log("Updated subscription:", data);
       return new Response(JSON.stringify({ success: true, data, refreshed: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // For new subscription creation or updates
-    // First check if subscription already exists
-    const { data: existingSubscription, error: fetchError } = await supabase
-      .from('user_subscriptions')
-      .select('*')
-      .eq('paypal_subscription_id', subscriptionId)
-      .maybeSingle()
-    
-    if (fetchError) {
-      console.error("Error checking existing subscription:", fetchError);
-    }
-    
-    // Determine next billing time or end date
-    let periodEnd = new Date();
-    if (subscription.billing_info?.next_billing_time) {
-      periodEnd = new Date(subscription.billing_info.next_billing_time);
-    } else if (subscription.billing_info?.last_payment?.time) {
-      periodEnd = new Date(subscription.billing_info.last_payment.time);
-      // Add 1 month if we're using last payment time
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-    } else {
-      // Default to 1 month from now
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-    }
-    
-    if (existingSubscription) {
-      // Update existing subscription
-      const { data, error } = await supabase
+    // For new subscription creation
+    if (subscription.status === 'ACTIVE' || subscription.status === 'APPROVED') {
+      // Check if subscription already exists
+      const { data: existingSubscription, error: fetchError } = await supabase
         .from('user_subscriptions')
-        .update({
-          status: subscription.status,
-          current_period_start: new Date(subscription.start_time),
-          current_period_end: periodEnd,
-          updated_at: new Date(),
-        })
-        .eq('id', existingSubscription.id)
-        .select()
+        .select('*')
+        .eq('paypal_subscription_id', subscriptionId)
         .single()
       
-      if (error) {
-        console.error("Error updating subscription:", error);
-        throw error;
+      if (existingSubscription) {
+        // Update existing subscription
+        const { data, error } = await supabase
+          .from('user_subscriptions')
+          .update({
+            status: subscription.status,
+            current_period_start: new Date(subscription.start_time),
+            current_period_end: new Date(subscription.billing_info.next_billing_time || subscription.billing_info.last_payment.time),
+            updated_at: new Date(),
+          })
+          .eq('id', existingSubscription.id)
+          .select()
+          .single()
+        
+        if (error) throw error
+        
+        return new Response(JSON.stringify({ success: true, data, updated: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
       }
       
-      console.log("Updated existing subscription:", data);
-      return new Response(JSON.stringify({ success: true, data, updated: true }), {
+      // Store new subscription in database
+      const { data, error } = await supabase
+        .from('user_subscriptions')
+        .insert({
+          user_id: user.id,
+          plan_id: planId,
+          paypal_subscription_id: subscriptionId,
+          status: subscription.status,
+          current_period_start: new Date(subscription.start_time),
+          current_period_end: new Date(subscription.billing_info.next_billing_time || 
+                                        (subscription.billing_info.last_payment ? 
+                                         subscription.billing_info.last_payment.time : 
+                                         new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))),
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return new Response(JSON.stringify({ success: true, data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-    
-    // Store new subscription in database
-    const { data, error } = await supabase
-      .from('user_subscriptions')
-      .insert({
-        user_id: user.id,
-        plan_id: planId,
-        paypal_subscription_id: subscriptionId,
-        status: subscription.status,
-        current_period_start: new Date(subscription.start_time),
-        current_period_end: periodEnd,
-      })
-      .select()
-      .single()
 
-    if (error) {
-      console.error("Error inserting new subscription:", error);
-      throw error;
-    }
-
-    console.log("Created new subscription:", data);
-    return new Response(JSON.stringify({ success: true, data, created: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    throw new Error(`Subscription not active: ${subscription.status}`)
 
   } catch (error) {
     console.error("Error handling subscription:", error);
