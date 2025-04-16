@@ -248,7 +248,7 @@ const SubscribePage = () => {
                 )}
                 
                 <PayPalScriptProvider options={{ 
-                  clientId: "AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIuHBIjy_OcQFqtUxUGN2n1DjHnM4A4u62h",
+                  clientId: "AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIjy_OcQFqtUxUGN2n1DjHnM4A4u62h",
                   vault: true,
                   intent: "subscription",
                   components: "buttons",
@@ -260,16 +260,18 @@ const SubscribePage = () => {
                       return actions.subscription.create({
                         'plan_id': 'P-8AR43998YB6934043M77H5AI',
                         'application_context': {
+                          'shipping_preference': 'NO_SHIPPING',
                           'user_action': 'SUBSCRIBE_NOW',
                           'return_url': `${window.location.origin}/subscribe?subscription_id={id}`,
-                          'cancel_url': `${window.location.origin}/subscribe`
+                          'cancel_url': `${window.location.origin}/subscribe`,
+                          'brand_name': 'Gemi PRO'
                         }
                       });
                     }}
                     style={{
                       shape: 'rect',
-                      color: 'black',
-                      layout: 'horizontal',
+                      color: 'gold',
+                      layout: 'vertical',
                       label: 'subscribe'
                     }}
                     onApprove={handlePayPalApprove}
