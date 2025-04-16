@@ -30,6 +30,11 @@ const PDFGrid = () => {
     loadPDFs();
   }, [user]);
 
+  // Handle PDF deletion
+  const handlePDFDelete = (deletedPdfId: string) => {
+    setAllPDFs(prevPDFs => prevPDFs.filter(pdf => pdf.id !== deletedPdfId));
+  };
+
   // Don't render anything if user is not signed in
   if (!user) {
     return null;
@@ -68,7 +73,7 @@ const PDFGrid = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 min-w-max pr-4">
               {allPDFs.map((pdf, index) => (
                 <div key={pdf.id} className="w-[280px]">
-                  <PDFCard pdf={pdf} index={index} />
+                  <PDFCard pdf={pdf} index={index} onDelete={handlePDFDelete} />
                 </div>
               ))}
             </div>
