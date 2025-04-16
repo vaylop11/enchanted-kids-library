@@ -57,32 +57,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Auth state changed:', event, session?.user?.id);
       
       if (event === 'SIGNED_IN' && session?.user) {
-        // Only show toast if it's the first sign-in or a fresh session
-        if (!initialSignInHandled) {
-          const newUser = {
-            id: session.user.id,
-            email: session.user.email || undefined
-          };
-          
-          setUser(newUser);
-          
-          // Check if user is admin
-          if (session.user.email === 'cherifhoucine83@gmail.com') {
-            setIsAdmin(true);
-          } else {
-            setIsAdmin(false);
-          }
+        const newUser = {
+          id: session.user.id,
+          email: session.user.email || undefined
+        };
+        
+        setUser(newUser);
+        
+        // Check if user is admin
+        if (session.user.email === 'cherifhoucine83@gmail.com') {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
 
-          // Use setTimeout to avoid potential deadlocks with Supabase client
-          setTimeout(async () => {
-            // Check subscription status
-            const { data: subscriptionData } = await supabase
-              .from('user_subscriptions')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .eq('status', 'ACTIVE')
-              .maybeSingle();
+        // Use setTimeout to avoid potential deadlocks with Supabase client
+        setTimeout(async () => {
+          // Check subscription status
+          const { data: subscriptionData } = await supabase
+            .from('user_subscriptions')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .eq('status', 'ACTIVE')
+            .maybeSingle();
 
+          // Only show toast on an actual sign-in event - not on page refreshes or navigation
+          if (!initialSignInHandled) {
             if (subscriptionData) {
               toast.success(
                 language === 'ar' 
@@ -94,11 +94,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 ? 'تم تسجيل الدخول بنجاح' 
                 : 'Signed in successfully');
             }
-
+            
             // Mark initial sign-in as handled
             setInitialSignInHandled(true);
-          }, 0);
-        }
+          }
+        }, 0);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAdmin(false);
@@ -113,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [language]);
+  }, [language, initialSignInHandled]);
 
   return (
     <AuthContext.Provider value={{ user, loading, checkUser, isAdmin }}>
@@ -121,4 +121,3 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
-
