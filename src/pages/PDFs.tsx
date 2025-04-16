@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserPDFs, uploadPDFToSupabase, SupabasePDF } from '@/services/pdfSupabaseService';
 import { PlanInfo } from '@/components/PlanInfo';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
 
 const PDFs = () => {
   const location = useLocation();
@@ -22,6 +24,8 @@ const PDFs = () => {
   const [filteredPDFs, setFilteredPDFs] = useState<SupabasePDF[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const { limits } = usePlanLimits();
   
   const handlePDFDelete = (deletedPdfId: string) => {
     setPdfs(prevPdfs => prevPdfs.filter(pdf => pdf.id !== deletedPdfId));
@@ -79,22 +83,24 @@ const PDFs = () => {
       return;
     }
     
-    if (pdfs.length >= 4) {
+    if (pdfs.length >= (limits?.max_pdfs ?? 2)) {
       toast.error(
         language === 'ar' 
-          ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4)' 
-          : 'You have reached the maximum number of PDFs (4)'
+          ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${limits?.max_pdfs ?? 2}). يرجى حذف بعض الملفات لتحميل المزيد.`
+          : `You have reached the maximum number of PDFs (${limits?.max_pdfs ?? 2}). Please delete some files to upload more.`
       );
       return;
     }
-    
-    if (file.type !== 'application/pdf') {
-      toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
-      return;
-    }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
+    const fileSizeMB = file.size / (1024 * 1024);
+    const maxSizeMB = limits?.max_file_size_mb ?? 5;
+
+    if (fileSizeMB > maxSizeMB) {
+      toast.error(
+        language === 'ar'
+          ? `حجم الملف كبير جدًا (الحد الأقصى ${maxSizeMB} ميجابايت)`
+          : `File size too large (max ${maxSizeMB}MB)`
+      );
       return;
     }
 
@@ -122,11 +128,11 @@ const PDFs = () => {
   };
 
   const handleUploadClick = () => {
-    if (pdfs.length >= 4) {
+    if (pdfs.length >= (limits?.max_pdfs ?? 2)) {
       toast.error(
         language === 'ar' 
-          ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4)' 
-          : 'You have reached the maximum number of PDFs (4)'
+          ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${limits?.max_pdfs ?? 2}). يرجى حذف بعض الملفات لتحميل المزيد.`
+          : `You have reached the maximum number of PDFs (${limits?.max_pdfs ?? 2}). Please delete some files to upload more.`
       );
       return;
     }
@@ -152,7 +158,7 @@ const PDFs = () => {
     return null;
   }
   
-  const hasReachedMaxPDFs = pdfs.length >= 4;
+  const hasReachedMaxPDFs = pdfs.length >= (limits?.max_pdfs ?? 2);
   
   return (
     <div className="min-h-screen flex flex-col">

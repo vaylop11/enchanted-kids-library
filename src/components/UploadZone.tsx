@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { uploadPDFToSupabase, getUserPDFs } from '@/services/pdfSupabaseService';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const UploadZone = () => {
   const { language } = useLanguage();
@@ -49,7 +50,6 @@ const UploadZone = () => {
       return;
     }
 
-    // Check file size against plan limits
     const fileSizeMB = file.size / (1024 * 1024);
     const maxSizeMB = limits?.max_file_size_mb ?? 5;
 
@@ -62,11 +62,11 @@ const UploadZone = () => {
       return;
     }
 
-    // Check PDF count against plan limits
     if (userPDFCount >= (limits?.max_pdfs ?? 2)) {
+      navigate('/pdfs');
       const message = language === 'ar'
-        ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${limits?.max_pdfs ?? 2}). يرجى الترقية للحصول على المزيد من المساحة.`
-        : `You have reached the maximum number of PDFs (${limits?.max_pdfs ?? 2}). Please upgrade for more storage.`;
+        ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${limits?.max_pdfs ?? 2}). يرجى حذف بعض الملفات لتحميل المزيد.`
+        : `You have reached the maximum number of PDFs (${limits?.max_pdfs ?? 2}). Please delete some files to upload more.`;
 
       toast.error(message);
       return;
@@ -242,6 +242,18 @@ const UploadZone = () => {
 
   return (
     <div className="w-full max-w-3xl mx-auto">
+      {userPDFCount >= (limits?.max_pdfs ?? 2) ? (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            {language === 'ar'
+              ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${limits?.max_pdfs ?? 2}). يرجى حذف بعض الملفات لتحميل المزيد.`
+              : `You have reached the maximum number of PDFs (${limits?.max_pdfs ?? 2}). Please delete some files to upload more.`
+            }
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {uploadError ? (
         <div className="p-8 border-2 border-amber-300 rounded-xl bg-amber-50 dark:bg-amber-950/20">
           <div className="flex flex-col items-center justify-center text-center space-y-4">
