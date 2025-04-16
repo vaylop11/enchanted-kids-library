@@ -51,7 +51,6 @@ const UploadZone = () => {
     }
 
     const fileSizeMB = file.size / (1024 * 1024);
-    // Update the max file size to 5MB for free/non-signed-in users
     const maxSizeMB = limits?.has_paid_subscription ? (limits?.max_file_size_mb ?? 20) : 5;
 
     if (fileSizeMB > maxSizeMB) {
@@ -106,7 +105,12 @@ const UploadZone = () => {
 
         if (pdf) {
           toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-          setUserPDFCount(prev => prev + 1);
+          
+          setUserPDFCount(prev => {
+            const newCount = prev + 1;
+            console.log(`Updated PDF count: ${newCount}/4`);
+            return newCount;
+          });
 
           setTimeout(() => {
             setIsUploading(false);
@@ -212,7 +216,7 @@ const UploadZone = () => {
   const triggerFileInput = () => {
     if (user && userPDFCount >= 4) {
       const errorMsg = language === 'ar'
-        ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
+        ? 'لقد وصلت إلى ��لحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
         : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.';
       toast.error(errorMsg);
       setUploadError(errorMsg);
@@ -374,18 +378,11 @@ const UploadZone = () => {
                   {language === 'ar' ? 'اختر ملف' : 'Select File'}
                 </Button>
 
-                {user ? (
+                {user && (
                   <p className="text-xs text-muted-foreground mt-2">
                     {language === 'ar'
                       ? `${userPDFCount}/4 ملفات تم تحميلها`
                       : `${userPDFCount}/4 PDFs uploaded`
-                    }
-                  </p>
-                ) : (
-                  <p className="text-xs text-amber-600 mt-2">
-                    {language === 'ar'
-                      ? 'ملاحظة: سجل الدخول لحفظ الملفات'
-                      : 'Note: Sign in to save files'
                     }
                   </p>
                 )}
