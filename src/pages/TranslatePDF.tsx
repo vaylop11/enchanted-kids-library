@@ -5,7 +5,6 @@ import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowLeft, FileText, Languages, Loader2, ZoomIn, ZoomOut, RotateCcw, RotateCw, ArrowLeftCircle, ArrowRightCircle } from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -21,6 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { extractTextFromPDF } from '@/services/pdfAnalysisService';
 import { translateText, supportedLanguages } from '@/services/translationService';
 import SEO from '@/components/SEO';
+import { MarkdownMessage } from '@/components/ui/markdown-message';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
@@ -357,9 +357,7 @@ const TranslatePDF = () => {
                     </p>
                   </div>
                 ) : translatedText ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown>{translatedText}</ReactMarkdown>
-                  </div>
+                  <MarkdownMessage content={translatedText} />
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     {language === 'ar' 
