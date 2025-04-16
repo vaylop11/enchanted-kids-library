@@ -1,3 +1,4 @@
+
 import { Progress } from "@/components/ui/progress";
 import { AnalysisProgress } from "@/services/pdfAnalysisService";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -5,7 +6,6 @@ import { FileText, Brain, Sparkles, CheckCircle, AlertTriangle, Loader, FileSear
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import WaterPotLoader from "./WaterPotLoader";
 
 interface PDFAnalysisProgressProps {
   analysis: AnalysisProgress;
@@ -33,7 +33,9 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false, uploadProgress = 0, 
           <Skeleton className="h-4 w-8" />
         </div>
         <div className="space-y-3">
-          <WaterPotLoader progress={60} />
+          <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+            <div className="h-full bg-primary animate-pulse rounded-full" style={{ width: '60%' }} />
+          </div>
           <Skeleton className="h-4 w-full" />
         </div>
       </div>
@@ -113,10 +115,9 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false, uploadProgress = 0, 
       </div>
 
       <div className="space-y-3">
-        {/* Upload Progress with Water Pot */}
+        {/* Upload Progress */}
         {uploadInProgress && (
           <div className="space-y-1.5">
-            <WaterPotLoader progress={uploadProgress} className="mb-2" />
             <div className="relative w-full h-2 overflow-hidden bg-muted rounded-full">
               <div 
                 className="h-full bg-primary transition-all duration-300 ease-out rounded-full"
@@ -137,25 +138,24 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false, uploadProgress = 0, 
         {/* Analysis Progress */}
         {!uploadInProgress && (
           <div className="space-y-1.5">
-            {isWaiting ? (
-              <WaterPotLoader progress={50} className="mb-2" />
-            ) : (
-              <>
-                <WaterPotLoader progress={analysis.progress} className="mb-2" />
-                <div className="relative w-full h-2 overflow-hidden bg-muted rounded-full">
-                  <div 
-                    className={cn(
-                      "h-full transition-all duration-300 ease-out rounded-full",
-                      analysis.stage === 'error' ? "bg-red-500" :
-                      analysis.stage === 'complete' ? "bg-green-500" : 
-                      analysis.stage === 'analyzing' ? "bg-amber-500" : "bg-primary",
-                      analysis.stage !== 'complete' && analysis.stage !== 'error' && "animate-pulse"
-                    )}
-                    style={{ width: `${analysis.progress}%` }}
-                  />
+            <div className="relative w-full h-2 overflow-hidden bg-muted rounded-full">
+              {isWaiting ? (
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="animate-[progress_2s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-primary to-transparent h-full w-1/2" />
                 </div>
-              </>
-            )}
+              ) : (
+                <div 
+                  className={cn(
+                    "h-full transition-all duration-300 ease-out rounded-full",
+                    analysis.stage === 'error' ? "bg-red-500" :
+                    analysis.stage === 'complete' ? "bg-green-500" : 
+                    analysis.stage === 'analyzing' ? "bg-amber-500" : "bg-primary",
+                    analysis.stage !== 'complete' && analysis.stage !== 'error' && "animate-pulse"
+                  )}
+                  style={{ width: `${analysis.progress}%` }}
+                />
+              )}
+            </div>
 
             <div className={cn("flex items-center text-xs", waitingClass)}>
               <p className="text-muted-foreground">{analysis.message}</p>
