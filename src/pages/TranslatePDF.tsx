@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowLeft, FileText, Languages, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileText, Languages, Loader2, Lock } from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { extractTextFromPDF } from '@/services/pdfAnalysisService';
 import { translateText, supportedLanguages } from '@/services/translationService';
 import SEO from '@/components/SEO';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
@@ -29,6 +30,7 @@ const TranslatePDF = () => {
   const navigate = useNavigate();
   const { language, direction } = useLanguage();
   const { user } = useAuth();
+  const { limits } = usePlanLimits();
   
   const [isLoaded, setIsLoaded] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
@@ -131,6 +133,16 @@ const TranslatePDF = () => {
   };
 
   const translateCurrentPage = async (page: number, lang: string) => {
+    // Check if translation is allowed
+    if (!limits?.can_translate) {
+      toast.error(
+        language === 'ar' 
+          ? 'الترجمة متاحة فقط للمشتركين في الخطة Pro' 
+          : 'Translation is only available for Pro subscribers'
+      );
+      return;
+    }
+
     if (!pdfUrl) return;
     
     setIsTranslating(true);
@@ -164,6 +176,7 @@ const TranslatePDF = () => {
     }
   }, [targetLanguage, isLoaded]);
 
+  // Modify the translation section to show a pro upgrade prompt
   return (
     <div className="min-h-screen flex flex-col">
       <SEO 
@@ -274,35 +287,56 @@ const TranslatePDF = () => {
             </div>
             
             <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-              <div className="p-4 border-b">
+              <div className="p-4 border-b flex justify-between items-center">
                 <h2 className="font-semibold text-lg">
                   {language === 'ar' ? 'النص المترجم' : 'Translated Text'}
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {isTranslating 
-                    ? (language === 'ar' ? 'جار الترجمة...' : 'Translating...') 
-                    : (language === 'ar' ? 'الترجمة جاهزة' : 'Translation ready')}
-                </p>
+                {!limits?.can_translate && (
+                  <div className="flex items-center gap-2 text-amber-600">
+                    <Lock className="h-4 w-4" />
+                    <span className="text-sm">
+                      {language === 'ar' ? 'مقتصر على Pro' : 'Pro Only'}
+                    </span>
+                  </div>
+                )}
               </div>
               
-              <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh]">
-                {isTranslating ? (
-                  <div className="flex flex-col items-center justify-center h-full gap-4">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                    <p className="text-sm text-muted-foreground">
-                      {language === 'ar' ? 'جار الترجمة...' : 'Translating...'}
+              <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh] flex flex-col items-center justify-center">
+                {!limits?.can_translate ? (
+                  <div className="text-center space-y-4">
+                    <Lock className="h-12 w-12 mx-auto text-amber-600" />
+                    <p className="text-lg font-semibold">
+                      {language === 'ar' 
+                        ? 'الترجمة متاحة فقط للمشتركين في الخطة Pro' 
+                        : 'Translation is only available for Pro subscribers'}
                     </p>
-                  </div>
-                ) : translatedText ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown>{translatedText}</ReactMarkdown>
+                    <Button
+                      onClick={() => navigate('/subscribe')}
+                      variant="default"
+                      className="bg-purple-800 text-white hover:bg-purple-900"
+                    >
+                      {language === 'ar' ? 'ترقية إلى Pro' : 'Upgrade to Pro'}
+                    </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                    {language === 'ar' 
-                      ? 'اختر لغة لبدء الترجمة'
-                      : 'Select a language to start translation'}
-                  </div>
+                  isTranslating ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-4">
+                      <Loader2 className="h-8 w-8 animate-spin" />
+                      <p className="text-sm text-muted-foreground">
+                        {language === 'ar' ? 'جار الترجمة...' : 'Translating...'}
+                      </p>
+                    </div>
+                  ) : translatedText ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown>{translatedText}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      {language === 'ar' 
+                        ? 'اختر لغة لبدء الترجمة'
+                        : 'Select a language to start translation'}
+                    </div>
+                  )
                 )}
               </div>
             </div>
