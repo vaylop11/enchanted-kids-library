@@ -12,23 +12,32 @@ import PDFCard from '@/components/PDFCard';
 
 const PDFGrid = () => {
   const [allPDFs, setAllPDFs] = useState(pdfs);
+  const [isLoading, setIsLoading] = useState(false);
   const { language } = useLanguage();
   const { user } = useAuth();
 
-  useEffect(() => {
-    const loadPDFs = async () => {
-      if (user) {
-        try {
-          const userPDFs = await getUserPDFs(user.id);
-          setAllPDFs(userPDFs);
-        } catch (error) {
-          console.error('Error loading user PDFs:', error);
-        }
+  const loadPDFs = async () => {
+    if (user) {
+      try {
+        setIsLoading(true);
+        const userPDFs = await getUserPDFs(user.id);
+        setAllPDFs(userPDFs);
+      } catch (error) {
+        console.error('Error loading user PDFs:', error);
+      } finally {
+        setIsLoading(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     loadPDFs();
   }, [user]);
+
+  // Handle PDF deletion
+  const handlePDFDelete = (deletedPdfId: string) => {
+    setAllPDFs(prevPdfs => prevPdfs.filter(pdf => pdf.id !== deletedPdfId));
+  };
 
   // Don't render anything if user is not signed in
   if (!user) {
@@ -36,7 +45,7 @@ const PDFGrid = () => {
   }
 
   // Don't render if there are no PDFs
-  if (allPDFs.length === 0) {
+  if (allPDFs.length === 0 && !isLoading) {
     return null;
   }
 
@@ -64,15 +73,21 @@ const PDFGrid = () => {
         </div>
 
         <div className="relative">
-          <ScrollArea className="w-full pb-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 min-w-max pr-4">
-              {allPDFs.map((pdf, index) => (
-                <div key={pdf.id} className="w-[280px]">
-                  <PDFCard pdf={pdf} index={index} />
-                </div>
-              ))}
+          {isLoading ? (
+            <div className="flex justify-center py-10">
+              <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/20 border-t-primary animate-spin" />
             </div>
-          </ScrollArea>
+          ) : (
+            <ScrollArea className="w-full pb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 min-w-max pr-4">
+                {allPDFs.map((pdf, index) => (
+                  <div key={pdf.id} className="w-[280px]">
+                    <PDFCard pdf={pdf} index={index} onDelete={handlePDFDelete} />
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
         </div>
 
         <div className="mt-12 text-center">

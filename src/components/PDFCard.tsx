@@ -28,6 +28,7 @@ interface PDFCardProps {
 const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { language } = useLanguage();
 
   useEffect(() => {
@@ -64,9 +65,13 @@ const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
     
     if (confirm(language === 'ar' ? 'هل أنت متأكد أنك تريد حذف هذا الملف؟' : 'Are you sure you want to delete this PDF?')) {
       try {
+        setIsDeleting(true);
         const success = await deletePDF(pdf.id);
+        
         if (success) {
           toast.success(language === 'ar' ? 'تم حذف الملف بنجاح' : 'PDF deleted successfully');
+          
+          // Call onDelete callback to update parent component state
           if (onDelete) {
             onDelete(pdf.id);
           }
@@ -74,6 +79,8 @@ const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
       } catch (error) {
         console.error('Error deleting PDF:', error);
         toast.error(language === 'ar' ? 'فشل في حذف الملف' : 'Failed to delete PDF');
+      } finally {
+        setIsDeleting(false);
       }
     }
   };
@@ -83,7 +90,8 @@ const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
       id={`pdf-card-${pdf.id}`}
       className={cn(
         'group relative flex flex-col overflow-hidden h-full hover-lift',
-        isInView ? 'animate-fade-in opacity-100' : 'opacity-0'
+        isInView ? 'animate-fade-in opacity-100' : 'opacity-0',
+        isDeleting ? 'opacity-50 pointer-events-none' : ''
       )}
       style={{ animationDelay }}
     >
@@ -146,11 +154,23 @@ const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
           size="sm" 
           className="h-8 px-2 rounded-md text-destructive hover:bg-destructive/10 hover:text-destructive w-full"
           onClick={handleDelete}
+          disabled={isDeleting}
         >
-          <Trash2 className="h-3.5 w-3.5 mr-1" />
-          <span className="text-xs">
-            {language === 'ar' ? 'حذف' : 'Delete'}
-          </span>
+          {isDeleting ? (
+            <>
+              <div className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin mr-1" />
+              <span className="text-xs">
+                {language === 'ar' ? 'جاري الحذف...' : 'Deleting...'}
+              </span>
+            </>
+          ) : (
+            <>
+              <Trash2 className="h-3.5 w-3.5 mr-1" />
+              <span className="text-xs">
+                {language === 'ar' ? 'حذف' : 'Delete'}
+              </span>
+            </>
+          )}
         </Button>
       </CardFooter>
     </Card>
