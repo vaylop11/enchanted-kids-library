@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -33,11 +32,15 @@ export const createSubscription = async (subscriptionId: string, planId: string)
   console.log("Creating subscription with ID:", subscriptionId, "for plan:", planId);
   
   try {
+    // First, get the paypal plan ID from the database
+    const paypalPlanId = await getPayPalPlanIdFromPlanId(planId);
+    console.log("Using PayPal Plan ID:", paypalPlanId);
+    
     const { data, error } = await supabase.functions.invoke('handle-subscription', {
       body: { 
         subscriptionId,
         planId,
-        paypalPlanId: 'P-8AR43998YB6934043M77H5AI'
+        paypalPlanId
       }
     });
 
@@ -56,6 +59,29 @@ export const createSubscription = async (subscriptionId: string, planId: string)
   }
 };
 
+export const getPayPalPlanIdFromPlanId = async (planId: string): Promise<string> => {
+  try {
+    const { data, error } = await supabase
+      .from('subscription_plans')
+      .select('paypal_plan_id')
+      .eq('id', planId)
+      .single();
+      
+    if (error || !data) {
+      console.error('Error fetching PayPal plan ID from plan ID:', error);
+      throw new Error('Could not find PayPal plan ID');
+    }
+    
+    console.log("Retrieved PayPal plan ID from database:", data.paypal_plan_id);
+    return data.paypal_plan_id;
+  } catch (error) {
+    console.error('Error getting PayPal plan ID:', error);
+    // Fallback to hardcoded ID if lookup fails
+    console.log("Falling back to hardcoded PayPal plan ID");
+    return 'P-8AR43998YB6934043M77H5AI';
+  }
+};
+
 export const getPayPalPlanIdFromDatabase = async (): Promise<string> => {
   try {
     // Get specifically the PRO plan, not just any plan
@@ -71,6 +97,7 @@ export const getPayPalPlanIdFromDatabase = async (): Promise<string> => {
       return 'P-8AR43998YB6934043M77H5AI';
     }
     
+    console.log("Successfully retrieved PayPal plan ID from database:", data.paypal_plan_id);
     return data.paypal_plan_id;
   } catch (error) {
     console.error('Error getting PayPal plan ID:', error);

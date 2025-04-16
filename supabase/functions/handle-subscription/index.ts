@@ -19,24 +19,29 @@ async function getPayPalAccessToken() {
   }
   
   const auth = btoa(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET_KEY}`)
-  const response = await fetch(`${PAYPAL_API_URL}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${auth}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
-  })
-  
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error("PayPal token error:", errorText)
-    throw new Error(`PayPal token error: ${response.status} ${errorText}`)
+  try {
+    const response = await fetch(`${PAYPAL_API_URL}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'grant_type=client_credentials',
+    })
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("PayPal token error:", errorText)
+      throw new Error(`PayPal token error: ${response.status} ${errorText}`)
+    }
+    
+    const data = await response.json()
+    console.log("PayPal token obtained successfully")
+    return data.access_token
+  } catch (error) {
+    console.error("Failed to get PayPal access token:", error)
+    throw error
   }
-  
-  const data = await response.json()
-  console.log("PayPal token obtained successfully")
-  return data.access_token
 }
 
 async function verifySubscription(subscriptionId: string, accessToken: string) {
@@ -46,22 +51,27 @@ async function verifySubscription(subscriptionId: string, accessToken: string) {
     throw new Error("No PayPal access token available")
   }
   
-  const response = await fetch(`${PAYPAL_API_URL}/v1/billing/subscriptions/${subscriptionId}`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-  })
-  
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error(`PayPal subscription verification error: ${response.status}`, errorText)
-    throw new Error(`PayPal subscription verification error: ${response.status} ${errorText}`)
+  try {
+    const response = await fetch(`${PAYPAL_API_URL}/v1/billing/subscriptions/${subscriptionId}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`PayPal subscription verification error: ${response.status}`, errorText)
+      throw new Error(`PayPal subscription verification error: ${response.status} ${errorText}`)
+    }
+    
+    const data = await response.json()
+    console.log("PayPal subscription details:", JSON.stringify(data))
+    return data
+  } catch (error) {
+    console.error("Error verifying subscription with PayPal:", error)
+    throw error
   }
-  
-  const data = await response.json()
-  console.log("PayPal subscription details:", JSON.stringify(data))
-  return data
 }
 
 Deno.serve(async (req) => {
@@ -70,9 +80,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { subscriptionId, planId, action } = await req.json()
+    const { subscriptionId, planId, paypalPlanId, action } = await req.json()
     
-    console.log("Received request:", { subscriptionId, planId, action })
+    console.log("Received request:", { subscriptionId, planId, paypalPlanId, action })
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -116,6 +126,11 @@ Deno.serve(async (req) => {
       if (!subscription.billing_info?.next_billing_time) {
         currentPeriodEnd.setDate(currentPeriodEnd.getDate() + 30)
       }
+
+      console.log("Subscription period:", {
+        start: currentPeriodStart.toISOString(),
+        end: currentPeriodEnd.toISOString()
+      })
 
       // Create or update subscription
       const { data: subData, error: subError } = await supabase
