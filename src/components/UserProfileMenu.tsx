@@ -1,11 +1,11 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, LogOut, File, Settings } from 'lucide-react';
+import { User, LogOut, File, Settings, MessageCircle, CreditCard } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,7 @@ const UserProfileMenu = () => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const { isSubscribed } = useSubscription();
   const [isOpen, setIsOpen] = useState(false);
 
   if (!user) return null;
@@ -52,6 +53,7 @@ const UserProfileMenu = () => {
           {language === 'ar' ? 'حسابي' : 'My Account'}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        
         <DropdownMenuItem 
           className="cursor-pointer"
           onClick={() => {
@@ -61,6 +63,30 @@ const UserProfileMenu = () => {
         >
           <File className="mr-2 h-4 w-4" />
           {language === 'ar' ? 'ملفات PDF الخاصة بي' : 'My PDFs'}
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem 
+          className="cursor-pointer"
+          onClick={() => {
+            setIsOpen(false);
+            navigate('/chat');
+          }}
+        >
+          <MessageCircle className="mr-2 h-4 w-4" />
+          {language === 'ar' ? 'الدردشة' : 'Chat'}
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem 
+          className="cursor-pointer"
+          onClick={() => {
+            setIsOpen(false);
+            navigate('/subscribe');
+          }}
+        >
+          <CreditCard className="mr-2 h-4 w-4" />
+          {isSubscribed 
+            ? (language === 'ar' ? 'إدارة الاشتراك' : 'Manage Subscription')
+            : (language === 'ar' ? 'اشترك الآن' : 'Subscribe Now')}
         </DropdownMenuItem>
         
         {isAdmin && (
