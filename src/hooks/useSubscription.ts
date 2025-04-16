@@ -6,14 +6,13 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export const useSubscription = () => {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { language } = useLanguage();
 
-  // Function to manually refresh subscription status
   const refreshSubscription = useCallback(async () => {
     if (!user) {
       setIsSubscribed(false);
@@ -47,16 +46,6 @@ export const useSubscription = () => {
       
       console.log("Retrieved subscription data:", data);
       
-      // If admin, they're always subscribed
-      if (isAdmin) {
-        setIsSubscribed(true);
-        setSubscriptionData(data || {
-          status: 'ACTIVE',
-          current_period_end: new Date(2099, 11, 31).toISOString()
-        });
-        return;
-      }
-      
       // Check if the subscription is active and not expired
       const isActive = data && 
                       data.status === 'ACTIVE' && 
@@ -82,7 +71,7 @@ export const useSubscription = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, isAdmin, language]);
+  }, [user, language]);
 
   useEffect(() => {
     refreshSubscription();

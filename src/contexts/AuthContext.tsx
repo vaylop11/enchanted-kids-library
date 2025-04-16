@@ -28,91 +28,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { language } = useLanguage();
   const [initialSignInHandled, setInitialSignInHandled] = useState(false);
 
-  const ensureAdminSubscription = async (userId: string) => {
-    try {
-      // Check if admin already has a subscription
-      const { data: existingSub, error: subError } = await supabase
-        .from('user_subscriptions')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'ACTIVE')
-        .eq('paypal_subscription_id', 'ADMIN_PERMANENT')
-        .maybeSingle();
-
-      if (subError) {
-        console.error('Error checking admin subscription:', subError);
-        return;
-      }
-
-      if (!existingSub) {
-        console.log('Creating permanent PRO subscription for admin user');
-        
-        // Get subscription plan
-        const { data: plans, error: planError } = await supabase
-          .from('subscription_plans')
-          .select('*')
-          .limit(1)
-          .single();
-
-        if (planError) {
-          console.error('Error fetching subscription plan:', planError);
-          return;
-        }
-
-        if (plans) {
-          // Check if admin has any existing subscription and update or create as needed
-          const { data: anyExistingSub } = await supabase
-            .from('user_subscriptions')
-            .select('id')
-            .eq('user_id', userId)
-            .maybeSingle();
-            
-          if (anyExistingSub) {
-            // Update existing subscription to permanent
-            const { error: updateError } = await supabase
-              .from('user_subscriptions')
-              .update({
-                plan_id: plans.id,
-                status: 'ACTIVE',
-                paypal_subscription_id: 'ADMIN_PERMANENT',
-                current_period_start: new Date().toISOString(),
-                current_period_end: new Date(2099, 11, 31).toISOString(), // Far future date
-              })
-              .eq('id', anyExistingSub.id);
-              
-            if (updateError) {
-              console.error('Error updating admin subscription:', updateError);
-            } else {
-              console.log('Updated to permanent PRO subscription for admin');
-            }
-          } else {
-            // Create new permanent subscription
-            const { error: insertError } = await supabase
-              .from('user_subscriptions')
-              .insert({
-                user_id: userId,
-                plan_id: plans.id,
-                status: 'ACTIVE',
-                paypal_subscription_id: 'ADMIN_PERMANENT',
-                current_period_start: new Date().toISOString(),
-                current_period_end: new Date(2099, 11, 31).toISOString(), // Far future date
-              });
-              
-            if (insertError) {
-              console.error('Error creating admin subscription:', insertError);
-            } else {
-              console.log('Created permanent PRO subscription for admin');
-            }
-          }
-        }
-      } else {
-        console.log('Admin already has a permanent PRO subscription');
-      }
-    } catch (error) {
-      console.error('Error ensuring admin subscription:', error);
-    }
-  };
-
   const checkUser = async () => {
     setLoading(true);
     try {
@@ -121,7 +36,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (currentUser?.email === 'cherifhoucine83@gmail.com') {
         setIsAdmin(true);
-        await ensureAdminSubscription(currentUser.id);
       } else {
         setIsAdmin(false);
       }
@@ -148,7 +62,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session.user.email === 'cherifhoucine83@gmail.com') {
           setIsAdmin(true);
-          await ensureAdminSubscription(session.user.id);
         } else {
           setIsAdmin(false);
         }
