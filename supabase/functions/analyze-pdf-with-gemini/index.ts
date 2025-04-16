@@ -1,115 +1,145 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { Gemini } from "https://esm.sh/@google/generative-ai";
 
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-
+// Set up CORS headers
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
 };
 
+// Get API key from environment variable
+const apiKey = Deno.env.get("GEMINI_API_KEY");
+
+if (!apiKey) {
+  console.error("GEMINI_API_KEY environment variable not set");
+}
+
+// Handle the request
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle OPTIONS for CORS
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { pdfText, userQuestion, previousChat, skipExtraction } = await req.json();
+    const { text, query, previousResponses = [], responseLanguage = 'en' } = await req.json();
+
+    if (!text || !query) {
+      return new Response(
+        JSON.stringify({ error: 'Missing text or query' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Determine if we should format the response as markdown
+    const useMarkdown = true; // Always use markdown formatting for better structured responses
+
+    // Check if we should format the response in the detected language
+    const formattingPrompt = generateFormattingPrompt(responseLanguage);
+
+    const model = new Gemini(apiKey);
+
+    // Build context from previous AI responses
+    const conversationContext = previousResponses.length 
+      ? "\n\nHere are some previous questions and responses from our conversation that may provide context:\n" + 
+        previousResponses.map((resp, i) => `Response ${i+1}: ${resp}`).join('\n\n')
+      : "";
+
+    // Construct the prompt with the text, query, and instructions
+    const promptText = `You are an advanced document analysis assistant that provides informative and accurate responses based on document content.
+
+    DOCUMENT CONTENT:
+    """
+    ${text}
+    """
     
-    if (!GEMINI_API_KEY) {
-      throw new Error('Missing Gemini API Key');
-    }
-
-    // Build context with optional previous chat messages
-    let chatContext = "";
-    if (previousChat && previousChat.length > 0) {
-      // Include up to 10 recent exchanges for context
-      const recentMessages = previousChat.slice(-10);
-      chatContext = "Previous conversation:\n" + 
-        recentMessages.map(m => `${m.isUser ? "User" : "Assistant"}: ${m.content}`).join("\n") +
-        "\n\n";
-    }
-
-    // Build prompt with improved instructions
-    let prompt;
+    ${conversationContext}
     
-    // If skipExtraction is true, we don't use PDF text but instead directly answer the question
-    if (skipExtraction) {
-      prompt = `
-        You are an AI assistant that helps users analyze and understand documents.
-        
-        ${chatContext}
-        
-        User question: ${userQuestion}
-        
-        Please provide a helpful, informative response based on your knowledge. If you don't know the answer for certain, provide your best estimate and be clear about any limitations.
-        Make sure your response is well-structured and easy to understand.
-      `;
-    } else {
-      // Original prompt with PDF text
-      prompt = `
-        You are an AI assistant that helps users analyze PDF documents and answer questions about them.
-        
-        ${chatContext}
-        
-        Here is the text content from a PDF document:
-        """
-        ${pdfText}
-        """
-        
-        User question: ${userQuestion}
-        
-        Provide a relevant, accurate, and comprehensive response based on the PDF content. If the answer cannot be determined from the PDF content, clearly state that. 
-        Make sure your response is well-structured and easy to understand. Include specific information from the document when relevant.
-      `;
-    }
+    USER QUERY:
+    """
+    ${query}
+    """
+    
+    ${formattingPrompt}
+    
+    IMPORTANT INSTRUCTIONS:
+    1. Answer ONLY based on the document content.
+    2. If the answer isn't in the document, say "I don't see information about that in the document."
+    3. Be concise yet thorough.
+    4. Format your response using markdown for better readability:
+       - Use **bold** for section headers and key concepts
+       - Use bullet points for lists
+       - Break long paragraphs into shorter ones
+       - Use proper headings where appropriate
+    5. Respond in the same language as the user query (${responseLanguage}).
+    6. If providing page numbers, note they are approximate.`;
 
-    console.log(`Processing question: "${userQuestion}"`);
-    console.log(`Skip extraction mode: ${skipExtraction}`);
-
-    // Call Gemini API with optimized parameters
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.2,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1500,
+    const response = await model.post({
+      model: "models/gemini-pro-latest", // Using latest pro model for highest quality
+      messages: [
+        {
+          role: "user",
+          parts: [{ text: promptText }]
         }
-      }),
+      ],
+      temperature: 0.2,
+      topP: 0.95,
+      topK: 40,
     });
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      console.error('Gemini API error response:', data);
-      throw new Error(`Gemini API error: ${JSON.stringify(data)}`);
+    if (!response.candidates || !response.candidates[0]) {
+      throw new Error('Invalid response from Gemini API');
     }
 
-    // Extract the response text
-    const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 
-                        "Sorry, I couldn't generate a response based on the PDF content.";
+    const responseText = response.candidates[0].content.parts[0].text;
 
-    console.log(`Generated response of ${generatedText.length} characters`);
-
-    return new Response(JSON.stringify({ response: generatedText }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ response: responseText }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
-    console.error('Error in analyze-pdf-with-gemini function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('Error processing request:', error);
+    return new Response(
+      JSON.stringify({ error: error.message || 'Unknown error occurred' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });
+
+// Helper function to generate formatting instructions based on language
+function generateFormattingPrompt(language: string): string {
+  // Adapt the formatting instructions based on detected language
+  switch (language) {
+    case 'ar':
+      return `قم بتنسيق إجابتك بشكل احترافي:
+      - استخدم **الخط العريض** للعناوين والمفاهيم الرئيسية
+      - قسم الفقرات الطويلة إلى فقرات أقصر
+      - استخدم النقاط للقوائم
+      - حافظ على لغة واضحة ومهنية`;
+    case 'fr':
+      return `Formatez votre réponse de manière professionnelle:
+      - Utilisez le **gras** pour les titres et concepts clés
+      - Divisez les longs paragraphes en paragraphes plus courts
+      - Utilisez des puces pour les listes
+      - Maintenez un langage clair et professionnel`;
+    case 'es':
+      return `Da formato a tu respuesta de manera profesional:
+      - Usa **negrita** para títulos y conceptos clave
+      - Divide los párrafos largos en párrafos más cortos
+      - Usa viñetas para las listas
+      - Mantén un lenguaje claro y profesional`;
+    case 'zh':
+      return `请专业地格式化您的回答:
+      - 使用**粗体**表示标题和关键概念
+      - 将长段落分成更短的段落
+      - 使用项目符号列表
+      - 保持清晰和专业的语言`;
+    default:
+      return `Format your response professionally:
+      - Use **bold** for headings and key concepts
+      - Break long paragraphs into shorter ones
+      - Use bullet points for lists
+      - Maintain clear, professional language`;
+  }
+}

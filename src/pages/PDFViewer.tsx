@@ -1,19 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, Share, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw, Languages } from 'lucide-react';
-import { toast } from 'sonner';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { Document, Page, pdfjs } from 'react-pdf';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import SEO from '@/components/SEO';
 import { useAuth } from '@/contexts/AuthContext';
-import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
-import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
+import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
+import { User, ArrowLeft, Crown, Trash2, Eraser, FileText, Share, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw, Languages } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { ChatMessageSkeleton } from '@/components/ui/skeleton';
 import { ChatInput } from '@/components/ui/chat-input';
 import { MarkdownMessage } from '@/components/ui/markdown-message';
+import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Document, Page, pdfjs } from 'react-pdf';
 import {
   Tooltip,
   TooltipContent,
@@ -46,8 +50,23 @@ import {
   AnalysisProgress,
   AnalysisStage
 } from '@/services/pdfAnalysisService';
+import { detectLanguage } from '@/services/translationService';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+
+type Message = {
+  id: string;
+  content: string;
+  user_id: string;
+  user_email: string;
+  created_at: string;
+};
+
+type OnlineUser = {
+  id: string;
+  email: string;
+  online_at: string;
+};
 
 const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
@@ -347,6 +366,9 @@ const PDFViewer = () => {
     try {
       let savedUserMessage: ChatMessage | null = null;
       
+      // Detect message language
+      const detectedLanguage = await detectLanguage(message);
+      
       if (isTempPdf) {
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
         if (tempPdfData) {
@@ -406,19 +428,47 @@ const PDFViewer = () => {
       scrollToLatestMessage();
       
       try {
+        let textContent = pdfTextContent;
+        if (!textContent) {
+          setAnalysisProgress({
+            stage: 'extracting',
+            progress: 25,
+            message: language === 'ar'
+              ? 'استخراج النص من ملف PDF...'
+              : 'Extracting text from PDF...'
+          });
+          
+          textContent = await extractPDFContent();
+          
+          if (!textContent) {
+            throw new Error(language === 'ar'
+              ? 'فشل في استخراج النص من الملف'
+              : 'Failed to extract text from PDF');
+          }
+        }
+        
         setAnalysisProgress({
-          stage: 'generating',
+          stage: 'analyzing',
           progress: 50,
           message: language === 'ar'
+            ? 'تحليل محتوى الملف...'
+            : 'Analyzing PDF content...'
+        });
+        
+        setAnalysisProgress({
+          stage: 'generating',
+          progress: 75,
+          message: language === 'ar'
             ? 'إنشاء إجابة دقيقة...'
-            : 'Generating answer...'
+            : 'Generating accurate answer...'
         });
         
         const aiContent = await analyzePDFWithGemini(
-          null, // No PDF text needed anymore
+          textContent, 
           message, 
           updateAnalysisProgress, 
-          chatMessages.filter(m => m.isUser === false).slice(-5)
+          chatMessages.filter(m => m.isUser === false).slice(-5),
+          detectedLanguage // Pass detected language to response generator
         );
         
         let savedAiMessage: ChatMessage | null = null;
@@ -1090,11 +1140,12 @@ const PDFViewer = () => {
                   <ChatInput 
                     onSubmit={handleChatSubmit}
                     placeholder={language === 'ar' 
-                      ? "اكتب سؤالك حول محتوى الملف..."
-                      : "Type your question about the PDF content..."
+                      ? "اطرح سؤالاً حول محتوى الملف بأي لغة..."
+                      : "Ask a question about the PDF content in any language..."
                     }
                     dir={language === 'ar' ? 'rtl' : 'ltr'}
                     disabled={isWaitingForResponse}
+                    className="bg-background/80 backdrop-blur-sm"
                   />
                 </>
               )}

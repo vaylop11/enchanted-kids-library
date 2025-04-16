@@ -1,204 +1,106 @@
+import { supabaseUntyped } from "@/integrations/supabase/client";
+import { ChatMessage } from "@/services/pdfStorage";
 
-import { supabase } from "@/integrations/supabase/client";
-import * as pdfjs from "pdfjs-dist";
-import { toast } from "sonner";
-
-// Initialize PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-
-// Analysis stages for the progress indicator
-export type AnalysisStage = 
-  | 'extracting' 
-  | 'analyzing' 
-  | 'generating' 
-  | 'complete' 
-  | 'error'
-  | 'waiting'; // Added waiting stage
+export type AnalysisStage = 'extracting' | 'analyzing' | 'generating' | 'completed' | 'waiting' | 'error';
 
 export interface AnalysisProgress {
   stage: AnalysisStage;
-  progress: number; // 0-100
+  progress: number;
   message: string;
 }
 
-let cachedPDFText: Record<string, string> = {};
+interface ExtractionOptions {
+  quickMode?: boolean;
+  maxPages?: number;
+  specificPage?: number;
+}
 
-/**
- * Extracts text content from a PDF file
- * Added cache to prevent re-extraction of PDFs that were already processed
- */
 export const extractTextFromPDF = async (
-  pdfUrl: string, 
+  pdfUrl: string,
   pdfId: string,
   updateProgress?: (progress: AnalysisProgress) => void,
-  extractionOptions: {
-    quickMode?: boolean;
-    maxPages?: number;
-    specificPage?: number;
-  } = {}
+  options: ExtractionOptions = {}
 ): Promise<string> => {
-  try {
-    // Only use cache if we're not extracting a specific page
-    if (!extractionOptions.specificPage && cachedPDFText[pdfId]) {
-      console.log('Using cached PDF text');
-      updateProgress?.({
-        stage: 'extracting',
-        progress: 100,
-        message: 'Using cached PDF text'
-      });
-      return cachedPDFText[pdfId];
-    }
-    
-    updateProgress?.({
-      stage: 'extracting',
-      progress: 0,
-      message: 'Initializing PDF extraction...'
-    });
-    
-    const pdf = await pdfjs.getDocument(pdfUrl).promise;
-    let fullText = '';
-    
-    const { quickMode, maxPages, specificPage } = extractionOptions;
-    
-    // If specificPage is provided, only extract that page
-    if (specificPage && specificPage > 0 && specificPage <= pdf.numPages) {
-      const page = await pdf.getPage(specificPage);
-      const textContent = await page.getTextContent();
-      fullText = textContent.items.map((item: any) => item.str).join(' ');
-    } else {
-      // Total pages for progress calculation
-      const totalPages = pdf.numPages;
-      const { quickMode, maxPages } = extractionOptions;
-      
-      // Always process all pages unless quickMode is explicitly set to true
-      const pagesToProcess = quickMode && maxPages ? Math.min(maxPages, totalPages) : totalPages;
-      
-      for (let i = 1; i <= pagesToProcess; i++) {
-        updateProgress?.({
-          stage: 'extracting',
-          progress: Math.round((i - 1) / pagesToProcess * 100),
-          message: `Extracting text from page ${i} of ${quickMode ? `${pagesToProcess} (quick mode)` : totalPages}...`
-        });
-        
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item: any) => item.str).join(' ');
-        fullText += pageText + ' ';
-        
-        // Update progress after each page
-        updateProgress?.({
-          stage: 'extracting',
-          progress: Math.round(i / pagesToProcess * 100),
-          message: `Extracted page ${i}`
-        });
-        
-        // Only break early if quickMode is explicitly set to true
-        if (quickMode && fullText.length > 5000 && i >= Math.min(5, pagesToProcess)) {
-          fullText += `\n\n[Note: Only the first ${i} pages were analyzed for quick response]`;
-          break;
-        }
-      }
-    }
-    
-    // Only cache if we're not extracting a specific page
-    if (!specificPage) {
-      cachedPDFText[pdfId] = fullText.trim();
-    }
-    
-    updateProgress?.({
-      stage: 'analyzing',
-      progress: 100,
-      message: 'Text extraction complete'
-    });
-    
-    return fullText.trim();
-  } catch (error) {
-    console.error('Error extracting text from PDF:', error);
-    updateProgress?.({
-      stage: 'error',
-      progress: 0,
-      message: 'Failed to extract text from PDF'
-    });
-    throw new Error('Failed to extract text from PDF');
-  }
-};
+  const { quickMode = false, maxPages = 0, specificPage } = options;
 
-/**
- * Analyzes PDF content and answers a user question using Gemini AI
- * Modified to skip extraction and directly send the query to Gemini
- */
-export const analyzePDFWithGemini = async (
-  pdfText: string | null, 
-  userQuestion: string,
-  updateProgress?: (progress: AnalysisProgress) => void,
-  previousChat: any[] = []
-): Promise<string> => {
   try {
-    // Set the waiting state before starting the analysis
-    updateProgress?.({
-      stage: 'waiting',
-      progress: 20,
-      message: 'Preparing your request...'
-    });
-    
-    // Short delay to show the waiting state
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    updateProgress?.({
-      stage: 'analyzing',
-      progress: 50,
-      message: 'Analyzing your question...'
-    });
-    
-    // Now we skip extraction and directly send the question
-    const { data, error } = await supabase.functions.invoke('analyze-pdf-with-gemini', {
-      body: { 
-        pdfText: pdfText || "", 
-        userQuestion, 
-        previousChat,
-        skipExtraction: true  // New flag to indicate skipping extraction
-      },
+    const { data, error } = await supabaseUntyped.functions.invoke('extract-pdf-text', {
+      body: {
+        pdfUrl,
+        pdfId,
+        quickMode,
+        maxPages,
+        specificPage
+      }
     });
 
     if (error) {
-      console.error('Gemini API error:', error);
-      updateProgress?.({
-        stage: 'error',
-        progress: 0,
-        message: 'Failed to analyze PDF content'
-      });
-      throw error;
+      console.error('Error from edge function:', error);
+      throw new Error(`Failed to extract PDF text: ${error.message}`);
     }
-    
-    updateProgress?.({
-      stage: 'generating',
-      progress: 75,
-      message: 'Generating response...'
-    });
-    
-    updateProgress?.({
-      stage: 'complete',
-      progress: 100,
-      message: 'Analysis complete'
-    });
-    
-    return data.response;
+
+    if (!data || !data.text) {
+      throw new Error('Invalid response from extraction service');
+    }
+
+    return data.text;
   } catch (error) {
-    console.error('Error analyzing PDF with Gemini:', error);
-    updateProgress?.({
-      stage: 'error',
-      progress: 0,
-      message: error instanceof Error ? error.message : 'Failed to analyze PDF content'
-    });
-    throw new Error('Failed to analyze PDF content');
+    console.error('Error in extractTextFromPDF:', error);
+    throw error;
   }
 };
 
-// Clear the cache for a specific PDF or all PDFs
-export const clearPDFTextCache = (pdfId?: string) => {
-  if (pdfId) {
-    delete cachedPDFText[pdfId];
-  } else {
-    cachedPDFText = {};
+export const analyzePDFWithGemini = async (
+  text: string,
+  query: string,
+  updateProgress?: (progress: AnalysisProgress) => void,
+  previousMessages: ChatMessage[] = [],
+  detectedLanguage: string = 'en'
+): Promise<string> => {
+  if (!text || !query) {
+    throw new Error('Missing PDF text or query');
+  }
+
+  try {
+    // Update progress if the callback is provided
+    if (updateProgress) {
+      updateProgress({
+        stage: 'analyzing',
+        progress: 60,
+        message: 'Sending query to AI model...'
+      });
+    }
+
+    const { data, error } = await supabaseUntyped.functions.invoke('analyze-pdf-with-gemini', {
+      body: {
+        text,
+        query,
+        previousResponses: previousMessages.map(m => m.content),
+        responseLanguage: detectedLanguage
+      }
+    });
+
+    if (error) {
+      console.error('Error from edge function:', error);
+      throw new Error(`Failed to analyze PDF: ${error.message}`);
+    }
+
+    if (!data || !data.response) {
+      throw new Error('Invalid response from AI service');
+    }
+
+    // Update progress
+    if (updateProgress) {
+      updateProgress({
+        stage: 'completed',
+        progress: 100,
+        message: 'Analysis complete'
+      });
+    }
+
+    return data.response;
+  } catch (error) {
+    console.error('Error in analyzePDFWithGemini:', error);
+    throw error;
   }
 };

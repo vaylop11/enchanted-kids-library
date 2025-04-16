@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -14,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { ChatMessageSkeleton } from '@/components/ui/skeleton';
-import ChatInput from '@/components/ui/chat-input';
+import { ChatInput } from '@/components/ui/chat-input';
 import { MarkdownMessage } from '@/components/ui/markdown-message';
 
 type Message = {
