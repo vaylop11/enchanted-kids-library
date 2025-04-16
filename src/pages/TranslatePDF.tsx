@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -19,7 +20,7 @@ import { getPDFById } from '@/services/pdfStorage';
 import { getSupabasePDFById } from '@/services/pdfSupabaseService';
 import { useAuth } from '@/contexts/AuthContext';
 import { extractTextFromPDF } from '@/services/pdfAnalysisService';
-import { translateText, supportedLanguages } from '@/services/translationService';
+import { translateText, supportedLanguages, clearTranslationCache } from '@/services/translationService';
 import SEO from '@/components/SEO';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -39,9 +40,11 @@ const TranslatePDF = () => {
   const [targetLanguage, setTargetLanguage] = useState('en');
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTempPdf, setIsTempPdf] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
   
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!id) {
@@ -119,6 +122,11 @@ const TranslatePDF = () => {
     };
 
     loadPdf();
+    
+    // Clear translation cache when component unmounts
+    return () => {
+      clearTranslationCache();
+    };
   }, [id, navigate, language, user]);
 
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
@@ -147,12 +155,18 @@ const TranslatePDF = () => {
   const handleRotateRight = () => {
     setRotation((prev) => (prev + 90) % 360);
   };
+  
+  const handleRetryTranslation = async () => {
+    setRetryCount(prev => prev + 1);
+    await translateCurrentPage(pageNumber, targetLanguage);
+  };
 
   const translateCurrentPage = async (page: number, lang: string) => {
     if (!pdfUrl) return;
     
     setIsTranslating(true);
     setTranslatedText('');
+    setTranslationError(null);
     
     try {
       const extractedText = await extractTextFromPDF(pdfUrl, id || 'temp', undefined, {
@@ -165,9 +179,11 @@ const TranslatePDF = () => {
       setTranslatedText(result.translatedText);
     } catch (error) {
       console.error('Translation error:', error);
-      toast.error(language === 'ar'
-        ? 'فشل في ترجمة النص'
-        : 'Failed to translate text');
+      setTranslationError(
+        language === 'ar'
+          ? 'فشل في ترجمة النص. يرجى المحاولة مرة أخرى لاحقًا.'
+          : 'Failed to translate text. Please try again later.'
+      );
     } finally {
       setIsTranslating(false);
     }
@@ -177,7 +193,7 @@ const TranslatePDF = () => {
     if (isLoaded && targetLanguage) {
       translateCurrentPage(pageNumber, targetLanguage);
     }
-  }, [targetLanguage, isLoaded]);
+  }, [targetLanguage, isLoaded, retryCount]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -337,15 +353,28 @@ const TranslatePDF = () => {
             </div>
             
             <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-              <div className="p-4 border-b">
-                <h2 className="font-semibold text-lg">
-                  {language === 'ar' ? 'النص المترجم' : 'Translated Text'}
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {isTranslating 
-                    ? (language === 'ar' ? 'جار الترجمة...' : 'Translating...') 
-                    : (language === 'ar' ? 'الترجمة جاهزة' : 'Translation ready')}
-                </p>
+              <div className="p-4 border-b flex justify-between items-center">
+                <div>
+                  <h2 className="font-semibold text-lg">
+                    {language === 'ar' ? 'النص المترجم' : 'Translated Text'}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {isTranslating 
+                      ? (language === 'ar' ? 'جار الترجمة...' : 'Translating...') 
+                      : (language === 'ar' ? 'الترجمة جاهزة' : 'Translation ready')}
+                  </p>
+                </div>
+                
+                {translationError && (
+                  <Button 
+                    size="sm"
+                    onClick={handleRetryTranslation}
+                    variant="outline"
+                    className="text-xs"
+                  >
+                    {language === 'ar' ? 'إعادة المحاولة' : 'Retry'}
+                  </Button>
+                )}
               </div>
               
               <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh]">
@@ -355,6 +384,20 @@ const TranslatePDF = () => {
                     <p className="text-sm text-muted-foreground">
                       {language === 'ar' ? 'جار الترجمة...' : 'Translating...'}
                     </p>
+                  </div>
+                ) : translationError ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-4">
+                    <div className="p-4 bg-destructive/10 text-destructive rounded-lg max-w-md text-center">
+                      <p>{translationError}</p>
+                      <Button 
+                        onClick={handleRetryTranslation}
+                        variant="outline"
+                        className="mt-3"
+                        size="sm"
+                      >
+                        {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                      </Button>
+                    </div>
                   </div>
                 ) : translatedText ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none">
