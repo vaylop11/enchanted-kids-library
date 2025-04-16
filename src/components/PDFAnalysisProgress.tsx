@@ -1,6 +1,6 @@
 
 import { Progress } from "@/components/ui/progress";
-import { AnalysisProgress } from "@/services/pdfAnalysisService";
+import { AnalysisProgress, AnalysisStage } from "@/services/pdfAnalysisService";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { FileText, Brain, Sparkles, CheckCircle, AlertTriangle, Loader, FileSearch, Dices } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

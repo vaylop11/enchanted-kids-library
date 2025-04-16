@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import * as pdfjs from "pdfjs-dist";
 import { toast } from "sonner";
@@ -12,7 +13,7 @@ export type AnalysisStage =
   | 'generating' 
   | 'complete' 
   | 'error'
-  | 'waiting'; // Added waiting stage
+  | 'waiting';
 
 export interface AnalysisProgress {
   stage: AnalysisStage;

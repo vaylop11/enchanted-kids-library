@@ -1,9 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,7 +17,8 @@ serve(async (req) => {
   try {
     const { pdfText, userQuestion, previousChat } = await req.json();
     
-    if (!GEMINI_API_KEY) {
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!apiKey) {
       throw new Error('Missing Gemini API Key');
     }
 
@@ -69,41 +68,23 @@ serve(async (req) => {
     console.log(`Processing question: "${userQuestion}"`);
     console.log(`Using ${processedText.length} characters of processed text`);
 
-    // Call Gemini API with optimized parameters for comprehensive analysis
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.2, // Slightly increased for more natural responses
-          topK: 40,         // Increased for more diversity
-          topP: 0.95,       // Adjusted for better quality
-          maxOutputTokens: 1500, // Increased for more comprehensive responses
-        }
-      }),
-    });
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      console.error('Gemini API error response:', data);
-      throw new Error(`Gemini API error: ${JSON.stringify(data)}`);
+    try {
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+      const generatedText = response.text();
+
+      console.log(`Generated response of ${generatedText.length} characters`);
+
+      return new Response(JSON.stringify({ response: generatedText }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (modelError) {
+      console.error('Gemini API error:', modelError);
+      throw new Error(`Gemini API error: ${modelError.message}`);
     }
-
-    // Extract the response text
-    const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 
-                        "Sorry, I couldn't generate a response based on the PDF content.";
-
-    console.log(`Generated response of ${generatedText.length} characters`);
-
-    return new Response(JSON.stringify({ response: generatedText }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   } catch (error) {
     console.error('Error in analyze-pdf-with-gemini function:', error);
     return new Response(JSON.stringify({ error: error.message }), {
