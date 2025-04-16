@@ -10,7 +10,6 @@ import AdSenseScript from "./components/AdSenseScript";
 import Index from "./pages/Index";
 import PDFs from "./pages/PDFs";
 import PDFViewer from "./pages/PDFViewer";
-import TranslatePDF from "./pages/TranslatePDF";
 import NotFound from "./pages/NotFound";
 import BlogPage from "./pages/BlogPage";
 import BlogPost from "./pages/BlogPost";
@@ -38,7 +37,6 @@ const App = () => (
               <Route path="/pdfs" element={<PDFs />} />
               <Route path="/pdf/:id" element={<PDFViewer />} />
               <Route path="/pdf/temp/:id" element={<PDFViewer />} />
-              <Route path="/translate/:id" element={<TranslatePDF />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />

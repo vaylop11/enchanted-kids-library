@@ -259,7 +259,7 @@ const UploadZone = () => {
       ) : (
         <div
           className={`relative p-8 border-2 border-dashed rounded-xl transition-colors duration-200 w-full ${
-            isDragging ? 'border-primary bg-primary/20' : 'border-border'
+            isDragging ? 'border-primary bg-primary/5' : 'border-border'
           } hover:border-primary/50 hover:bg-muted/30 ${hasReachedMaxPDFs ? 'opacity-70 pointer-events-none' : ''}`}
           onDragOver={hasReachedMaxPDFs ? undefined : handleDragOver}
           onDragLeave={hasReachedMaxPDFs ? undefined : handleDragLeave}
@@ -302,7 +302,7 @@ const UploadZone = () => {
               <img 
                 src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/Generated%20Image%20April%2006,%202025%20-%2012_51AM%20(1).png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvR2VuZXJhdGVkIEltYWdlIEFwcmlsIDA2LCAyMDI1IC0gMTJfNTFBTSAoMSkucG5nIiwiaWF0IjoxNzQzODk5NDAyLCJleHAiOjE3NzU0MzU0MDJ9.E_gIvYsWG6SPy7xc-wdvo4lXLEWkB4G_AreBPy-xyWY" 
                 alt="PDF Chat Illustration" 
-                className="max-w-full h-auto rounded-lg"
+                className="max-w-full h-auto rounded-lg shadow-md"
                 onError={(e) => {
                   console.error("Image failed to load");
                   (e.target as HTMLImageElement).style.display = 'none';
