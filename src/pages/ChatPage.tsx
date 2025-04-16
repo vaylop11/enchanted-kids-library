@@ -194,7 +194,7 @@ const ChatPage = () => {
     }, 100);
   };
 
-  const handleReaction = async (messageId: string, emoji: '👍' | '❤️' | '😂' | '😢' | '😡') => {
+  const handleReaction = async (messageId: string, emoji: '👍' | '❤️' | '😂' | '😲' | '😢' | '😡') => {
     if (!user) return;
     
     try {
