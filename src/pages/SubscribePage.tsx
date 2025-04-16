@@ -104,27 +104,13 @@ const SubscribePage = () => {
     }
   };
 
-  const handlePayPalInitError = () => {
-    setPaypalButtonLoaded(false);
-    setPaypalError(language === 'ar' 
-      ? 'تعذر تحميل PayPal. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.' 
-      : 'Could not load PayPal. Please check your internet connection and try again.');
-    console.error("PayPal initialization failed");
-  };
-
-  const handlePayPalLoaded = () => {
-    setPaypalButtonLoaded(true);
-    setPaypalError(null);
-    console.log("PayPal buttons loaded successfully");
-  };
-
-  // PayPal script options
+  // PayPal script options with simple, verified configuration
   const paypalScriptOptions = {
     clientId: "AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIuHBIjy_OcQFqtUxUGN2n1DjHnM4A4u62h",
-    vault: true,
     intent: "subscription",
-    components: "buttons",
-    dataClientToken: "ElxMwKc8tNdkO5UyZ9EWDEXYVzID45oZj9DuZMSuaOpPRdUiYrZHnF8Q+o3TprrfhGM5Cmd5tunU/OdI"
+    vault: true,
+    components: "buttons"
+    // Removing dataClientToken which was causing URI malformed errors
   };
 
   return (
@@ -182,27 +168,24 @@ const SubscribePage = () => {
             ) : plan ? (
               <div className="bg-background rounded-lg border p-4 mb-4">
                 <PayPalScriptProvider options={paypalScriptOptions}>
-                  <div id="paypal-button-container">
+                  <div id="paypal-button-container" className="min-h-[150px]">
                     <PayPalButtons
-                      createSubscription={(data, actions) => {
-                        console.log("Creating subscription with plan ID:", paypalPlanId);
-                        return actions.subscription.create({
-                          plan_id: paypalPlanId
-                        });
-                      }}
                       style={{
                         shape: 'rect',
                         color: 'black',
                         layout: 'horizontal',
                         label: 'subscribe'
                       }}
-                      onApprove={(data, actions) => {
+                      createSubscription={(data, actions) => {
+                        console.log("Creating subscription with plan ID:", paypalPlanId);
+                        return actions.subscription.create({
+                          plan_id: paypalPlanId
+                        });
+                      }}
+                      onApprove={(data) => {
                         console.log("PayPal subscription approved:", data);
                         handlePayPalApprove(data);
                         return Promise.resolve();
-                      }}
-                      onInit={() => {
-                        handlePayPalLoaded();
                       }}
                       onError={(err) => {
                         console.error('PayPal error:', err);
@@ -212,23 +195,18 @@ const SubscribePage = () => {
                       }}
                     />
                   </div>
+                  {paypalError && (
+                    <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-700 dark:text-amber-300 text-sm">
+                      {paypalError}
+                    </div>
+                  )}
                 </PayPalScriptProvider>
-                {paypalError && (
-                  <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-700 dark:text-amber-300 text-sm">
-                    {paypalError}
-                  </div>
-                )}
-                {!paypalButtonLoaded && !paypalError && (
-                  <div className="mt-4 flex justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                  </div>
-                )}
               </div>
             ) : (
               <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-700 dark:text-amber-300">
-                {paypalError || (language === 'ar' 
+                {language === 'ar' 
                   ? 'لم يتم العثور على خطط اشتراك. يرجى المحاولة مرة أخرى لاحقًا.'
-                  : 'No subscription plans found. Please try again later.')}
+                  : 'No subscription plans found. Please try again later.'}
               </div>
             )}
             
