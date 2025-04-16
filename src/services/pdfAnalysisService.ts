@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import * as pdfjs from "pdfjs-dist";
 import { toast } from "sonner";
@@ -148,33 +149,59 @@ export const analyzePDFWithGemini = async (
       message: 'Sending PDF content to Gemini AI...'
     });
     
-    const { data, error } = await supabase.functions.invoke('analyze-pdf-with-gemini', {
-      body: { pdfText, userQuestion, previousChat },
-    });
-
-    if (error) {
-      console.error('Gemini API error:', error);
-      updateProgress?.({
-        stage: 'error',
-        progress: 0,
-        message: 'Failed to analyze PDF content'
-      });
-      throw error;
+    // Add retry mechanism for better reliability
+    let retries = 0;
+    const maxRetries = 2;
+    
+    while (retries <= maxRetries) {
+      try {
+        const response = await supabase.functions.invoke('analyze-pdf-with-gemini', {
+          body: { 
+            pdfText: pdfText.substring(0, 100000), // Limit text size to avoid payload issues
+            userQuestion, 
+            previousChat 
+          },
+        });
+        
+        if (response.error) {
+          throw response.error;
+        }
+        
+        if (!response.data) {
+          throw new Error('No response data received');
+        }
+        
+        updateProgress?.({
+          stage: 'generating',
+          progress: 70,
+          message: 'Generating response...'
+        });
+        
+        updateProgress?.({
+          stage: 'complete',
+          progress: 100,
+          message: 'Analysis complete'
+        });
+        
+        return response.data.response || "I couldn't generate a response based on the PDF content.";
+      } catch (err) {
+        retries++;
+        if (retries > maxRetries) {
+          throw err;
+        }
+        
+        // Wait a bit longer between retries
+        await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+        
+        updateProgress?.({
+          stage: 'analyzing',
+          progress: 30,
+          message: `Retrying... (Attempt ${retries} of ${maxRetries})`
+        });
+      }
     }
     
-    updateProgress?.({
-      stage: 'generating',
-      progress: 70,
-      message: 'Generating response...'
-    });
-    
-    updateProgress?.({
-      stage: 'complete',
-      progress: 100,
-      message: 'Analysis complete'
-    });
-    
-    return data.response;
+    throw new Error('Failed to analyze PDF content after multiple attempts');
   } catch (error) {
     console.error('Error analyzing PDF with Gemini:', error);
     updateProgress?.({

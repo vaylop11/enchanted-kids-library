@@ -17,10 +17,33 @@ serve(async (req) => {
   }
 
   try {
-    const { pdfText, userQuestion, previousChat } = await req.json();
+    // Parse request body and validate inputs
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error('Failed to parse request body:', e);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { pdfText, userQuestion, previousChat } = body;
+    
+    if (!pdfText || !userQuestion) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required parameters: pdfText and userQuestion' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     if (!GEMINI_API_KEY) {
-      throw new Error('Missing Gemini API Key');
+      console.error('Missing Gemini API Key');
+      return new Response(
+        JSON.stringify({ error: 'API configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Calculate text length for processing strategy
@@ -69,47 +92,60 @@ serve(async (req) => {
     console.log(`Processing question: "${userQuestion}"`);
     console.log(`Using ${processedText.length} characters of processed text`);
 
-    // Call Gemini API with optimized parameters for comprehensive analysis
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.2, // Slightly increased for more natural responses
-          topK: 40,         // Increased for more diversity
-          topP: 0.95,       // Adjusted for better quality
-          maxOutputTokens: 1500, // Increased for more comprehensive responses
-        }
-      }),
-    });
+    // Make the API call with better error handling
+    try {
+      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            temperature: 0.2, // Slightly increased for more natural responses
+            topK: 40,         // Increased for more diversity
+            topP: 0.95,       // Adjusted for better quality
+            maxOutputTokens: 1500, // Increased for more comprehensive responses
+          }
+        }),
+      });
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      console.error('Gemini API error response:', data);
-      throw new Error(`Gemini API error: ${JSON.stringify(data)}`);
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Gemini API error response:', errorData);
+        return new Response(
+          JSON.stringify({ error: `Gemini API error: ${response.status} - ${errorData}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const data = await response.json();
+      
+      // Extract the response text with proper validation
+      const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 
+                          "Sorry, I couldn't generate a response based on the PDF content.";
+
+      console.log(`Generated response of ${generatedText.length} characters`);
+
+      return new Response(
+        JSON.stringify({ response: generatedText }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (apiError) {
+      console.error('Error calling Gemini API:', apiError);
+      return new Response(
+        JSON.stringify({ error: `Failed to call Gemini API: ${apiError.message}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-
-    // Extract the response text
-    const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 
-                        "Sorry, I couldn't generate a response based on the PDF content.";
-
-    console.log(`Generated response of ${generatedText.length} characters`);
-
-    return new Response(JSON.stringify({ response: generatedText }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   } catch (error) {
     console.error('Error in analyze-pdf-with-gemini function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ error: error.message || 'An unknown error occurred' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });
 
