@@ -38,7 +38,7 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
         return <FileSearch className="h-5 w-5 animate-pulse" />;
       case 'generating':
         return <Sparkles className="h-5 w-5 animate-pulse" />;
-      case 'complete':
+      case 'completed':
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'error':
         return <AlertTriangle className="h-5 w-5 text-red-500" />;
@@ -55,7 +55,7 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
         case 'extracting': return 'استخراج النص';
         case 'analyzing': return 'تحليل المحتوى';
         case 'generating': return 'إنشاء الإجابة';
-        case 'complete': return 'اكتمل';
+        case 'completed': return 'اكتمل';
         case 'error': return 'خطأ';
         case 'waiting': return 'لحظة من فضلك';
         default: return '';
@@ -65,7 +65,7 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
         case 'extracting': return 'Extracting Text';
         case 'analyzing': return 'Analyzing Content';
         case 'generating': return 'Generating Answer';
-        case 'complete': return 'Complete';
+        case 'completed': return 'Complete';
         case 'error': return 'Error';
         case 'waiting': return 'One moment please';
         default: return '';
@@ -88,7 +88,7 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
           className={cn(
             "flex items-center gap-1 text-xs font-medium",
             analysis.stage === 'error' ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" :
-            analysis.stage === 'complete' ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
+            analysis.stage === 'completed' ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
             analysis.stage === 'analyzing' ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" :
             analysis.stage === 'waiting' ? "bg-blue-100/50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300" :
             "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
@@ -111,9 +111,9 @@ const PDFAnalysisProgress = ({ analysis, isLoading = false }: PDFAnalysisProgres
             className={cn(
               "h-full transition-all duration-300 ease-out rounded-full",
               analysis.stage === 'error' ? "bg-red-500" :
-              analysis.stage === 'complete' ? "bg-green-500" : 
+              analysis.stage === 'completed' ? "bg-green-500" : 
               analysis.stage === 'analyzing' ? "bg-amber-500" : "bg-primary",
-              analysis.stage !== 'complete' && analysis.stage !== 'error' && "animate-pulse"
+              analysis.stage !== 'completed' && analysis.stage !== 'error' && "animate-pulse"
             )}
             style={{ width: `${analysis.progress}%` }}
           />
