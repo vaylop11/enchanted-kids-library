@@ -1,19 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, Share, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw, Languages } from 'lucide-react';
+import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
-import { ChatInput } from '@/components/ui/chat-input';
-import { MarkdownMessage } from '@/components/ui/markdown-message';
 import {
   Tooltip,
   TooltipContent,
@@ -341,9 +340,13 @@ const PDFViewer = () => {
     }
   };
 
-  const handleChatSubmit = async (message: string) => {
-    if (!message || !id || !pdf) return;
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !id || !pdf) return;
 
+    const userMessageContent = chatInput.trim();
+    setChatInput('');
+    
     try {
       let savedUserMessage: ChatMessage | null = null;
       
@@ -358,7 +361,7 @@ const PDFViewer = () => {
             
             savedUserMessage = {
               id: `temp-msg-${Date.now()}`,
-              content: message,
+              content: userMessageContent,
               isUser: true,
               timestamp: new Date()
             };
@@ -371,7 +374,7 @@ const PDFViewer = () => {
           }
         }
       } else if (user) {
-        const result = await addSupabaseChatMessage(id, message, true);
+        const result = await addSupabaseChatMessage(id, userMessageContent, true);
         if (result) {
           savedUserMessage = {
             id: result.id,
@@ -382,7 +385,7 @@ const PDFViewer = () => {
         }
       } else {
         savedUserMessage = addChatMessageToPDF(id, {
-          content: message,
+          content: userMessageContent,
           isUser: true,
           timestamp: new Date()
         });
@@ -443,7 +446,7 @@ const PDFViewer = () => {
         
         const aiContent = await analyzePDFWithGemini(
           textContent, 
-          message, 
+          userMessageContent, 
           updateAnalysisProgress, 
           chatMessages.filter(m => m.isUser === false).slice(-5)
         );
@@ -742,6 +745,7 @@ const PDFViewer = () => {
               {showPdfControls && (
                 <div className="flex flex-wrap justify-between items-center p-4 bg-muted/20 border-b">
                   <div className="flex items-center flex-wrap gap-4 w-full md:w-auto">
+                    {/* Page navigation controls */}
                     <div className="flex items-center space-x-2">
                       <Button 
                         variant="outline" 
@@ -777,6 +781,7 @@ const PDFViewer = () => {
                       </Button>
                     </div>
                     
+                    {/* Zoom controls */}
                     <div className="flex items-center space-x-2">
                       <Button 
                         variant="outline" 
@@ -799,6 +804,7 @@ const PDFViewer = () => {
                       </Button>
                     </div>
                     
+                    {/* Rotation controls */}
                     <div className="flex items-center space-x-2">
                       <TooltipProvider>
                         <Tooltip>
@@ -1024,10 +1030,9 @@ const PDFViewer = () => {
                                 : "mr-auto bg-muted"
                             )}
                           >
-                            <MarkdownMessage 
-                              content={message.content} 
-                              className={message.isUser ? "text-primary-foreground" : ""}
-                            />
+                            <div className="whitespace-pre-wrap text-sm">
+                              {message.content}
+                            </div>
                             <div className="text-xs opacity-70 mt-1 text-right">
                               {new Date(message.timestamp).toLocaleTimeString()}
                             </div>
@@ -1114,15 +1119,30 @@ const PDFViewer = () => {
                     )}
                   </div>
                   
-                  <ChatInput 
-                    onSubmit={handleChatSubmit}
-                    placeholder={language === 'ar' 
-                      ? "اكتب سؤالك حول محتوى الملف..."
-                      : "Type your question about the PDF content..."
-                    }
-                    dir={language === 'ar' ? 'rtl' : 'ltr'}
-                    disabled={isWaitingForResponse}
-                  />
+                  <form 
+                    onSubmit={handleChatSubmit} 
+                    className="border-t p-4 flex gap-2 items-end"
+                  >
+                    <Textarea
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      placeholder={language === 'ar' 
+                        ? "اكتب سؤالك حول محتوى الملف..."
+                        : "Type your question about the PDF content..."
+                      }
+                      className="resize-none min-h-[80px]"
+                      dir={language === 'ar' ? 'rtl' : 'ltr'}
+                      disabled={isWaitingForResponse}
+                    />
+                    <Button 
+                      type="submit" 
+                      size="icon" 
+                      className="h-10 w-10 rounded-full flex-shrink-0"
+                      disabled={!chatInput.trim() || isWaitingForResponse}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </form>
                 </>
               )}
             </div>
