@@ -24,18 +24,6 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 
-type Message = {
-  id: string;
-  content: string;
-  user_id: string;
-  user_email: string;
-  created_at: string;
-  reactions?: {
-    emoji: string;
-    users: string[];
-  }[];
-};
-
 type OnlineUser = {
   id: string;
   email: string;
@@ -53,13 +41,13 @@ const ChatPage = () => {
   const { user, loading, isAdmin } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [onlineUsers, setOnlineUsers] = useState<Record<string, OnlineUser>>({});
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [replyToMessage, setReplyToMessage] = useState<ChatMessageType | null>(null);
   const { setTyping, getTypingIndicator } = useTypingIndicator('global', user?.id || '', user?.email || '');
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
@@ -78,7 +66,7 @@ const ChatPage = () => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
-          const newMessage = payload.new as Message;
+          const newMessage = payload.new as ChatMessageType;
           setMessages((prev) => [...prev, newMessage]);
         }
       )
@@ -102,7 +90,7 @@ const ChatPage = () => {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'messages' },
         (payload) => {
-          const updatedMessage = payload.new as Message;
+          const updatedMessage = payload.new as ChatMessageType;
           setMessages(prev => 
             prev.map(msg => msg.id === updatedMessage.id ? updatedMessage : msg)
           );
@@ -155,7 +143,7 @@ const ChatPage = () => {
           .limit(50);
 
         if (error) throw error;
-        if (data) setMessages(data as Message[]);
+        if (data) setMessages(data as ChatMessageType[]);
       } catch (error) {
         console.error('Error fetching messages:', error);
         toast.error('Failed to load messages');
@@ -201,8 +189,16 @@ const ChatPage = () => {
     }, 2000);
   };
 
-  const handleReply = (message: Message) => {
+  const handleReply = (message: ChatMessageType) => {
     setReplyToMessage(message);
+    // Scroll to message input when replying
+    setTimeout(() => {
+      const input = document.querySelector('input[aria-label="Type a message"]');
+      if (input) {
+        input.scrollIntoView({ behavior: 'smooth' });
+        (input as HTMLInputElement).focus();
+      }
+    }, 100);
   };
 
   const sendMessage = async (e: React.FormEvent) => {
@@ -214,14 +210,24 @@ const ChatPage = () => {
     setNewMessage('');
     
     try {
+      let messagePayload: any = {
+        content: messageContent,
+        user_id: user.id,
+        user_email: user.email || 'Anonymous'
+      };
+      
+      // If replying to a message, add it to the payload
+      if (replyToMessage) {
+        messagePayload.reply_to = {
+          id: replyToMessage.id,
+          user_email: replyToMessage.user_email,
+          content: replyToMessage.content.substring(0, 50) + (replyToMessage.content.length > 50 ? '...' : '')
+        };
+      }
+      
       const { error } = await supabaseUntyped
         .from('messages')
-        .insert({
-          content: messageContent,
-          user_id: user.id,
-          user_email: user.email || 'Anonymous'
-        })
-        .select('*');
+        .insert(messagePayload);
 
       if (error) throw error;
     } catch (error) {
@@ -277,12 +283,12 @@ const ChatPage = () => {
       // Get the current message to check existing reactions
       const { data: message, error: fetchError } = await supabaseUntyped
         .from('messages')
-        .select('reactions')
+        .select('*')
         .eq('id', messageId)
         .single();
 
       if (fetchError) throw fetchError;
-
+      
       // Initialize or get existing reactions
       let updatedReactions = message?.reactions || [];
       
@@ -475,6 +481,22 @@ const ChatPage = () => {
                           ? "bg-primary text-primary-foreground" 
                           : "bg-muted"
                       )}>
+                        {message.reply_to && (
+                          <div className={cn(
+                            "mb-2 px-3 py-2 text-xs border-l-2 rounded bg-background/40",
+                            message.user_id === user?.id 
+                              ? "border-primary-foreground/30 text-primary-foreground/70" 
+                              : "border-primary/30 text-foreground/70"
+                          )}>
+                            <div className="font-medium mb-0.5">
+                              Replying to {message.reply_to.user_email}
+                            </div>
+                            <div className="line-clamp-1">
+                              {message.reply_to.content}
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="whitespace-pre-wrap text-sm">
                           {message.content}
                         </div>
@@ -564,12 +586,15 @@ const ChatPage = () => {
                 <div className="mb-2 flex items-center justify-between text-sm bg-muted p-2 rounded">
                   <div className="flex items-center gap-2">
                     <Reply className="h-4 w-4" />
-                    <span>Replying to {replyToMessage.user_email}</span>
+                    <span className="line-clamp-1">
+                      <span className="font-medium">Replying to {replyToMessage.user_email}:</span> {replyToMessage.content}
+                    </span>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setReplyToMessage(null)}
+                    className="flex-shrink-0"
                   >
                     Cancel
                   </Button>
