@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { File, AlertTriangle } from 'lucide-react';
@@ -8,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { uploadPDFToSupabase, getUserPDFs } from '@/services/pdfSupabaseService';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 
 const UploadZone = () => {
   const { language } = useLanguage();
