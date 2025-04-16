@@ -58,18 +58,21 @@ export const createSubscription = async (subscriptionId: string, planId: string)
 
 export const getPayPalPlanIdFromDatabase = async (): Promise<string> => {
   try {
+    // Changed from .single() to .eq() with .limit(1) to get just the first pro plan
     const { data, error } = await supabase
       .from('subscription_plans')
       .select('paypal_plan_id')
-      .single();
+      .not('paypal_plan_id', 'eq', 'FREE_PLAN') // Exclude free plan
+      .limit(1);
       
-    if (error) {
-      console.error('Error fetching PayPal plan ID:', error);
+    if (error || !data || data.length === 0) {
+      console.error('Error fetching PayPal plan ID:', error || 'No data returned');
       // Fall back to hardcoded ID
       return 'P-8AR43998YB6934043M77H5AI';
     }
     
-    return data?.paypal_plan_id || 'P-8AR43998YB6934043M77H5AI';
+    console.log('Found PayPal plan ID:', data[0].paypal_plan_id);
+    return data[0].paypal_plan_id || 'P-8AR43998YB6934043M77H5AI';
   } catch (error) {
     console.error('Error fetching PayPal plan ID:', error);
     // Fall back to hardcoded ID

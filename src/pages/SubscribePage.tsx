@@ -30,6 +30,7 @@ const SubscribePage = () => {
   const [paypalPlanId, setPaypalPlanId] = useState<string | null>(null);
   const [paypalError, setPaypalError] = useState<string | null>(null);
   const [paypalLoadError, setPaypalLoadError] = useState<string | null>(null);
+  const [paypalScriptLoaded, setPaypalScriptLoaded] = useState(false);
   const { refreshSubscription } = useSubscription();
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorDetails, setErrorDetails] = useState('');
@@ -86,9 +87,12 @@ const SubscribePage = () => {
       try {
         const plans = await getSubscriptionPlans();
         console.log("Loaded plans:", plans);
-        if (plans.length > 0) {
-          const updatedPlan = { ...plans[0], price: 4.99 };
-          setPlan(updatedPlan);
+        
+        // Find the PRO plan (non-free plan)
+        const proPlan = plans.find(p => p.price > 0);
+        
+        if (proPlan) {
+          setPlan(proPlan);
           
           const paypalId = await getPayPalPlanIdFromDatabase();
           if (paypalId) {
@@ -97,12 +101,28 @@ const SubscribePage = () => {
           } else {
             setPaypalError("Missing PayPal plan ID. Please contact support.");
           }
+        } else if (plans.length > 0) {
+          // Fallback to first plan
+          setPlan(plans[0]);
+          setPaypalPlanId('P-8AR43998YB6934043M77H5AI');
         }
       } catch (error) {
         console.error("Error loading subscription plans:", error);
         toast.error(language === 'ar' 
           ? 'فشل في تحميل خطط الاشتراك' 
           : 'Failed to load subscription plans');
+        
+        // Set fallback plan
+        setPlan({
+          id: "fallback",
+          name: "Gemi PRO",
+          description: "Get advanced features and faster response speeds",
+          price: 4.99,
+          currency: "USD",
+          interval: "month",
+          paypal_plan_id: "P-8AR43998YB6934043M77H5AI"
+        });
+        setPaypalPlanId("P-8AR43998YB6934043M77H5AI");
       } finally {
         setIsLoading(false);
       }
@@ -153,8 +173,19 @@ const SubscribePage = () => {
       : 'Error loading PayPal buttons. Please try again.');
   };
 
+  const handlePayPalScriptLoad = (loaded: boolean) => {
+    console.log("PayPal script loaded:", loaded);
+    setPaypalScriptLoaded(loaded);
+    if (!loaded) {
+      setPaypalLoadError("Failed to load PayPal script. Please check your internet connection or try again later.");
+    } else {
+      setPaypalLoadError(null);
+    }
+  };
+
   const handleTryAgain = () => {
     setPaypalError(null);
+    setPaypalLoadError(null);
     setErrorDetails('');
     setShowErrorDialog(false);
     
@@ -231,6 +262,14 @@ const SubscribePage = () => {
                   </div>
                 )}
                 
+                <div className="p-4 bg-muted/50 rounded-lg mb-4">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm font-medium">{plan.name}</span>
+                    <span className="text-sm font-bold">${plan.price.toFixed(2)}/{plan.interval}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{plan.description}</p>
+                </div>
+                
                 <PayPalScriptProvider 
                   options={{ 
                     clientId: "AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIjy_OcQFqtUxUGN2n1DjHnM4A4u62h",
@@ -240,35 +279,37 @@ const SubscribePage = () => {
                     debug: true
                   }}
                 >
-                  <PayPalButtons
-                    createSubscription={(data, actions) => {
-                      console.log("Creating subscription with plan ID: P-8AR43998YB6934043M77H5AI");
-                      return actions.subscription.create({
-                        'plan_id': 'P-8AR43998YB6934043M77H5AI',
-                        'application_context': {
-                          'shipping_preference': 'NO_SHIPPING',
-                          'user_action': 'SUBSCRIBE_NOW',
-                          'return_url': `${window.location.origin}/subscribe?subscription_id={id}`,
-                          'cancel_url': `${window.location.origin}/subscribe`,
-                          'brand_name': 'Gemi PRO'
-                        }
-                      });
-                    }}
-                    style={{
-                      shape: 'rect',
-                      color: 'gold',
-                      layout: 'vertical',
-                      label: 'subscribe'
-                    }}
-                    onApprove={handlePayPalApprove}
-                    onError={handlePayPalError}
-                    onCancel={() => {
-                      console.log('PayPal subscription canceled by user');
-                      toast.info(language === 'ar'
-                        ? 'تم إلغاء الاشتراك'
-                        : 'Subscription canceled');
-                    }}
-                  />
+                  <div id="paypal-button-container">
+                    <PayPalButtons
+                      createSubscription={(data, actions) => {
+                        console.log("Creating subscription with plan ID: P-8AR43998YB6934043M77H5AI");
+                        return actions.subscription.create({
+                          'plan_id': 'P-8AR43998YB6934043M77H5AI',
+                          'application_context': {
+                            'shipping_preference': 'NO_SHIPPING',
+                            'user_action': 'SUBSCRIBE_NOW',
+                            'return_url': `${window.location.origin}/subscribe?subscription_id={id}`,
+                            'cancel_url': `${window.location.origin}/subscribe`,
+                            'brand_name': 'Gemi PRO'
+                          }
+                        });
+                      }}
+                      style={{
+                        shape: 'rect',
+                        color: 'gold',
+                        layout: 'vertical',
+                        label: 'subscribe'
+                      }}
+                      onApprove={handlePayPalApprove}
+                      onError={handlePayPalError}
+                      onCancel={() => {
+                        console.log('PayPal subscription canceled by user');
+                        toast.info(language === 'ar'
+                          ? 'تم إلغاء الاشتراك'
+                          : 'Subscription canceled');
+                      }}
+                    />
+                  </div>
                 </PayPalScriptProvider>
               </div>
             ) : (
@@ -276,6 +317,14 @@ const SubscribePage = () => {
                 {paypalError || (language === 'ar' 
                   ? 'لم يتم العثور على خطط اشتراك. يرجى المحاولة مرة أخرى لاحقًا.'
                   : 'No subscription plans found. Please try again later.')}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2 w-full"
+                  onClick={handleTryAgain}
+                >
+                  {language === 'ar' ? 'حاول مرة أخرى' : 'Try Again'}
+                </Button>
               </div>
             )}
             
