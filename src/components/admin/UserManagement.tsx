@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabaseUntyped } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
-import { Loader2, Ban, Trash2, UserX, Users } from 'lucide-react';
+import { Loader2, Ban, Trash2, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -25,13 +25,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 
 type User = {
   id: string;
@@ -41,12 +34,7 @@ type User = {
   banned_until?: string | null;
 };
 
-interface UserManagementProps {
-  userCount?: number | null;
-  countLoading?: boolean;
-}
-
-const UserManagement = ({ userCount, countLoading = false }: UserManagementProps) => {
+const UserManagement = () => {
   const { language } = useLanguage();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,46 +174,6 @@ const UserManagement = ({ userCount, countLoading = false }: UserManagementProps
 
   return (
     <div className="space-y-4">
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl flex items-center">
-            <Users className="mr-2 h-5 w-5" />
-            {language === 'ar' ? 'إحصائيات المستخدمين' : 'User Statistics'}
-          </CardTitle>
-          <CardDescription>
-            {language === 'ar' 
-              ? 'نظرة عامة على مستخدمي النظام'
-              : 'Overview of system users'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <div className="text-sm font-medium text-muted-foreground mb-1">
-                {language === 'ar' ? 'إجمالي المستخدمين' : 'Total Users'}
-              </div>
-              <div className="text-2xl font-bold">
-                {countLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : userCount !== null ? (
-                  userCount
-                ) : (
-                  '-'
-                )}
-              </div>
-            </div>
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <div className="text-sm font-medium text-muted-foreground mb-1">
-                {language === 'ar' ? 'المستخدمين المحظورين' : 'Banned Users'}
-              </div>
-              <div className="text-2xl font-bold">
-                {users.filter(user => isBanned(user)).length}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
       <div className="flex items-center justify-between">
         <Input
           placeholder={language === 'ar' ? 'البحث حسب البريد الإلكتروني' : 'Search by email'}
