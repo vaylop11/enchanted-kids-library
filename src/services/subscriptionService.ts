@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -67,9 +68,15 @@ export const getPayPalPlanIdFromPlanId = async (planId: string): Promise<string>
       .eq('id', planId)
       .single();
       
-    if (error || !data) {
+    if (error || !data || !data.paypal_plan_id) {
       console.error('Error fetching PayPal plan ID from plan ID:', error);
       throw new Error('Could not find PayPal plan ID');
+    }
+    
+    // If the paypal_plan_id is "YOUR_PAYPAL_PLAN_ID_HERE", use the hardcoded fallback
+    if (data.paypal_plan_id === "YOUR_PAYPAL_PLAN_ID_HERE") {
+      console.log("Plan has placeholder PayPal ID. Using hardcoded fallback");
+      return 'P-8AR43998YB6934043M77H5AI';
     }
     
     console.log("Retrieved PayPal plan ID from database:", data.paypal_plan_id);
@@ -91,9 +98,15 @@ export const getPayPalPlanIdFromDatabase = async (): Promise<string> => {
       .eq('name', 'Gemi PRO')
       .single();
       
-    if (error || !data) {
+    if (error || !data || !data.paypal_plan_id) {
       console.error('Error fetching PayPal plan ID:', error);
       // Fallback to hardcoded ID if lookup fails
+      return 'P-8AR43998YB6934043M77H5AI';
+    }
+    
+    // If the paypal_plan_id is "YOUR_PAYPAL_PLAN_ID_HERE", use the hardcoded fallback
+    if (data.paypal_plan_id === "YOUR_PAYPAL_PLAN_ID_HERE") {
+      console.log("Plan has placeholder PayPal ID. Using hardcoded fallback");
       return 'P-8AR43998YB6934043M77H5AI';
     }
     

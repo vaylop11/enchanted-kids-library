@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -117,6 +118,15 @@ const SubscribePage = () => {
     console.log("PayPal buttons loaded successfully");
   };
 
+  // PayPal script options
+  const paypalScriptOptions = {
+    clientId: "AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIuHBIjy_OcQFqtUxUGN2n1DjHnM4A4u62h",
+    vault: true,
+    intent: "subscription",
+    components: "buttons",
+    dataClientToken: "ElxMwKc8tNdkO5UyZ9EWDEXYVzID45oZj9DuZMSuaOpPRdUiYrZHnF8Q+o3TprrfhGM5Cmd5tunU/OdI"
+  };
+
   return (
     <div key={key} className="min-h-screen bg-gradient-to-b from-background to-background via-muted/5">
       <SEO 
@@ -171,16 +181,7 @@ const SubscribePage = () => {
               </div>
             ) : plan ? (
               <div className="bg-background rounded-lg border p-4 mb-4">
-                <PayPalScriptProvider 
-                  options={{
-                    clientId: "AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIuHBIjy_OcQFqtUxUGN2n1DjHnM4A4u62h",
-                    vault: true,
-                    intent: "subscription",
-                    components: "buttons",
-                    dataClientToken: "ElxMwKc8tNdkO5UyZ9EWDEXYVzID45oZj9DuZMSuaOpPRdUiYrZHnF8Q+o3TprrfhGM5Cmd5tunU/OdI"
-                  }}
-                  onError={handlePayPalInitError}
-                >
+                <PayPalScriptProvider options={paypalScriptOptions}>
                   <div id="paypal-button-container">
                     <PayPalButtons
                       createSubscription={(data, actions) => {
