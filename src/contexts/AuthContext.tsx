@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, getCurrentUser } from '@/services/authService';
@@ -27,6 +28,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { language } = useLanguage();
   const [initialSignInHandled, setInitialSignInHandled] = useState(false);
 
+  const ensureAdminSubscription = async (userId: string) => {
+    try {
+      // Check if admin already has a subscription
+      const { data: existingSub } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'ACTIVE')
+        .maybeSingle();
+
+      if (!existingSub) {
+        // Create a PRO subscription for admin
+        const { data: plans } = await supabase
+          .from('subscription_plans')
+          .select('*')
+          .limit(1)
+          .single();
+
+        if (plans) {
+          await supabase
+            .from('user_subscriptions')
+            .insert({
+              user_id: userId,
+              plan_id: plans.id,
+              status: 'ACTIVE',
+              paypal_subscription_id: 'ADMIN_PERMANENT',
+              current_period_start: new Date().toISOString(),
+              current_period_end: new Date(2099, 11, 31).toISOString(), // Far future date
+            });
+          console.log('Created permanent PRO subscription for admin');
+        }
+      }
+    } catch (error) {
+      console.error('Error ensuring admin subscription:', error);
+    }
+  };
+
   const checkUser = async () => {
     setLoading(true);
     try {
@@ -35,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (currentUser?.email === 'cherifhoucine83@gmail.com') {
         setIsAdmin(true);
+        await ensureAdminSubscription(currentUser.id);
       } else {
         setIsAdmin(false);
       }
@@ -61,6 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session.user.email === 'cherifhoucine83@gmail.com') {
           setIsAdmin(true);
+          await ensureAdminSubscription(session.user.id);
         } else {
           setIsAdmin(false);
         }
