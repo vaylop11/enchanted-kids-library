@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.id);
       
-      if (event === 'SIGNED_IN' && session?.user) {
+      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
         const newUser = {
           id: session.user.id,
           email: session.user.email || undefined
@@ -68,11 +68,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsAdmin(false);
         }
         
-        toast.success('Signed in successfully');
+        if (event === 'SIGNED_IN') {
+          toast.success('Signed in successfully');
+        }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAdmin(false);
         toast.success('Signed out successfully');
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Handle token refresh if needed
+        console.log('Auth token refreshed');
       }
     });
 
