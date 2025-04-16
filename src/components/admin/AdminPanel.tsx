@@ -85,9 +85,7 @@ const AdminPanel = () => {
         
         if (data && data.apiKey) {
           // Show masked version of the API key
-          const maskedKey = data.apiKey.substring(0, 4) + '...' + 
-            data.apiKey.substring(data.apiKey.length - 4);
-          setCurrentApiKey(maskedKey);
+          setCurrentApiKey(data.apiKey);
           
           // Don't set the actual key in the form for security reasons
           apiKeyForm.setValue('geminiApiKey', '');
@@ -318,7 +316,7 @@ const AdminPanel = () => {
       
       console.log('API key update response:', data);
       
-      // Update the displayed masked key
+      // Update the displayed masked key and refresh from the server
       const maskedKey = values.geminiApiKey.substring(0, 4) + '...' + 
         values.geminiApiKey.substring(values.geminiApiKey.length - 4);
       setCurrentApiKey(maskedKey);
@@ -331,6 +329,19 @@ const AdminPanel = () => {
           ? 'تم تحديث مفتاح API Gemini بنجاح'
           : 'Gemini API key updated successfully'
       );
+      
+      // Fetch the updated key to confirm
+      setTimeout(async () => {
+        try {
+          const { data } = await supabaseUntyped.functions.invoke('get-gemini-api-key');
+          if (data && data.apiKey) {
+            setCurrentApiKey(data.apiKey);
+          }
+        } catch (refreshError) {
+          console.error('Error refreshing API key display:', refreshError);
+        }
+      }, 1000);
+      
     } catch (error) {
       console.error('Error updating API key:', error);
       toast.error(

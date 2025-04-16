@@ -62,9 +62,24 @@ serve(async (req) => {
     
     console.log("Updating API key for admin:", user.email);
     
-    // Update the API key directly using Deno env
-    // This will update the key for this execution context
-    await Deno.env.set("GEMINI_API_KEY", apiKey);
+    // Store the API key in the database
+    // Using a separate table to store configuration values
+    const { error: upsertError } = await supabase
+      .from('app_settings')
+      .upsert({
+        key: 'GEMINI_API_KEY',
+        value: apiKey,
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
+    
+    if (upsertError) {
+      console.error("Error storing API key in database:", upsertError);
+      return new Response(JSON.stringify({ error: "Failed to update API key", details: upsertError }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
     
     // Return success response
     return new Response(JSON.stringify({ success: true }), {
