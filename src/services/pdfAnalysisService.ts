@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import * as pdfjs from "pdfjs-dist";
 import { toast } from "sonner";
@@ -132,6 +133,15 @@ export const analyzePDFWithGemini = async (
   previousChat: any[] = []
 ): Promise<string> => {
   try {
+    // Validate inputs
+    if (!pdfText || !pdfText.trim()) {
+      throw new Error('No PDF text provided for analysis');
+    }
+    
+    if (!userQuestion || !userQuestion.trim()) {
+      throw new Error('No question provided for analysis');
+    }
+    
     // First set the waiting state before starting the analysis
     updateProgress?.({
       stage: 'waiting',
@@ -149,17 +159,31 @@ export const analyzePDFWithGemini = async (
     });
     
     const { data, error } = await supabase.functions.invoke('analyze-pdf-with-gemini', {
-      body: { pdfText, userQuestion, previousChat },
+      body: { 
+        pdfText, 
+        userQuestion, 
+        previousChat 
+      },
     });
 
     if (error) {
-      console.error('Gemini API error:', error);
+      console.error('Error from Supabase function:', error);
       updateProgress?.({
         stage: 'error',
         progress: 0,
-        message: 'Failed to analyze PDF content'
+        message: error.message || 'Failed to analyze PDF content'
       });
-      throw error;
+      throw new Error(error.message || 'Failed to analyze PDF content');
+    }
+    
+    if (!data || !data.response) {
+      console.error('Invalid response from Gemini analysis:', data);
+      updateProgress?.({
+        stage: 'error',
+        progress: 0,
+        message: 'Received invalid response from AI service'
+      });
+      throw new Error('Received invalid response from AI service');
     }
     
     updateProgress?.({
@@ -182,7 +206,7 @@ export const analyzePDFWithGemini = async (
       progress: 0,
       message: error instanceof Error ? error.message : 'Failed to analyze PDF content'
     });
-    throw new Error('Failed to analyze PDF content');
+    throw error;
   }
 };
 
