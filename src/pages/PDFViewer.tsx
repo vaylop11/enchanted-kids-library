@@ -1,20 +1,18 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, Share, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw, Languages } from 'lucide-react';
+import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ChatInput } from '@/components/ui/chat-input';
-import { MarkdownMessage } from '@/components/ui/markdown-message';
+import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
   TooltipContent,
@@ -50,7 +48,7 @@ import {
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
-const PDFViewer = (): JSX.Element => {
+const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -64,6 +62,7 @@ const PDFViewer = (): JSX.Element => {
   const [pdfScale, setPdfScale] = useState(1.0);
   const [pdfRotation, setPdfRotation] = useState(0);
   const [showPdfControls, setShowPdfControls] = useState(true);
+  const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [showChat, setShowChat] = useState(true);
   const [pdf, setPdf] = useState<UploadedPDF | null>(null);
@@ -154,11 +153,11 @@ const PDFViewer = (): JSX.Element => {
           const newPdf: UploadedPDF = {
             id: supabasePdf.id,
             title: supabasePdf.title,
-            summary: supabasePdf.summary || '',
+            summary: supabasePdf.summary,
             uploadDate: supabasePdf.uploadDate,
-            pageCount: supabasePdf.pageCount || 0,
-            fileSize: supabasePdf.fileSize || '0 KB',
-            dataUrl: supabasePdf.fileUrl, // Map fileUrl to dataUrl
+            pageCount: supabasePdf.pageCount,
+            fileSize: supabasePdf.fileSize,
+            dataUrl: supabasePdf.fileUrl,
             chatMessages: []
           };
           
@@ -172,7 +171,7 @@ const PDFViewer = (): JSX.Element => {
               id: msg.id,
               content: msg.content,
               isUser: msg.isUser,
-              timestamp: new Date(msg.timestamp)
+              timestamp: msg.timestamp
             }));
             
             setChatMessages(convertedMessages);
@@ -290,6 +289,10 @@ const PDFViewer = (): JSX.Element => {
     }
   };
 
+  const handleTranslate = () => {
+    navigate(`/translate/${id}`);
+  };
+
   const handleRetryLoading = () => {
     setIsLoadingPdf(true);
     setPdfError(null);
@@ -337,9 +340,13 @@ const PDFViewer = (): JSX.Element => {
     }
   };
 
-  const handleChatSubmit = async (message: string) => {
-    if (!message || !id || !pdf) return;
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !id || !pdf) return;
 
+    const userMessageContent = chatInput.trim();
+    setChatInput('');
+    
     try {
       let savedUserMessage: ChatMessage | null = null;
       
@@ -354,7 +361,7 @@ const PDFViewer = (): JSX.Element => {
             
             savedUserMessage = {
               id: `temp-msg-${Date.now()}`,
-              content: message,
+              content: userMessageContent,
               isUser: true,
               timestamp: new Date()
             };
@@ -367,18 +374,18 @@ const PDFViewer = (): JSX.Element => {
           }
         }
       } else if (user) {
-        const result = await addSupabaseChatMessage(id, message, true);
+        const result = await addSupabaseChatMessage(id, userMessageContent, true);
         if (result) {
           savedUserMessage = {
             id: result.id,
             content: result.content,
             isUser: result.isUser,
-            timestamp: new Date(result.timestamp)
+            timestamp: result.timestamp
           };
         }
       } else {
         savedUserMessage = addChatMessageToPDF(id, {
-          content: message,
+          content: userMessageContent,
           isUser: true,
           timestamp: new Date()
         });
@@ -439,7 +446,7 @@ const PDFViewer = (): JSX.Element => {
         
         const aiContent = await analyzePDFWithGemini(
           textContent, 
-          message, 
+          userMessageContent, 
           updateAnalysisProgress, 
           chatMessages.filter(m => m.isUser === false).slice(-5)
         );
@@ -476,7 +483,7 @@ const PDFViewer = (): JSX.Element => {
               id: result.id,
               content: result.content,
               isUser: result.isUser,
-              timestamp: new Date(result.timestamp)
+              timestamp: result.timestamp
             };
           }
         } else {
@@ -536,7 +543,7 @@ const PDFViewer = (): JSX.Element => {
               id: result.id,
               content: result.content,
               isUser: result.isUser,
-              timestamp: new Date(result.timestamp)
+              timestamp: result.timestamp
             };
           }
         } else {
@@ -738,6 +745,7 @@ const PDFViewer = (): JSX.Element => {
               {showPdfControls && (
                 <div className="flex flex-wrap justify-between items-center p-4 bg-muted/20 border-b">
                   <div className="flex items-center flex-wrap gap-4 w-full md:w-auto">
+                    {/* Page navigation controls */}
                     <div className="flex items-center space-x-2">
                       <Button 
                         variant="outline" 
@@ -773,6 +781,7 @@ const PDFViewer = (): JSX.Element => {
                       </Button>
                     </div>
                     
+                    {/* Zoom controls */}
                     <div className="flex items-center space-x-2">
                       <Button 
                         variant="outline" 
@@ -795,6 +804,7 @@ const PDFViewer = (): JSX.Element => {
                       </Button>
                     </div>
                     
+                    {/* Rotation controls */}
                     <div className="flex items-center space-x-2">
                       <TooltipProvider>
                         <Tooltip>
@@ -1020,10 +1030,9 @@ const PDFViewer = (): JSX.Element => {
                                 : "mr-auto bg-muted"
                             )}
                           >
-                            <MarkdownMessage 
-                              content={message.content} 
-                              className={message.isUser ? "text-primary-foreground" : ""}
-                            />
+                            <div className="whitespace-pre-wrap text-sm">
+                              {message.content}
+                            </div>
                             <div className="text-xs opacity-70 mt-1 text-right">
                               {new Date(message.timestamp).toLocaleTimeString()}
                             </div>
@@ -1110,15 +1119,30 @@ const PDFViewer = (): JSX.Element => {
                     )}
                   </div>
                   
-                  <ChatInput 
-                    onSubmit={handleChatSubmit}
-                    placeholder={language === 'ar' 
-                      ? "اكتب سؤالك حول محتوى الملف..."
-                      : "Type your question about the PDF content..."
-                    }
-                    dir={language === 'ar' ? 'rtl' : 'ltr'}
-                    disabled={isWaitingForResponse}
-                  />
+                  <form 
+                    onSubmit={handleChatSubmit} 
+                    className="border-t p-4 flex gap-2 items-end"
+                  >
+                    <Textarea
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      placeholder={language === 'ar' 
+                        ? "اكتب سؤالك حول محتوى الملف..."
+                        : "Type your question about the PDF content..."
+                      }
+                      className="resize-none min-h-[80px]"
+                      dir={language === 'ar' ? 'rtl' : 'ltr'}
+                      disabled={isWaitingForResponse}
+                    />
+                    <Button 
+                      type="submit" 
+                      size="icon" 
+                      className="h-10 w-10 rounded-full flex-shrink-0"
+                      disabled={!chatInput.trim() || isWaitingForResponse}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </form>
                 </>
               )}
             </div>

@@ -1,113 +1,170 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent";
+import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Supported language codes
-const LANGUAGE_CODES = {
-  'en': 'English',
-  'ar': 'Arabic', 
-  'zh': 'Chinese (Simplified)',
-  'fr': 'French',
-  'de': 'German',
-  'hi': 'Hindi',
-  'it': 'Italian',
-  'ja': 'Japanese',
-  'ko': 'Korean',
-  'pt': 'Portuguese',
-  'ru': 'Russian',
-  'es': 'Spanish'
-};
-
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { text, targetLanguage, enhancedFormat } = await req.json();
+    const { text, targetLanguage, enhancedFormat = false } = await req.json();
     
     if (!text || !targetLanguage) {
-      throw new Error('Text and target language are required');
+      return new Response(
+        JSON.stringify({ error: 'Text and target language are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
-    if (!GEMINI_API_KEY) {
-      throw new Error('Missing Gemini API Key');
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ error: 'Gemini API key not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-    
-    // Get the language name from the code
-    const languageName = LANGUAGE_CODES[targetLanguage] || targetLanguage;
-    
-    // Determine if the input is markdown
-    const isMarkdown = text.includes('```') || text.includes('#') || text.includes('**') || text.includes('*');
-    
-    // Build the prompt
-    let prompt = "";
-    
-    if (enhancedFormat && isMarkdown) {
-      prompt = `Translate the following markdown text into ${languageName}. Preserve all markdown formatting including code blocks, headers, lists, and emphasis. Don't translate content inside code blocks.
 
-Text to translate:
-${text}`;
-    } else {
-      prompt = `Translate the following text into ${languageName}:
-
-${text}`;
+    // Check if text is empty or just whitespace
+    if (!text.trim()) {
+      return new Response(
+        JSON.stringify({ 
+          translatedText: '',
+          detectedSourceLanguage: null,
+          isMarkdown: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    // Handle large texts by splitting them if needed
+    const chunkSize = 9000; // Adjust based on model constraints
+    const chunks = [];
+    let currentChunk = '';
     
-    // Call Gemini API
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.2,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
+    if (text.length > chunkSize) {
+      // Better chunking by paragraphs or sections
+      const paragraphs = text.split(/\n\n|\r\n\r\n/);
+      
+      for (const paragraph of paragraphs) {
+        if ((currentChunk + paragraph).length > chunkSize) {
+          if (currentChunk) {
+            chunks.push(currentChunk);
+            currentChunk = paragraph + '\n\n';
+          } else {
+            // Handle case where a single paragraph is too long
+            chunks.push(paragraph);
+          }
+        } else {
+          currentChunk += paragraph + '\n\n';
         }
-      }),
-    });
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-      console.error('Gemini API error response:', data);
-      throw new Error(`Gemini API error: ${JSON.stringify(data)}`);
+      }
+      
+      // Add the last chunk if it's not empty
+      if (currentChunk) {
+        chunks.push(currentChunk);
+      }
+    } else {
+      chunks.push(text);
     }
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    let finalTranslatedText = '';
+    
+    // Determine the appropriate prompt based on enhancedFormat flag
+    const getPrompt = (chunk: string) => {
+      if (enhancedFormat) {
+        return `Translate the following text to ${targetLanguage} with professional quality and formatting. 
+               
+Use proper markdown formatting to enhance readability:
+- Use headings (## and ###) for section titles
+- Format lists properly with bullet points or numbers
+- Use **bold** for emphasis on important terms
+- Maintain paragraph structure and spacing
+- Use appropriate formatting for quotes, code blocks, or special content
+- Ensure consistent and professional tone throughout
 
-    // Extract the translation text
-    const translatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+Only respond with the translated text in well-formatted markdown, nothing else. Do not include any notes, comments or original text:
 
-    // Return the translation
-    return new Response(JSON.stringify({
-      translatedText,
-      isMarkdown: enhancedFormat && isMarkdown
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+${chunk}`;
+      } else {
+        return `Translate the following text to ${targetLanguage}. Format the output in markdown to preserve formatting, headings, and structure. Only respond with the translated text in markdown format, nothing else:
+
+${chunk}`;
+      }
+    };
+    
+    for (const chunk of chunks) {
+      const prompt = getPrompt(chunk);
+
+      try {
+        const result = await model.generateContent(prompt);
+        finalTranslatedText += result.response.text() + '\n\n';
+      } catch (modelError) {
+        console.error('Gemini API Error:', modelError.message);
+        
+        // If it's a rate limit error, try with smaller chunk or timeout
+        if (modelError.message && modelError.message.includes('429')) {
+          // Wait a second and try again with a smaller chunk if possible
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Create a smaller chunk by roughly halving it
+          const sentences = chunk.split(/[.!?]\s/);
+          const midpoint = Math.floor(sentences.length / 2);
+          
+          const firstHalf = sentences.slice(0, midpoint).join('. ') + '.';
+          const secondHalf = sentences.slice(midpoint).join('. ');
+          
+          try {
+            // Translate first half
+            const prompt1 = getPrompt(firstHalf);
+            const result1 = await model.generateContent(prompt1);
+            finalTranslatedText += result1.response.text() + '\n\n';
+            
+            // Translate second half
+            const prompt2 = getPrompt(secondHalf);
+            const result2 = await model.generateContent(prompt2);
+            finalTranslatedText += result2.response.text() + '\n\n';
+            
+          } catch (retryError) {
+            console.error('Failed retry with smaller chunks:', retryError);
+            throw modelError; // Re-throw the original error
+          }
+        } else {
+          throw modelError;
+        }
+      }
+    }
+    
+    // Final post-processing for enhanced formatting
+    if (enhancedFormat) {
+      // Ensure consistent spacing between sections
+      finalTranslatedText = finalTranslatedText
+        .replace(/\n{3,}/g, '\n\n')  // Replace multiple newlines with double newlines
+        .replace(/#+\s*([^\n]+)/g, (match) => `\n${match}\n`); // Add spacing around headers
+    }
+    
+    return new Response(
+      JSON.stringify({ 
+        translatedText: finalTranslatedText.trim(),
+        detectedSourceLanguage: null,
+        isMarkdown: true
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
     
   } catch (error) {
     console.error('Error in translate-text function:', error);
-    
-    return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'An unknown error occurred'
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });
