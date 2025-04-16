@@ -205,7 +205,8 @@ const SubscribePage = () => {
                         'plan_id': 'P-8AR43998YB6934043M77H5AI',
                         'application_context': {
                           'user_action': 'SUBSCRIBE_NOW',
-                          'return_url': `${window.location.origin}/subscribe?subscription_id={id}`
+                          'return_url': `${window.location.origin}/subscribe?subscription_id={id}`,
+                          'cancel_url': `${window.location.origin}/subscribe`
                         }
                       });
                     }}
