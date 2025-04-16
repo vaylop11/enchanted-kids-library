@@ -30,11 +30,6 @@ type Message = {
   user_id: string;
   user_email: string;
   created_at: string;
-  reply_to?: {
-    id: string;
-    content: string;
-    user_email: string;
-  } | null;
   reactions?: {
     emoji: string;
     users: string[];
@@ -64,7 +59,7 @@ const ChatPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const [replyTo, setReplyTo] = useState<ChatMessageType['reply_to']>(null);
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const { setTyping, getTypingIndicator } = useTypingIndicator('global', user?.id || '', user?.email || '');
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
@@ -101,6 +96,16 @@ const ChatPage = () => {
           else {
             fetchMessages();
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages' },
+        (payload) => {
+          const updatedMessage = payload.new as Message;
+          setMessages(prev => 
+            prev.map(msg => msg.id === updatedMessage.id ? updatedMessage : msg)
+          );
         }
       )
       .subscribe();
@@ -197,11 +202,7 @@ const ChatPage = () => {
   };
 
   const handleReply = (message: Message) => {
-    setReplyTo({
-      id: message.id,
-      content: message.content,
-      user_email: message.user_email
-    });
+    setReplyToMessage(message);
   };
 
   const sendMessage = async (e: React.FormEvent) => {
@@ -211,7 +212,6 @@ const ChatPage = () => {
 
     const messageContent = newMessage.trim();
     setNewMessage('');
-    setReplyTo(null);
     
     try {
       const { error } = await supabaseUntyped
@@ -219,8 +219,7 @@ const ChatPage = () => {
         .insert({
           content: messageContent,
           user_id: user.id,
-          user_email: user.email || 'Anonymous',
-          reply_to: replyTo,
+          user_email: user.email || 'Anonymous'
         })
         .select('*');
 
@@ -228,6 +227,8 @@ const ChatPage = () => {
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
+    } finally {
+      setReplyToMessage(null);
     }
   };
 
@@ -269,6 +270,62 @@ const ChatPage = () => {
     }
   };
 
+  const handleReaction = async (messageId: string, emoji: string) => {
+    if (!user) return;
+    
+    try {
+      // Get the current message to check existing reactions
+      const { data: message, error: fetchError } = await supabaseUntyped
+        .from('messages')
+        .select('reactions')
+        .eq('id', messageId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Initialize or get existing reactions
+      let updatedReactions = message?.reactions || [];
+      
+      // Find if this emoji reaction already exists
+      const existingReactionIndex = updatedReactions.findIndex(r => r.emoji === emoji);
+      
+      if (existingReactionIndex >= 0) {
+        // Check if user has already reacted with this emoji
+        const userIndex = updatedReactions[existingReactionIndex].users.indexOf(user.id);
+        
+        if (userIndex >= 0) {
+          // Remove user from the reaction
+          updatedReactions[existingReactionIndex].users.splice(userIndex, 1);
+          
+          // If no users left for this reaction, remove the reaction
+          if (updatedReactions[existingReactionIndex].users.length === 0) {
+            updatedReactions.splice(existingReactionIndex, 1);
+          }
+        } else {
+          // Add user to the existing reaction
+          updatedReactions[existingReactionIndex].users.push(user.id);
+        }
+      } else {
+        // Add new reaction with this user
+        updatedReactions.push({
+          emoji,
+          users: [user.id]
+        });
+      }
+
+      // Update the message with the new reactions
+      const { error: updateError } = await supabaseUntyped
+        .from('messages')
+        .update({ reactions: updatedReactions })
+        .eq('id', messageId);
+
+      if (updateError) throw updateError;
+    } catch (error) {
+      console.error('Error updating reaction:', error);
+      toast.error('Failed to update reaction');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -285,46 +342,6 @@ const ChatPage = () => {
   const pageDescription = language === 'ar' 
     ? 'تواصل مع مستخدمين آخرين وناقش ملفات PDF ومشاريعك في غرفة دردشة تشات PDF'
     : 'Connect with other users and discuss PDF files and projects in the ChatPDF chat room';
-
-  const handleReaction = async (messageId: string, emoji: string) => {
-    try {
-      const { data: message } = await supabaseUntyped
-        .from('messages')
-        .select('reactions')
-        .eq('id', messageId)
-        .single();
-
-      let updatedReactions = message?.reactions || [];
-      const existingReactionIndex = updatedReactions.findIndex(r => r.emoji === emoji);
-
-      if (existingReactionIndex >= 0) {
-        const userIndex = updatedReactions[existingReactionIndex].users.indexOf(user!.id);
-        if (userIndex >= 0) {
-          updatedReactions[existingReactionIndex].users.splice(userIndex, 1);
-          if (updatedReactions[existingReactionIndex].users.length === 0) {
-            updatedReactions.splice(existingReactionIndex, 1);
-          }
-        } else {
-          updatedReactions[existingReactionIndex].users.push(user!.id);
-        }
-      } else {
-        updatedReactions.push({
-          emoji,
-          users: [user!.id]
-        });
-      }
-
-      const { error } = await supabaseUntyped
-        .from('messages')
-        .update({ reactions: updatedReactions })
-        .eq('id', messageId);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error updating reaction:', error);
-      toast.error('Failed to update reaction');
-    }
-  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -458,18 +475,6 @@ const ChatPage = () => {
                           ? "bg-primary text-primary-foreground" 
                           : "bg-muted"
                       )}>
-                        {message.reply_to && (
-                          <div className="text-xs opacity-75 mb-2 p-2 rounded bg-background/20 cursor-pointer"
-                               onClick={() => {
-                                 const replyMessage = messages.find(m => m.id === message.reply_to?.id);
-                                 if (replyMessage) {
-                                   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                                 }
-                               }}>
-                            <span className="font-medium">{message.reply_to.user_email}:</span> {message.reply_to.content}
-                          </div>
-                        )}
-                        
                         <div className="whitespace-pre-wrap text-sm">
                           {message.content}
                         </div>
@@ -555,16 +560,16 @@ const ChatPage = () => {
             </ScrollArea>
             
             <form onSubmit={sendMessage} className="flex flex-col gap-2">
-              {replyTo && (
+              {replyToMessage && (
                 <div className="mb-2 flex items-center justify-between text-sm bg-muted p-2 rounded">
                   <div className="flex items-center gap-2">
                     <Reply className="h-4 w-4" />
-                    <span>Replying to {replyTo.user_email}</span>
+                    <span>Replying to {replyToMessage.user_email}</span>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setReplyTo(null)}
+                    onClick={() => setReplyToMessage(null)}
                   >
                     Cancel
                   </Button>

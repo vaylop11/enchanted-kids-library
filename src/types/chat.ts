@@ -16,11 +16,5 @@ export type ChatMessage = {
   user_id: string;
   user_email: string;
   created_at: string;
-  reply_to?: {
-    id: string;
-    content: string;
-    user_email: string;
-  } | null;
   reactions?: MessageReaction[];
 };
-
