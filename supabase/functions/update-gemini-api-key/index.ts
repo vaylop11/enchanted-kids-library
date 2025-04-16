@@ -22,7 +22,6 @@ serve(async (req) => {
     // Get the JWT from the request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error("No authorization header");
       return new Response(JSON.stringify({ error: "Not authorized" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
@@ -43,7 +42,6 @@ serve(async (req) => {
     
     // Check if user is admin (has a specific email)
     if (user.email !== 'cherifhoucine83@gmail.com') {
-      console.error("Not admin:", user.email);
       return new Response(JSON.stringify({ error: "Not authorized - admin access required" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 403,
@@ -53,33 +51,14 @@ serve(async (req) => {
     // Parse the request body to get the api key
     const { apiKey } = await req.json();
     if (!apiKey) {
-      console.error("No API key provided");
       return new Response(JSON.stringify({ error: "API key is required" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
       });
     }
     
-    console.log("Updating API key for admin:", user.email);
-    
-    // Store the API key in the database
-    // Using a separate table to store configuration values
-    const { error: upsertError } = await supabase
-      .from('app_settings')
-      .upsert({
-        key: 'GEMINI_API_KEY',
-        value: apiKey,
-        updated_by: user.id,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'key' });
-    
-    if (upsertError) {
-      console.error("Error storing API key in database:", upsertError);
-      return new Response(JSON.stringify({ error: "Failed to update API key", details: upsertError }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      });
-    }
+    // Update the API key using Deno KV
+    await Deno.env.set("GEMINI_API_KEY", apiKey);
     
     // Return success response
     return new Response(JSON.stringify({ success: true }), {

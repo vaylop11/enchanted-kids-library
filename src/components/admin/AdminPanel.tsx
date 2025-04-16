@@ -85,14 +85,15 @@ const AdminPanel = () => {
         
         if (data && data.apiKey) {
           // Show masked version of the API key
-          setCurrentApiKey(data.apiKey);
+          const maskedKey = data.apiKey.substring(0, 4) + '...' + 
+            data.apiKey.substring(data.apiKey.length - 4);
+          setCurrentApiKey(maskedKey);
           
           // Don't set the actual key in the form for security reasons
           apiKeyForm.setValue('geminiApiKey', '');
         }
       } catch (error) {
         console.error('Error fetching API key:', error);
-        toast.error('Error fetching current API key');
       }
     };
     
@@ -299,24 +300,13 @@ const AdminPanel = () => {
     setIsSavingApiKey(true);
     
     try {
-      console.log('Updating API key...');
-      const { data, error } = await supabaseUntyped.functions.invoke('update-gemini-api-key', {
+      const { error } = await supabaseUntyped.functions.invoke('update-gemini-api-key', {
         body: { apiKey: values.geminiApiKey }
       });
       
-      if (error) {
-        console.error('Error response:', error);
-        throw new Error(`API error: ${error.message || 'Unknown error'}`);
-      }
-
-      if (!data || data.error) {
-        console.error('Response data error:', data?.error || 'No data returned');
-        throw new Error(data?.error || 'Failed to update API key');
-      }
+      if (error) throw error;
       
-      console.log('API key update response:', data);
-      
-      // Update the displayed masked key and refresh from the server
+      // Update the displayed masked key
       const maskedKey = values.geminiApiKey.substring(0, 4) + '...' + 
         values.geminiApiKey.substring(values.geminiApiKey.length - 4);
       setCurrentApiKey(maskedKey);
@@ -329,25 +319,12 @@ const AdminPanel = () => {
           ? 'تم تحديث مفتاح API Gemini بنجاح'
           : 'Gemini API key updated successfully'
       );
-      
-      // Fetch the updated key to confirm
-      setTimeout(async () => {
-        try {
-          const { data } = await supabaseUntyped.functions.invoke('get-gemini-api-key');
-          if (data && data.apiKey) {
-            setCurrentApiKey(data.apiKey);
-          }
-        } catch (refreshError) {
-          console.error('Error refreshing API key display:', refreshError);
-        }
-      }, 1000);
-      
     } catch (error) {
       console.error('Error updating API key:', error);
       toast.error(
         language === 'ar'
           ? 'حدث خطأ أثناء تحديث مفتاح API'
-          : `Error updating API key: ${error instanceof Error ? error.message : 'Unknown error'}`
+          : 'Error updating API key'
       );
     } finally {
       setIsSavingApiKey(false);
