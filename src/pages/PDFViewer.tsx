@@ -1,23 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import SEO from '@/components/SEO';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
-import { User, ArrowLeft, Crown, Trash2, Eraser, FileText, Share, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw, Languages } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { ArrowLeft, FileText, Share, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw, Languages } from 'lucide-react';
 import { toast } from 'sonner';
-import { ChatMessageSkeleton } from '@/components/ui/skeleton';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Document, Page, pdfjs } from 'react-pdf';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/AuthContext';
+import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
+import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
 import { ChatInput } from '@/components/ui/chat-input';
 import { MarkdownMessage } from '@/components/ui/markdown-message';
-import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
-import { Document, Page, pdfjs } from 'react-pdf';
 import {
   Tooltip,
   TooltipContent,
@@ -50,632 +46,1089 @@ import {
   AnalysisProgress,
   AnalysisStage
 } from '@/services/pdfAnalysisService';
-import { detectLanguage } from '@/services/translationService';
-import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
-type Message = {
-  id: string;
-  content: string;
-  user_id: string;
-  user_email: string;
-  created_at: string;
-};
-
-type OnlineUser = {
-  id: string;
-  email: string;
-  online_at: string;
-};
-
-const PDFViewer = (): JSX.Element => {
+const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const { language, direction } = useLanguage();
   const { user } = useAuth();
-  const { language } = useLanguage();
-  const [pdf, setPdf] = useState<UploadedPDF | null>(null);
+  
+  const [isLoaded, setIsLoaded] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>({ stage: 'waiting', progress: 0, message: 'Waiting...' });
-  const [pdfText, setPdfText] = useState<string>('');
-  const [detectedLanguage, setDetectedLanguage] = useState<string>('en');
+  const [pageInputValue, setPageInputValue] = useState("1");
+  const [pdfScale, setPdfScale] = useState(1.0);
+  const [pdfRotation, setPdfRotation] = useState(0);
+  const [showPdfControls, setShowPdfControls] = useState(true);
+  const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
-  const [isChatVisible, setIsChatVisible] = useState(true);
-  const [pdfTitle, setPdfTitle] = useState<string>('');
-  const [isEditTitleModalOpen, setIsEditTitleModalOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [isOwner, setIsOwner] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [scale, setScale] = useState(1.0);
-  const [rotation, setRotation] = useState(0);
-  const [isSharePopoverOpen, setIsSharePopoverOpen] = useState(false);
-  const [isFetchingInitialData, setIsFetchingInitialData] = useState(true);
-  const [isMounted, setIsMounted] = useState(false);
-  const [isProcessingChat, setIsProcessingChat] = useState(false);
-  const [isInitialAnalysisComplete, setIsInitialAnalysisComplete] = useState(false);
-  const [isTextExtractionSkipped, setIsTextExtractionSkipped] = useState(false);
-  const [isMountedAfterInitialAnalysis, setIsMountedAfterInitialAnalysis] = useState(false);
-  const [isMountedRef] = useState(useRef(false));
-  const pdfContainerRef = useRef<HTMLDivElement>(null);
+  const [showChat, setShowChat] = useState(true);
+  const [pdf, setPdf] = useState<UploadedPDF | null>(null);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(true);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isTempPdf, setIsTempPdf] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [pdfTextContent, setPdfTextContent] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>({
+    stage: 'extracting',
+    progress: 0,
+    message: 'Preparing to analyze PDF...'
+  });
+  const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
 
   useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+    if (!id) {
+      navigate('/');
+      return;
+    }
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const fetchPDF = async () => {
-      if (!id) {
-        toast.error('PDF ID is missing.');
+    const loadPdf = async () => {
+      if (id.startsWith('temp-') || window.location.pathname.includes('/pdf/temp/')) {
+        setIsTempPdf(true);
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          try {
+            const parsedData = JSON.parse(tempPdfData);
+            if (parsedData.fileData && parsedData.fileData.id === id) {
+              setPdf(parsedData.fileData);
+              setChatMessages(parsedData.fileData.chatMessages || []);
+              setIsLoadingPdf(false);
+              setIsLoaded(true);
+              return;
+            }
+          } catch (error) {
+            console.error('Error parsing temporary PDF:', error);
+          }
+        }
+        toast.error(language === 'ar' ? 'لم يتم العثور على الملف المؤقت' : 'Temporary PDF not found');
+        navigate('/');
         return;
       }
 
-      try {
-        const fetchedPdf = await getSupabasePDFById(id);
-
-        if (!fetchedPdf) {
-          toast.error('PDF not found.');
-          navigate('/404');
-          return;
+      const loadedPdf = getPDFById(id);
+      if (loadedPdf) {
+        setPdf(loadedPdf);
+        if (loadedPdf.chatMessages) {
+          setChatMessages(loadedPdf.chatMessages);
         }
-
-        setPdf(fetchedPdf);
-        setPdfTitle(fetchedPdf.title || '');
-        setNewTitle(fetchedPdf.title || '');
-
-        if (user) {
-          setIsOwner(user.id === fetchedPdf.user_id);
+        
+        if (!loadedPdf.dataUrl) {
+          if (user) {
+            tryLoadFromSupabase(id);
+          } else {
+            setPdfError(language === 'ar' 
+              ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
+              : 'Could not load PDF data due to storage limitations');
+            toast.error(language === 'ar' 
+              ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
+              : 'Could not load PDF data due to storage limitations');
+            setIsLoadingPdf(false);
+          }
+        } else {
+          setIsLoadingPdf(false);
         }
-
-        // Fetch chat messages
-        try {
-          const initialMessages = await getChatMessagesForPDF(id);
-          setChatMessages(initialMessages);
-        } catch (error) {
-          console.error("Error fetching chat messages:", error);
-          toast.error("Failed to load chat messages.");
-        }
-
-        // If text already exists, skip extraction
-        if (fetchedPdf.text) {
-          setPdfText(fetchedPdf.text);
-          setIsTextExtractionSkipped(true);
-          setIsInitialAnalysisComplete(true);
-          setIsFetchingInitialData(false);
-          return;
-        }
-
-        // Start analysis if text is not available
-        if (!fetchedPdf.text) {
-          await startAnalysis(fetchedPdf.url, fetchedPdf.id);
-        }
-      } catch (error) {
-        console.error('Error fetching PDF:', error);
-        toast.error('Failed to load PDF.');
-        navigate('/404');
-      } finally {
-        setIsFetchingInitialData(false);
+      } else {
+        tryLoadFromSupabase(id);
       }
     };
 
-    fetchPDF();
-  }, [id, navigate, user]);
+    const tryLoadFromSupabase = async (pdfId: string) => {
+      if (!user) {
+        toast.error(language === 'ar' ? 'يرجى تسجيل الدخول لعرض هذا الملف' : 'Please sign in to view this PDF');
+        navigate('/login');
+        return;
+      }
+      
+      try {
+        console.log('Trying to load PDF from Supabase with ID:', pdfId);
+        const supabasePdf = await getSupabasePDFById(pdfId);
+        
+        if (supabasePdf && supabasePdf.fileUrl) {
+          console.log('Successfully loaded PDF from Supabase:', supabasePdf);
+          
+          const newPdf: UploadedPDF = {
+            id: supabasePdf.id,
+            title: supabasePdf.title,
+            summary: supabasePdf.summary,
+            uploadDate: supabasePdf.uploadDate,
+            pageCount: supabasePdf.pageCount,
+            fileSize: supabasePdf.fileSize,
+            dataUrl: supabasePdf.fileUrl,
+            chatMessages: []
+          };
+          
+          setPdf(newPdf);
+          setIsLoadingPdf(false);
+          
+          setIsLoadingMessages(true);
+          const messages = await getChatMessagesForPDF(pdfId);
+          if (messages && messages.length > 0) {
+            const convertedMessages: ChatMessage[] = messages.map(msg => ({
+              id: msg.id,
+              content: msg.content,
+              isUser: msg.isUser,
+              timestamp: msg.timestamp
+            }));
+            
+            setChatMessages(convertedMessages);
+          }
+          setIsLoadingMessages(false);
+        } else {
+          console.error('PDF data not found in Supabase');
+          toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
+          navigate('/pdfs');
+          return;
+        }
+      } catch (error) {
+        console.error('Error loading PDF from Supabase:', error);
+        toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
+        navigate('/pdfs');
+        return;
+      }
+    };
 
-  useEffect(() => {
-    if (isInitialAnalysisComplete && isMountedRef.current) {
-      setIsMountedAfterInitialAnalysis(true);
-    }
-  }, [isInitialAnalysisComplete]);
+    loadPdf();
+    
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 100);
+    
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [id, navigate, language, retryCount, user]);
 
-  useEffect(() => {
-    supabase
-      .channel('online-users')
-      .on('presence', { event: 'sync' }, () => {
-        const presenceState = supabase.channel('online-users').presenceState();
-        const users: OnlineUser[] = [];
-        for (const key in presenceState) {
-          if (Object.hasOwnProperty.call(presenceState, key)) {
-            const element = presenceState[key];
-            element.forEach((user: any) => {
-              users.push({
-                id: user.user_id,
-                email: user.user_email,
-                online_at: user.online_at
-              });
-            });
+  const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setIsLoadingPdf(false);
+    setPdfError(null);
+    
+    if (pdf && pdf.pageCount !== numPages) {
+      const updatedPdf = { ...pdf, pageCount: numPages };
+      setPdf(updatedPdf);
+      
+      if (!isTempPdf) {
+        if (user) {
+          updatePDFMetadata(updatedPdf.id, { pageCount: numPages });
+        } else {
+          savePDF(updatedPdf);
+        }
+      } else if (updatedPdf.id.startsWith('temp-')) {
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          try {
+            const parsedData = JSON.parse(tempPdfData);
+            parsedData.fileData.pageCount = numPages;
+            sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+          } catch (error) {
+            console.error('Error updating temporary PDF page count:', error);
           }
         }
-        setOnlineUsers(users);
-      })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        newPresences.forEach((presence: any) => {
-          setOnlineUsers(prevUsers => [...prevUsers, {
-            id: presence.user_id,
-            email: presence.user_email,
-            online_at: presence.online_at
-          }]);
-        });
-      })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        leftPresences.forEach((presence: any) => {
-          setOnlineUsers(prevUsers => prevUsers.filter(u => u.id !== presence.user_id));
-        });
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await supabase.presence.track({
-            user_id: user?.id,
-            user_email: user?.email,
-            online_at: new Date().toISOString()
-          });
-        }
-      });
-
-    return () => {
-      supabase.removeChannel('online-users');
-    };
-  }, [user]);
-
-  const startAnalysis = async (pdfUrl: string, pdfId: string) => {
-    setIsAnalyzing(true);
-    setAnalysisProgress({ stage: 'extracting', progress: 5, message: 'Extracting text from PDF...' });
-
-    try {
-      const extractedText = await extractTextFromPDF(pdfUrl, pdfId, (progress) => {
-        setAnalysisProgress(progress);
-      });
-
-      setPdfText(extractedText);
-      setAnalysisProgress({ stage: 'analyzing', progress: 30, message: 'Analyzing PDF content...' });
-
-      const detectedLang = await detectLanguage(extractedText);
-      setDetectedLanguage(detectedLang);
-
-      // Save the extracted text to the database
-      try {
-        await updatePDFMetadata(pdfId, { text: extractedText });
-        toast.success('PDF text saved successfully!');
-      } catch (error) {
-        console.error('Error saving PDF text:', error);
-        toast.error('Failed to save PDF text.');
       }
-
-      setIsInitialAnalysisComplete(true);
-    } catch (error: any) {
-      console.error('Error during PDF analysis:', error);
-      toast.error(`Failed to analyze PDF: ${error.message}`);
-      setAnalysisProgress({ stage: 'error', progress: 0, message: 'Analysis failed.' });
-    } finally {
-      setIsAnalyzing(false);
     }
   };
 
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-  };
-
-  const changePage = (offset: number) => {
-    setPageNumber((prevPageNumber) => Math.max(1, Math.min(prevPageNumber + offset, numPages || 1)));
-  };
-
-  const goToPrevPage = () => changePage(-1);
-
-  const goToNextPage = () => changePage(1);
-
-  const handleSendChatMessage = async (messageContent: string) => {
-    if (!user || !pdf?.id) {
-      toast.error("You must be logged in to send messages.");
-      return;
-    }
-
-    if (isProcessingChat) {
-      toast.error("Please wait, processing previous message.");
-      return;
-    }
-
-    setIsProcessingChat(true);
-
-    try {
-      const newMessage: ChatMessage = {
-        id: new Date().getTime().toString(),
-        content: messageContent,
-        user_id: user.id,
-        user_email: user.email || 'Unknown',
-        created_at: new Date().toISOString(),
-        pdf_id: pdf.id
-      };
-
-      setChatMessages(prevMessages => [...prevMessages, newMessage]);
-
-      // Optimistically update the UI
-      setChatMessages(prevMessages => [...prevMessages, {
-        id: 'temp_' + new Date().getTime().toString(),
-        content: '...',
-        user_id: 'ai',
-        user_email: 'AI',
-        created_at: new Date().toISOString(),
-        pdf_id: pdf.id
-      }]);
-
-      const aiResponse = await analyzePDFWithGemini(
-        pdfText,
-        messageContent,
-        (progress) => {
-          setAnalysisProgress(progress);
-        },
-        [...chatMessages, newMessage],
-        detectedLanguage
-      );
-
-      // Remove the loading message
-      setChatMessages(prevMessages => prevMessages.filter(message => !message.id?.startsWith('temp_')));
-
-      const aiMessage: ChatMessage = {
-        id: new Date().getTime().toString(),
-        content: aiResponse,
-        user_id: 'ai',
-        user_email: 'AI',
-        created_at: new Date().toISOString(),
-        pdf_id: pdf.id
-      };
-
-      setChatMessages(prevMessages => [...prevMessages, aiMessage]);
-
-      try {
-        await addSupabaseChatMessage(pdf.id, newMessage.content, aiResponse);
-      } catch (error) {
-        console.error("Error adding chat message to Supabase:", error);
-        toast.error("Failed to save chat message.");
-      }
-    } catch (error: any) {
-      console.error("Error sending chat message:", error);
-      toast.error(`Failed to send chat message: ${error.message}`);
-    } finally {
-      setIsProcessingChat(false);
-    }
-  };
-
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewTitle(e.target.value);
-  };
-
-  const handleEditTitle = () => {
-    setIsEditTitleModalOpen(true);
-  };
-
-  const handleSaveTitle = async () => {
-    if (!pdf?.id) {
-      toast.error("PDF ID is missing.");
-      return;
-    }
-
-    try {
-      await updatePDFMetadata(pdf.id, { title: newTitle });
-      setPdfTitle(newTitle);
-      toast.success("Title updated successfully!");
-    } catch (error) {
-      console.error("Error updating title:", error);
-      toast.error("Failed to update title.");
-    } finally {
-      setIsEditTitleModalOpen(false);
-    }
+  const handleDocumentLoadError = (error: Error) => {
+    console.error('Error loading PDF:', error);
+    setPdfError(language === 'ar'
+      ? 'فشل في تحميل ملف PDF. قد يكون الملف تالفًا أو غير متوافق.'
+      : 'Failed to load PDF. The file may be corrupted or incompatible.');
+    setIsLoadingPdf(false);
   };
 
   const handleDeletePDF = () => {
-    setIsDeleteModalOpen(true);
+    if (!id) return;
+    
+    if (window.confirm(language === 'ar' 
+      ? 'هل أنت متأكد من أنك تريد حذف هذا الملف؟' 
+      : 'Are you sure you want to delete this PDF?')) {
+      
+      if (isTempPdf) {
+        sessionStorage.removeItem('tempPdfFile');
+        navigate('/');
+        return;
+      }
+      
+      if (user) {
+        deleteSupabasePDF(id).then(success => {
+          if (success) {
+            navigate('/pdfs');
+          }
+        });
+      } else {
+        if (deletePDFById(id)) {
+          navigate('/pdfs');
+        }
+      }
+    }
   };
 
-  const confirmDeletePDF = async () => {
-    if (!pdf?.id) {
-      toast.error("PDF ID is missing.");
-      return;
+  const scrollToLatestMessage = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToLatestMessage();
+  }, [chatMessages, isAnalyzing]);
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: pdf ? pdf.title : '',
+        text: pdf ? pdf.summary : '',
+        url: window.location.href,
+      })
+      .catch((error) => console.log('Error sharing', error));
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast(language === 'ar' ? 'تم نسخ الرابط إلى الحافظة' : 'Link copied to clipboard');
     }
+  };
+
+  const handleTranslate = () => {
+    navigate(`/translate/${id}`);
+  };
+
+  const handleRetryLoading = () => {
+    setIsLoadingPdf(true);
+    setPdfError(null);
+    setRetryCount(prev => prev + 1);
+  };
+
+  const updateAnalysisProgress = (progress: AnalysisProgress) => {
+    setAnalysisProgress(progress);
+  };
+
+  const extractPDFContent = async () => {
+    if (!pdf?.dataUrl || pdfTextContent) return;
+    
+    try {
+      setAnalysisProgress({
+        stage: 'extracting',
+        progress: 10,
+        message: language === 'ar' 
+          ? 'بدء استخراج النص من ملف PDF...' 
+          : 'Starting text extraction from PDF...'
+      });
+      
+      const text = await extractTextFromPDF(pdf.dataUrl, pdf.id, updateAnalysisProgress);
+      setPdfTextContent(text);
+      
+      setAnalysisProgress({
+        stage: 'extracting',
+        progress: 100,
+        message: language === 'ar'
+          ? 'تم استخراج النص بنجاح من الملف'
+          : 'Text successfully extracted from PDF'
+      });
+      
+      return text;
+    } catch (error) {
+      console.error('Error extracting PDF text:', error);
+      setAnalysisProgress({
+        stage: 'error',
+        progress: 0,
+        message: language === 'ar'
+          ? 'فشل في استخراج النص من الملف'
+          : 'Failed to extract text from PDF'
+      });
+      return null;
+    }
+  };
+
+  const handleChatSubmit = async (message: string) => {
+    if (!message || !id || !pdf) return;
 
     try {
-      await deleteSupabasePDF(pdf.id);
-      toast.success("PDF deleted successfully!");
-      navigate('/pdfs');
+      let savedUserMessage: ChatMessage | null = null;
+      
+      if (isTempPdf) {
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          try {
+            const parsedData = JSON.parse(tempPdfData);
+            if (!parsedData.fileData.chatMessages) {
+              parsedData.fileData.chatMessages = [];
+            }
+            
+            savedUserMessage = {
+              id: `temp-msg-${Date.now()}`,
+              content: message,
+              isUser: true,
+              timestamp: new Date()
+            };
+            
+            parsedData.fileData.chatMessages.push(savedUserMessage);
+            
+            sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+          } catch (error) {
+            console.error('Error adding user message to temporary PDF:', error);
+          }
+        }
+      } else if (user) {
+        const result = await addSupabaseChatMessage(id, message, true);
+        if (result) {
+          savedUserMessage = {
+            id: result.id,
+            content: result.content,
+            isUser: result.isUser,
+            timestamp: result.timestamp
+          };
+        }
+      } else {
+        savedUserMessage = addChatMessageToPDF(id, {
+          content: message,
+          isUser: true,
+          timestamp: new Date()
+        });
+      }
+      
+      if (savedUserMessage) {
+        setChatMessages(prev => [...prev, savedUserMessage!]);
+      }
+
+      setIsAnalyzing(true);
+      setIsWaitingForResponse(true);
+      
+      setAnalysisProgress({
+        stage: 'waiting',
+        progress: 15,
+        message: language === 'ar'
+          ? 'لحظة من فضلك، نعمل على إجابة سؤالك...'
+          : 'One moment please, working on your answer...'
+      });
+      
+      scrollToLatestMessage();
+      
+      try {
+        let textContent = pdfTextContent;
+        if (!textContent) {
+          setAnalysisProgress({
+            stage: 'extracting',
+            progress: 25,
+            message: language === 'ar'
+              ? 'استخراج النص من ملف PDF...'
+              : 'Extracting text from PDF...'
+          });
+          
+          textContent = await extractPDFContent();
+          
+          if (!textContent) {
+            throw new Error(language === 'ar'
+              ? 'فشل في استخراج النص من الملف'
+              : 'Failed to extract text from PDF');
+          }
+        }
+        
+        setAnalysisProgress({
+          stage: 'analyzing',
+          progress: 50,
+          message: language === 'ar'
+            ? 'تحليل محتوى الملف...'
+            : 'Analyzing PDF content...'
+        });
+        
+        setAnalysisProgress({
+          stage: 'generating',
+          progress: 75,
+          message: language === 'ar'
+            ? 'إنشاء إجابة دقيقة...'
+            : 'Generating accurate answer...'
+        });
+        
+        const aiContent = await analyzePDFWithGemini(
+          textContent, 
+          message, 
+          updateAnalysisProgress, 
+          chatMessages.filter(m => m.isUser === false).slice(-5)
+        );
+        
+        let savedAiMessage: ChatMessage | null = null;
+        
+        if (isTempPdf) {
+          const tempPdfData = sessionStorage.getItem('tempPdfFile');
+          if (tempPdfData) {
+            try {
+              const parsedData = JSON.parse(tempPdfData);
+              if (!parsedData.fileData.chatMessages) {
+                parsedData.fileData.chatMessages = [];
+              }
+              
+              savedAiMessage = {
+                id: `temp-msg-${Date.now()}`,
+                content: aiContent,
+                isUser: false,
+                timestamp: new Date()
+              };
+              
+              parsedData.fileData.chatMessages.push(savedAiMessage);
+              
+              sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+            } catch (error) {
+              console.error('Error adding AI message to temporary PDF:', error);
+            }
+          }
+        } else if (user) {
+          const result = await addSupabaseChatMessage(id, aiContent, false);
+          if (result) {
+            savedAiMessage = {
+              id: result.id,
+              content: result.content,
+              isUser: result.isUser,
+              timestamp: result.timestamp
+            };
+          }
+        } else {
+          savedAiMessage = addChatMessageToPDF(id, {
+            content: aiContent,
+            isUser: false,
+            timestamp: new Date()
+          });
+        }
+        
+        if (savedAiMessage) {
+          setChatMessages(prev => [...prev, savedAiMessage!]);
+        }
+      } catch (error) {
+        console.error('Error in AI analysis:', error);
+        setAnalysisProgress({
+          stage: 'error',
+          progress: 0,
+          message: language === 'ar'
+            ? 'حدث خطأ أثناء تحليل الملف'
+            : 'Error during PDF analysis'
+        });
+          
+        const fallbackResponse = language === 'ar'
+          ? "عذرًا، حدث خطأ أثناء تحليل الملف. يرجى المحاولة مرة أخرى لاحقًا."
+          : "Sorry, there was an error analyzing the PDF. Please try again later.";
+          
+        let savedFallbackMessage: ChatMessage | null = null;
+        
+        if (isTempPdf) {
+          const tempPdfData = sessionStorage.getItem('tempPdfFile');
+          if (tempPdfData) {
+            try {
+              const parsedData = JSON.parse(tempPdfData);
+              if (!parsedData.fileData.chatMessages) {
+                parsedData.fileData.chatMessages = [];
+              }
+              
+              savedFallbackMessage = {
+                id: `temp-msg-${Date.now()}`,
+                content: fallbackResponse,
+                isUser: false,
+                timestamp: new Date()
+              };
+              
+              parsedData.fileData.chatMessages.push(savedFallbackMessage);
+              
+              sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+            } catch (error) {
+              console.error('Error adding fallback message to temporary PDF:', error);
+            }
+          }
+        } else if (user) {
+          const result = await addSupabaseChatMessage(id, fallbackResponse, false);
+          if (result) {
+            savedFallbackMessage = {
+              id: result.id,
+              content: result.content,
+              isUser: result.isUser,
+              timestamp: result.timestamp
+            };
+          }
+        } else {
+          savedFallbackMessage = addChatMessageToPDF(id, {
+            content: fallbackResponse,
+            isUser: false,
+            timestamp: new Date()
+          });
+        }
+        
+        if (savedFallbackMessage) {
+          setChatMessages(prev => [...prev, savedFallbackMessage!]);
+        }
+      } finally {
+        setIsAnalyzing(false);
+        setIsWaitingForResponse(false);
+      }
     } catch (error) {
-      console.error("Error deleting PDF:", error);
-      toast.error("Failed to delete PDF.");
-    } finally {
-      setIsDeleteModalOpen(false);
+      console.error('Error adding user message:', error);
+      setIsAnalyzing(false);
+      setIsWaitingForResponse(false);
+      toast.error(language === 'ar' 
+        ? 'حدث خطأ أثناء إضافة رسالتك' 
+        : 'Error adding your message');
     }
   };
 
-  const handleScaleUp = () => {
-    setScale(prevScale => Math.min(prevScale + 0.25, 3));
-  };
-
-  const handleScaleDown = () => {
-    setScale(prevScale => Math.max(prevScale - 0.25, 0.5));
-  };
-
-  const handleRotateRight = () => {
-    setRotation(prevRotation => (prevRotation + 90) % 360);
-  };
-
-  const handleRotateLeft = () => {
-    setRotation(prevRotation => (prevRotation - 90 + 360) % 360);
-  };
-
-  const handleShareClick = () => {
-    setIsSharePopoverOpen(true);
-  };
-
-  const handleCopyLink = () => {
-    if (pdf?.id) {
-      const pdfLink = `${window.location.origin}/pdf/${pdf.id}`;
-      navigator.clipboard.writeText(pdfLink);
-      toast.success("Link copied to clipboard!");
+  const handleResetChat = () => {
+    if (!id || !pdf) return;
+    
+    const confirmMessage = language === 'ar' 
+      ? 'هل أنت متأكد أنك تريد مسح جميع الرسائل؟'
+      : 'Are you sure you want to clear all messages?';
+      
+    if (window.confirm(confirmMessage)) {
+      setChatMessages([]);
+      
+      if (isTempPdf) {
+        const tempPdfData = sessionStorage.getItem('tempPdfFile');
+        if (tempPdfData) {
+          try {
+            const parsedData = JSON.parse(tempPdfData);
+            parsedData.fileData.chatMessages = [];
+            sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+          } catch (error) {
+            console.error('Error clearing chat messages from temporary PDF:', error);
+          }
+        }
+      }
+      
+      toast.success(language === 'ar' 
+        ? 'تم مسح المحادثة بنجاح'
+        : 'Chat cleared successfully');
     }
   };
 
-  const toggleChatVisibility = () => {
-    setIsChatVisible(!isChatVisible);
+  const handleCopyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+    toast.success(language === 'ar' 
+      ? 'تم نسخ الرسالة إلى الحافظة'
+      : 'Message copied to clipboard');
   };
 
-  if (!isMounted) {
-    return <div className="h-screen w-screen flex items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-    </div>;
+  const handlePrevPage = () => {
+    if (pageNumber > 1) {
+      setPageNumber(pageNumber - 1);
+      setPageInputValue(String(pageNumber - 1));
+    }
+  };
+
+  const handleNextPage = () => {
+    if (numPages && pageNumber < numPages) {
+      setPageNumber(pageNumber + 1);
+      setPageInputValue(String(pageNumber + 1));
+    }
+  };
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPageInputValue(e.target.value);
+  };
+
+  const handlePageInputSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    const pageNum = parseInt(pageInputValue, 10);
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= (numPages || 1)) {
+      setPageNumber(pageNum);
+    } else {
+      setPageInputValue(String(pageNumber));
+    }
+  };
+
+  const handleZoomIn = () => {
+    setPdfScale(prevScale => Math.min(prevScale + 0.25, 3.0));
+  };
+
+  const handleZoomOut = () => {
+    setPdfScale(prevScale => Math.max(prevScale - 0.25, 0.5));
+  };
+
+  const handleRotateClockwise = () => {
+    setPdfRotation(prevRotation => (prevRotation + 90) % 360);
+  };
+
+  const handleRotateCounterClockwise = () => {
+    setPdfRotation(prevRotation => (prevRotation - 90 + 360) % 360);
+  };
+
+  if (!pdf) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+        <h1 className="text-xl font-medium mb-2">
+          {language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF Not Found'}
+        </h1>
+        <Link 
+          to="/" 
+          className="text-primary hover:underline"
+        >
+          {language === 'ar' ? 'العودة إلى الصفحة الرئيسية' : 'Return to Home'}
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <SEO title={pdfTitle || "PDF Viewer"} />
+    <div className="min-h-screen flex flex-col">
       <Navbar />
-      <div className="container mx-auto py-8">
-        {isFetchingInitialData ? (
-          <div className="flex flex-col items-center justify-center h-96">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mb-4" />
-            <p className="text-muted-foreground">Loading PDF...</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* PDF Viewer Section */}
-            <div className="md:col-span-2">
-              <Card className="mb-4">
-                <div className="flex justify-between items-center p-4">
-                  <div>
-                    <h2 className="text-2xl font-semibold">{pdfTitle || "Untitled PDF"}</h2>
-                    {pdf?.created_at && (
-                      <p className="text-sm text-muted-foreground">
-                        Uploaded on {new Date(pdf.created_at).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={handleScaleDown}>
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Zoom Out</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <span className="text-sm">{Math.round(scale * 100)}%</span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={handleScaleUp}>
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Zoom In</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={handleRotateLeft}>
-                            <RotateCcw className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Rotate Left</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={handleRotateRight}>
-                            <RotateCw className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Rotate Right</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    {isOwner && (
-                      <>
-                        <Button variant="ghost" size="icon" onClick={handleEditTitle}>
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={handleDeletePDF}>
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </>
-                    )}
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={handleShareClick}>
-                          <Share className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64">
-                        <div className="flex flex-col space-y-2">
-                          <p className="text-sm font-medium">Share PDF</p>
-                          <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                            <Copy className="h-4 w-4 mr-2" />
-                            Copy Link
-                          </Button>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-                <div className="p-4 flex flex-col items-center">
-                  <div ref={pdfContainerRef} style={{ transform: `rotate(${rotation}deg)` }}>
-                    <Document
-                      file={pdf?.url}
-                      onLoadSuccess={onDocumentLoadSuccess}
-                      className="w-full"
-                    >
-                      <Page pageNumber={pageNumber} scale={scale} />
-                    </Document>
-                  </div>
-                  <div className="flex justify-center items-center mt-4 space-x-4">
-                    <Button variant="outline" size="sm" onClick={goToPrevPage} disabled={pageNumber <= 1}>
-                      Previous
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      Page {pageNumber} of {numPages || 1}
-                    </span>
-                    <Button variant="outline" size="sm" onClick={goToNextPage} disabled={pageNumber >= (numPages || 1)}>
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-              {isAnalyzing && (
-                <PDFAnalysisProgress progress={analysisProgress} />
-              )}
-              {!isAnalyzing && !isTextExtractionSkipped && isInitialAnalysisComplete && (
-                <Badge variant="outline">Analysis Complete</Badge>
-              )}
+      
+      <main className="flex-1 pt-24 pb-10">
+        <div className="container mx-auto px-4 md:px-6 max-w-7xl">
+          <div className="flex justify-between items-center mb-6">
+            <Link 
+              to={isTempPdf ? "/" : "/pdfs"} 
+              className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className={`h-4 w-4 ${direction === 'rtl' ? 'ml-2 rotate-180' : 'mr-2'}`} />
+              {language === 'ar' 
+                ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
+                : isTempPdf ? 'Back to Home' : 'Back to PDFs'}
+            </Link>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleShare}
+                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-muted transition-colors"
+                aria-label={language === 'ar' ? 'مشاركة الملف' : 'Share file'}
+              >
+                <Share className="h-5 w-5" />
+              </button>
+              
+              <Link
+                to={`/translate/${id}`}
+                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-muted transition-colors"
+                aria-label={language === 'ar' ? 'ترجمة الملف' : 'Translate PDF'}
+              >
+                <Languages className="h-5 w-5" />
+              </Link>
+              
+              <button
+                onClick={handleDeletePDF}
+                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-destructive/10 text-destructive transition-colors"
+                aria-label={language === 'ar' ? 'حذف الملف' : 'Delete file'}
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
             </div>
-
-            {/* Chat Section */}
-            <div className="md:col-span-1 flex flex-col">
-              <Card className="flex-grow flex flex-col">
-                <div className="border-b p-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Chat</h3>
-                    <Button variant="ghost" size="icon" onClick={toggleChatVisibility}>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+          </div>
+          
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="lg:w-2/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+              <div className="flex justify-between items-center p-4 border-b">
+                <div>
+                  <h1 className="font-display text-xl font-medium truncate">
+                    {pdf.title}
+                  </h1>
+                  <div className="flex gap-2 mt-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {pdf.fileSize}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {pdf.pageCount || '?'} {language === 'ar' ? 'صفحات' : 'pages'}
+                    </Badge>
+                    {isTempPdf && (
+                      <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/30">
+                        {language === 'ar' ? 'مؤقت' : 'Temporary'}
+                      </Badge>
+                    )}
                   </div>
-                  <div className="flex items-center space-x-2 mt-2">
-                    {onlineUsers.map((user) => (
-                      <TooltipProvider key={user.id}>
+                </div>
+                <button 
+                  onClick={() => setShowPdfControls(!showPdfControls)}
+                  className="p-1 rounded-md hover:bg-muted transition-colors"
+                >
+                  {showPdfControls ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </button>
+              </div>
+              
+              {showPdfControls && (
+                <div className="flex flex-wrap justify-between items-center p-4 bg-muted/20 border-b">
+                  <div className="flex items-center flex-wrap gap-4 w-full md:w-auto">
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        className="h-8 w-8" 
+                        onClick={handlePrevPage}
+                        disabled={pageNumber <= 1 || pdfError !== null || !pdf.dataUrl}
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                      
+                      <form onSubmit={handlePageInputSubmit} className="flex items-center">
+                        <Input
+                          type="text"
+                          value={pageInputValue}
+                          onChange={handlePageInputChange}
+                          onBlur={handlePageInputSubmit}
+                          className="page-number-input"
+                          disabled={pdfError !== null || !pdf.dataUrl}
+                          aria-label={language === 'ar' ? 'رقم الصفحة' : 'Page number'}
+                        />
+                        <span className="px-2 text-sm text-muted-foreground">/ {numPages || '?'}</span>
+                      </form>
+                      
+                      <Button 
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8" 
+                        onClick={handleNextPage}
+                        disabled={!numPages || pageNumber >= numPages || pdfError !== null || !pdf.dataUrl}
+                      >
+                        <ArrowLeft className="h-4 w-4 rotate-180" />
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={handleZoomOut}
+                        disabled={pdfError !== null || !pdf.dataUrl}
+                      >
+                        -
+                      </Button>
+                      <span className="text-sm min-w-[50px] text-center">{Math.round(pdfScale * 100)}%</span>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={handleZoomIn}
+                        disabled={pdfError !== null || !pdf.dataUrl}
+                      >
+                        +
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Avatar className="h-6 w-6">
-                              <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
-                            </Avatar>
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              className="h-8 w-8 rotation-control"
+                              onClick={handleRotateCounterClockwise}
+                              disabled={pdfError !== null || !pdf.dataUrl}
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{user.email}</p>
+                            {language === 'ar' ? 'تدوير عكس عقارب الساعة' : 'Rotate counterclockwise'}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                    ))}
-                    <Badge variant="secondary">{onlineUsers.length} Online</Badge>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              className="h-8 w-8 rotation-control"
+                              onClick={handleRotateClockwise}
+                              disabled={pdfError !== null || !pdf.dataUrl}
+                            >
+                              <RotateCw className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {language === 'ar' ? 'تدوير باتجاه عقارب الساعة' : 'Rotate clockwise'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      {pdfRotation !== 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {pdfRotation}°
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="text-sm text-muted-foreground mt-2 md:mt-0">
+                    {language === 'ar' ? 'تم التحميل' : 'Uploaded'}: {pdf.uploadDate}
                   </div>
                 </div>
-                {isChatVisible && (
-                  <div className="flex-grow flex flex-col">
-                    <ScrollArea className="flex-grow p-4">
-                      <div className="flex flex-col space-y-4">
-                        {chatMessages.length === 0 && !isProcessingChat && (
-                          <p className="text-muted-foreground text-center">No messages yet. Be the first to send one!</p>
+              )}
+              
+              <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
+                {isLoadingPdf ? (
+                  <div className="flex flex-col items-center justify-center h-full w-full">
+                    <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
+                    <p className="text-lg font-medium mb-2">
+                      {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'ar' ? 'يرجى الانتظار' : 'Please wait'}
+                    </p>
+                  </div>
+                ) : pdfError ? (
+                  <div className="flex flex-col items-center justify-center h-full w-full">
+                    <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" />
+                    <h2 className="text-xl font-medium mb-2 text-center">
+                      {language === 'ar' ? 'تعذر تحميل الملف' : 'Failed to load PDF'}
+                    </h2>
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                      {pdfError}
+                    </p>
+                    <div className="flex gap-3">
+                      <Button variant="outline" onClick={handleRetryLoading}>
+                        {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                      </Button>
+                      <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
+                        {language === 'ar'
+                          ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
+                          : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : !pdf.dataUrl ? (
+                  <div className="flex flex-col items-center justify-center h-full w-full">
+                    <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h2 className="text-xl font-medium mb-2 text-center">
+                      {language === 'ar' ? 'لا توجد بيانات PDF' : 'No PDF Data Available'}
+                    </h2>
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                      {language === 'ar' 
+                        ? 'لم يتم تخزين بيانات PDF بسبب قيود التخزين. حاول حذف بعض الملفات القديمة وتحميل هذا الملف مرة أخرى.'
+                        : 'PDF data was not stored due to storage limitations. Try deleting some older PDFs and upload this file again.'}
+                    </p>
+                    <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
+                      {language === 'ar'
+                        ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
+                        : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
+                    </Button>
+                  </div>
+                ) : (
+                  <Document
+                    file={pdf.dataUrl}
+                    onLoadSuccess={handleDocumentLoadSuccess}
+                    onLoadError={handleDocumentLoadError}
+                    loading={
+                      <div className="flex items-center justify-center h-full w-full">
+                        <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                      </div>
+                    }
+                    error={
+                      <div className="flex flex-col items-center justify-center h-full w-full">
+                        <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground text-center mb-2">
+                          {language === 'ar' ? 'فشل تحميل الملف' : 'Failed to load PDF'}
+                        </p>
+                        <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
+                          {language === 'ar' 
+                            ? 'قد تكون هناك مشكلة في تنسيق الملف أو أن الملف قد يكون كبيرًا جدًا للعرض.' 
+                            : 'There might be an issue with the file format or the file may be too large to display.'}
+                        </p>
+                        <Button variant="outline" onClick={handleRetryLoading}>
+                          {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                        </Button>
+                      </div>
+                    }
+                  >
+                    <Page 
+                      pageNumber={pageNumber} 
+                      scale={pdfScale}
+                      rotate={pdfRotation}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                      error={
+                        <div className="flex flex-col items-center justify-center p-6">
+                          <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
+                          <p className="text-sm text-center">
+                            {language === 'ar' ? 'خطأ في عرض الصفحة' : 'Error rendering page'}
+                          </p>
+                        </div>
+                      }
+                    />
+                  </Document>
+                )}
+              </div>
+            </div>
+            
+            <div className="lg:w-1/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm flex flex-col">
+              <div className="flex justify-between items-center p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-display text-lg font-medium">
+                    {language === 'ar' ? 'دردشة مع هذا الملف' : 'Chat with this PDF'}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={handleResetChat}
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          aria-label={language === 'ar' ? 'إعادة تعيين المحادثة' : 'Reset chat'}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {language === 'ar' ? 'إعادة تعيين المحادثة' : 'Reset chat'}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setShowChat(!showChat)}
+                    className="h-8 w-8"
+                  >
+                    {showChat ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                  </Button>
+                </div>
+              </div>
+              
+              {showChat && (
+                <>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: '60vh' }}>
+                    {isLoadingMessages ? (
+                      <div className="flex justify-center items-center h-full">
+                        <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                      </div>
+                    ) : chatMessages.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                        <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                        <p className="font-medium mb-2">
+                          {language === 'ar' ? 'اطرح سؤالاً حول هذا الملف' : 'Ask a question about this PDF'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {language === 'ar' 
+                            ? 'يمكنك طرح أسئلة حول محتوى الملف والحصول على إجابات دقيقة باستخدام الذكاء الاصطناعي من Gemini'
+                            : 'Ask questions about the PDF content and get accurate AI-powered answers from Gemini'
+                          }
+                        </p>
+                        {isTempPdf && (
+                          <p className="text-xs text-amber-600 mt-4">
+                            {language === 'ar'
+                              ? 'ملاحظة: هذا ملف مؤقت. سيتم فقدان المحادثة عند إغلاق المتصفح.'
+                              : 'Note: This is a temporary file. Chat will be lost when you close the browser.'}
+                          </p>
                         )}
-                        {chatMessages.map((message) => (
-                          <div key={message.id} className={cn(
-                            "flex flex-col space-y-2",
-                            message.user_id === user?.id ? "items-end" : "items-start"
-                          )}>
-                            <div className={cn(
-                              "rounded-lg p-3 relative overflow-hidden",
-                              message.user_id === user?.id ? "bg-primary text-primary-foreground" : "bg-muted",
-                              message.user_id === 'ai' ? 'bg-green-100 dark:bg-green-800 text-black dark:text-white' : ''
-                            )}>
-                              {message.user_id === 'ai' && (
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-green-200/20 to-transparent animate-[shimmer_2s_infinite] dark:via-green-900/10" />
-                              )}
-                              <MarkdownMessage content={message.content} />
+                      </div>
+                    ) : (
+                      <>
+                        {chatMessages.map(message => (
+                          <div 
+                            key={message.id}
+                            className={cn(
+                              "flex flex-col p-3 rounded-lg max-w-[80%] group relative",
+                              message.isUser 
+                                ? "ml-auto bg-primary text-primary-foreground" 
+                                : "mr-auto bg-muted"
+                            )}
+                          >
+                            <MarkdownMessage 
+                              content={message.content} 
+                              className={message.isUser ? "text-primary-foreground" : ""}
+                            />
+                            <div className="text-xs opacity-70 mt-1 text-right">
+                              {new Date(message.timestamp).toLocaleTimeString()}
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              {message.user_id === user?.id ? 'You' : message.user_email} - {new Date(message.created_at).toLocaleTimeString()}
+
+                            <div className={cn(
+                              "absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity", 
+                              message.isUser ? "left-2" : "right-2",
+                              "flex gap-1"
+                            )}>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-6 w-6 bg-background/80 backdrop-blur-sm rounded-full p-1"
+                                      onClick={() => handleCopyMessage(message.content)}
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {language === 'ar' ? 'نسخ' : 'Copy'}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    className="h-6 w-6 bg-background/80 backdrop-blur-sm rounded-full p-1"
+                                  >
+                                    <MoreHorizontal className="h-3 w-3" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-56 p-2">
+                                  <div className="space-y-1">
+                                    <h3 className="text-sm font-medium mb-2">
+                                      {language === 'ar' ? 'تفاصيل اضافية' : 'More Details'}
+                                    </h3>
+                                    <div className="text-xs text-muted-foreground space-y-2">
+                                      <div>
+                                        <span className="font-medium">{language === 'ar' ? 'النوع:' : 'Type:'}</span>{' '}
+                                        {message.isUser 
+                                          ? (language === 'ar' ? 'رسالة مستخدم' : 'User Message') 
+                                          : (language === 'ar' ? 'رد الذكاء الاصطناعي' : 'AI Response')}
+                                      </div>
+                                      <div>
+                                        <span className="font-medium">{language === 'ar' ? 'الوقت:' : 'Time:'}</span>{' '}
+                                        {new Date(message.timestamp).toLocaleString()}
+                                      </div>
+                                      <div>
+                                        <span className="font-medium">{language === 'ar' ? 'المعرف:' : 'ID:'}</span>{' '}
+                                        {message.id.substring(0, 8)}...
+                                      </div>
+                                      <div className="pt-1">
+                                        <Button 
+                                          variant="secondary" 
+                                          size="sm" 
+                                          className="w-full text-xs" 
+                                          onClick={() => handleCopyMessage(message.content)}
+                                        >
+                                          <Copy className="h-3 w-3 mr-1" />
+                                          {language === 'ar' ? 'نسخ الرسالة' : 'Copy Message'}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
                             </div>
                           </div>
                         ))}
-                        {isProcessingChat && (
-                          <ChatMessageSkeleton />
+
+                        {isAnalyzing && (
+                          <div className="mr-auto max-w-[80%]">
+                            <PDFAnalysisProgress analysis={analysisProgress} />
+                          </div>
                         )}
-                      </div>
-                    </ScrollArea>
-                    <div className="p-4 border-t">
-                      <ChatInput
-                        onSubmit={handleSendChatMessage}
-                        disabled={isAnalyzing || !isInitialAnalysisComplete}
-                      />
-                    </div>
+                        <div ref={chatEndRef} />
+                      </>
+                    )}
                   </div>
-                )}
-              </Card>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Edit Title Modal */}
-      {isEditTitleModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-lg font-semibold mb-4">Edit Title</h2>
-            <Input
-              type="text"
-              value={newTitle}
-              onChange={handleTitleChange}
-              placeholder="Enter new title"
-              className="mb-4"
-            />
-            <div className="flex justify-end space-x-2">
-              <Button variant="ghost" onClick={() => setIsEditTitleModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveTitle}>Save</Button>
+                  
+                  <ChatInput 
+                    onSubmit={handleChatSubmit}
+                    placeholder={language === 'ar' 
+                      ? "اكتب سؤالك حول محتوى الملف..."
+                      : "Type your question about the PDF content..."
+                    }
+                    dir={language === 'ar' ? 'rtl' : 'ltr'}
+                    disabled={isWaitingForResponse}
+                  />
+                </>
+              )}
             </div>
           </div>
         </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-lg font-semibold mb-4">Delete PDF</h2>
-            <p className="mb-4">Are you sure you want to delete this PDF? This action cannot be undone.</p>
-            <div className="flex justify-end space-x-2">
-              <Button variant="ghost" onClick={() => setIsDeleteModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={confirmDeletePDF}>
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      </main>
     </div>
   );
 };

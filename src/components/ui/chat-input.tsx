@@ -5,13 +5,12 @@ import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-interface ChatInputProps {
+interface ChatInputProps extends React.HTMLAttributes<HTMLDivElement> {
   onSubmit: (message: string) => void;
   placeholder?: string;
   disabled?: boolean;
   dir?: "ltr" | "rtl";
   autoFocus?: boolean;
-  className?: string;
 }
 
 export function ChatInput({
