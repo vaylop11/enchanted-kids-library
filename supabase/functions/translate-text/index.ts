@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, targetLanguage, enhancedFormat = false } = await req.json();
+    const { text, targetLanguage } = await req.json();
     
     if (!text || !targetLanguage) {
       return new Response(
@@ -48,7 +48,7 @@ serve(async (req) => {
     let currentChunk = '';
     
     if (text.length > chunkSize) {
-      // Better chunking by paragraphs or sections
+      // Simple chunking by paragraphs or sentences
       const paragraphs = text.split(/\n\n|\r\n\r\n/);
       
       for (const paragraph of paragraphs) {
@@ -78,31 +78,10 @@ serve(async (req) => {
     
     let finalTranslatedText = '';
     
-    // Determine the appropriate prompt based on enhancedFormat flag
-    const getPrompt = (chunk: string) => {
-      if (enhancedFormat) {
-        return `Translate the following text to ${targetLanguage} with professional quality and formatting. 
-               
-Use proper markdown formatting to enhance readability:
-- Use headings (## and ###) for section titles
-- Format lists properly with bullet points or numbers
-- Use **bold** for emphasis on important terms
-- Maintain paragraph structure and spacing
-- Use appropriate formatting for quotes, code blocks, or special content
-- Ensure consistent and professional tone throughout
-
-Only respond with the translated text in well-formatted markdown, nothing else. Do not include any notes, comments or original text:
-
-${chunk}`;
-      } else {
-        return `Translate the following text to ${targetLanguage}. Format the output in markdown to preserve formatting, headings, and structure. Only respond with the translated text in markdown format, nothing else:
-
-${chunk}`;
-      }
-    };
-    
     for (const chunk of chunks) {
-      const prompt = getPrompt(chunk);
+      const prompt = `Translate the following text to ${targetLanguage}. Format the output in markdown to preserve formatting, headings, and structure. Only respond with the translated text in markdown format, nothing else:
+
+${chunk}`;
 
       try {
         const result = await model.generateContent(prompt);
@@ -124,12 +103,12 @@ ${chunk}`;
           
           try {
             // Translate first half
-            const prompt1 = getPrompt(firstHalf);
+            const prompt1 = `Translate the following text to ${targetLanguage}. Format the output in markdown to preserve formatting, headings, and structure. Only respond with the translated text in markdown format, nothing else:\n\n${firstHalf}`;
             const result1 = await model.generateContent(prompt1);
             finalTranslatedText += result1.response.text() + '\n\n';
             
             // Translate second half
-            const prompt2 = getPrompt(secondHalf);
+            const prompt2 = `Translate the following text to ${targetLanguage}. Format the output in markdown to preserve formatting, headings, and structure. Only respond with the translated text in markdown format, nothing else:\n\n${secondHalf}`;
             const result2 = await model.generateContent(prompt2);
             finalTranslatedText += result2.response.text() + '\n\n';
             
@@ -141,14 +120,6 @@ ${chunk}`;
           throw modelError;
         }
       }
-    }
-    
-    // Final post-processing for enhanced formatting
-    if (enhancedFormat) {
-      // Ensure consistent spacing between sections
-      finalTranslatedText = finalTranslatedText
-        .replace(/\n{3,}/g, '\n\n')  // Replace multiple newlines with double newlines
-        .replace(/#+\s*([^\n]+)/g, (match) => `\n${match}\n`); // Add spacing around headers
     }
     
     return new Response(
