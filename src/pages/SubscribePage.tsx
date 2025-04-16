@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
@@ -16,6 +17,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import SEO from '@/components/SEO';
 import ProSubscriptionCard from '@/components/ProSubscriptionCard';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 const SubscribePage = () => {
   const navigate = useNavigate();
@@ -236,7 +239,6 @@ const SubscribePage = () => {
                     components: "buttons",
                     debug: true
                   }}
-                  onError={handlePayPalError}
                 >
                   <PayPalButtons
                     createSubscription={(data, actions) => {
