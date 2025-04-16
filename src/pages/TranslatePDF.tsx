@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowLeft, FileText, Languages, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileText, Languages, Loader2, ZoomIn, ZoomOut, RotateCcw, RotateCw, ArrowLeftCircle, ArrowRightCircle } from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
@@ -33,12 +33,15 @@ const TranslatePDF = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
-  const [pdfUrl, setPdfUrl, ] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfTitle, setPdfTitle] = useState('');
   const [translatedText, setTranslatedText] = useState('');
   const [targetLanguage, setTargetLanguage] = useState('en');
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTempPdf, setIsTempPdf] = useState(false);
+  
+  const [scale, setScale] = useState(1);
+  const [rotation, setRotation] = useState(0);
 
   useEffect(() => {
     if (!id) {
@@ -125,9 +128,24 @@ const TranslatePDF = () => {
   const handlePageChange = async (newPage: number) => {
     if (newPage >= 1 && newPage <= (numPages || 1)) {
       setPageNumber(newPage);
-      // Automatically translate the new page
       await translateCurrentPage(newPage, targetLanguage);
     }
+  };
+
+  const handleZoomIn = () => {
+    setScale((prev) => Math.min(prev + 0.2, 3));
+  };
+
+  const handleZoomOut = () => {
+    setScale((prev) => Math.max(prev - 0.2, 0.4));
+  };
+
+  const handleRotateLeft = () => {
+    setRotation((prev) => (prev - 90) % 360);
+  };
+
+  const handleRotateRight = () => {
+    setRotation((prev) => (prev + 90) % 360);
   };
 
   const translateCurrentPage = async (page: number, lang: string) => {
@@ -137,14 +155,12 @@ const TranslatePDF = () => {
     setTranslatedText('');
     
     try {
-      // Extract text from the current page
       const extractedText = await extractTextFromPDF(pdfUrl, id || 'temp', undefined, {
         quickMode: true,
         maxPages: 1,
         specificPage: page
       });
       
-      // Translate the extracted text
       const result = await translateText(extractedText, lang);
       setTranslatedText(result.translatedText);
     } catch (error) {
@@ -157,7 +173,6 @@ const TranslatePDF = () => {
     }
   };
 
-  // Trigger translation when target language changes
   useEffect(() => {
     if (isLoaded && targetLanguage) {
       translateCurrentPage(pageNumber, targetLanguage);
@@ -222,6 +237,78 @@ const TranslatePDF = () => {
                 </p>
               </div>
               
+              <div className="bg-muted/20 p-3 flex justify-between items-center border-b">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pageNumber - 1)}
+                  disabled={pageNumber <= 1}
+                  className="rounded-full"
+                >
+                  <ArrowLeftCircle className="h-4 w-4" />
+                </Button>
+                
+                <div className="text-sm font-medium">
+                  {language === 'ar' 
+                    ? `صفحة ${pageNumber} من ${numPages || '?'}`
+                    : `Page ${pageNumber} of ${numPages || '?'}`}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pageNumber + 1)}
+                  disabled={!numPages || pageNumber >= numPages}
+                  className="rounded-full"
+                >
+                  <ArrowRightCircle className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="bg-muted/10 p-3 flex justify-center items-center gap-3 border-b">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleZoomOut}
+                  className="rounded-full h-9 w-9 p-0"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                
+                <span className="text-sm font-medium">
+                  {Math.round(scale * 100)}%
+                </span>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleZoomIn}
+                  className="rounded-full h-9 w-9 p-0"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+                
+                <div className="mx-2 h-6 border-r border-border" />
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRotateLeft}
+                  className="rounded-full h-9 w-9 p-0"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRotateRight}
+                  className="rounded-full h-9 w-9 p-0"
+                >
+                  <RotateCw className="h-4 w-4" />
+                </Button>
+              </div>
+              
               <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
                 {!isLoaded ? (
                   <div className="flex items-center justify-center h-full">
@@ -241,35 +328,11 @@ const TranslatePDF = () => {
                       pageNumber={pageNumber} 
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
+                      scale={scale}
+                      rotate={rotation}
                     />
                   </Document>
                 )}
-              </div>
-              
-              <div className="p-4 border-t bg-muted/10 flex justify-between items-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pageNumber - 1)}
-                  disabled={pageNumber <= 1}
-                >
-                  {language === 'ar' ? 'السابق' : 'Previous'}
-                </Button>
-                
-                <div className="text-sm">
-                  {language === 'ar' 
-                    ? `صفحة ${pageNumber} من ${numPages || '?'}`
-                    : `Page ${pageNumber} of ${numPages || '?'}`}
-                </div>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pageNumber + 1)}
-                  disabled={!numPages || pageNumber >= numPages}
-                >
-                  {language === 'ar' ? 'التالي' : 'Next'}
-                </Button>
               </div>
             </div>
             
