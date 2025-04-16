@@ -42,7 +42,7 @@ const AdminPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-4 border-purple-800 border-r-transparent rounded-full"></div>
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-r-transparent rounded-full"></div>
       </div>
     );
   }
@@ -58,7 +58,7 @@ const AdminPage = () => {
   }
   
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-background/95 via-purple-50">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
       
       <main className="flex-1 pt-24 pb-20 px-4 md:px-6">

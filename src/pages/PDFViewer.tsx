@@ -1,7 +1,8 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw } from 'lucide-react';
+import { ArrowLeft, FileText, Share, Send, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -9,21 +10,9 @@ import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -58,9 +47,7 @@ const PDFViewer = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
-  const [pageInputValue, setPageInputValue] = useState("1");
   const [pdfScale, setPdfScale] = useState(1.0);
-  const [pdfRotation, setPdfRotation] = useState(0);
   const [showPdfControls, setShowPdfControls] = useState(true);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -273,7 +260,7 @@ const PDFViewer = () => {
 
   useEffect(() => {
     scrollToLatestMessage();
-  }, [chatMessages, isAnalyzing]);
+  }, [chatMessages]);
 
   const handleShare = () => {
     if (navigator.share) {
@@ -289,47 +276,14 @@ const PDFViewer = () => {
     }
   };
 
-  // PDF navigation and display handlers
   const handlePrevPage = () => {
-    const newPage = Math.max(pageNumber - 1, 1);
-    setPageNumber(newPage);
-    setPageInputValue(newPage.toString());
+    setPageNumber(prevPage => Math.max(prevPage - 1, 1));
   };
 
   const handleNextPage = () => {
     if (numPages) {
-      const newPage = Math.min(pageNumber + 1, numPages);
-      setPageNumber(newPage);
-      setPageInputValue(newPage.toString());
+      setPageNumber(prevPage => Math.min(prevPage + 1, numPages));
     }
-  };
-
-  // New page input handler
-  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPageInputValue(e.target.value.replace(/[^0-9]/g, ''));
-  };
-
-  const handlePageInputSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const pageNum = parseInt(pageInputValue);
-    if (isNaN(pageNum) || !numPages) {
-      setPageInputValue(pageNumber.toString());
-      return;
-    }
-    
-    const validPage = Math.max(1, Math.min(pageNum, numPages));
-    setPageNumber(validPage);
-    setPageInputValue(validPage.toString());
-  };
-
-  // New rotation handlers
-  const handleRotateClockwise = () => {
-    setPdfRotation((prev) => (prev + 90) % 360);
-  };
-
-  const handleRotateCounterClockwise = () => {
-    setPdfRotation((prev) => (prev - 90 + 360) % 360);
   };
 
   const handleZoomIn = () => {
@@ -362,7 +316,7 @@ const PDFViewer = () => {
           : 'Starting text extraction from PDF...'
       });
       
-      const text = await extractTextFromPDF(pdf.dataUrl, pdf.id, updateAnalysisProgress);
+      const text = await extractTextFromPDF(pdf.dataUrl, updateAnalysisProgress);
       setPdfTextContent(text);
       
       setAnalysisProgress({
@@ -445,16 +399,6 @@ const PDFViewer = () => {
       setIsAnalyzing(true);
       setIsWaitingForResponse(true);
       
-      setAnalysisProgress({
-        stage: 'waiting',
-        progress: 15,
-        message: language === 'ar'
-          ? 'لحظة من فضلك، نعمل على إجابة سؤالك...'
-          : 'One moment please, working on your answer...'
-      });
-      
-      scrollToLatestMessage();
-      
       try {
         let textContent = pdfTextContent;
         if (!textContent) {
@@ -465,7 +409,6 @@ const PDFViewer = () => {
               ? 'استخراج النص من ملف PDF...'
               : 'Extracting text from PDF...'
           });
-          
           textContent = await extractPDFContent();
           
           if (!textContent) {
@@ -491,12 +434,7 @@ const PDFViewer = () => {
             : 'Generating accurate answer...'
         });
         
-        const aiContent = await analyzePDFWithGemini(
-          textContent, 
-          userMessageContent, 
-          updateAnalysisProgress, 
-          chatMessages.filter(m => m.isUser === false).slice(-5)
-        );
+        const aiContent = await analyzePDFWithGemini(textContent, userMessageContent, updateAnalysisProgress);
         
         let savedAiMessage: ChatMessage | null = null;
         
@@ -618,42 +556,6 @@ const PDFViewer = () => {
     }
   };
 
-  const handleResetChat = () => {
-    if (!id || !pdf) return;
-    
-    const confirmMessage = language === 'ar' 
-      ? 'هل أنت متأكد أنك تريد مسح جميع الرسائل؟'
-      : 'Are you sure you want to clear all messages?';
-      
-    if (window.confirm(confirmMessage)) {
-      setChatMessages([]);
-      
-      if (isTempPdf) {
-        const tempPdfData = sessionStorage.getItem('tempPdfFile');
-        if (tempPdfData) {
-          try {
-            const parsedData = JSON.parse(tempPdfData);
-            parsedData.fileData.chatMessages = [];
-            sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
-          } catch (error) {
-            console.error('Error clearing chat messages from temporary PDF:', error);
-          }
-        }
-      }
-      
-      toast.success(language === 'ar' 
-        ? 'تم مسح المحادثة بنجاح'
-        : 'Chat cleared successfully');
-    }
-  };
-
-  const handleCopyMessage = (content: string) => {
-    navigator.clipboard.writeText(content);
-    toast.success(language === 'ar' 
-      ? 'تم نسخ الرسالة إلى الحافظة'
-      : 'Message copied to clipboard');
-  };
-
   if (!pdf) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -737,115 +639,50 @@ const PDFViewer = () => {
               
               {showPdfControls && (
                 <div className="flex flex-wrap justify-between items-center p-4 bg-muted/20 border-b">
-                  <div className="flex items-center flex-wrap gap-4 w-full md:w-auto">
-                    {/* Page navigation controls */}
+                  <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-2">
                       <Button 
                         variant="outline" 
-                        size="icon"
-                        className="h-8 w-8" 
+                        size="sm" 
                         onClick={handlePrevPage}
                         disabled={pageNumber <= 1 || pdfError !== null || !pdf.dataUrl}
                       >
-                        <ArrowLeft className="h-4 w-4" />
+                        {language === 'ar' ? 'السابق' : 'Prev'}
                       </Button>
-                      
-                      <form onSubmit={handlePageInputSubmit} className="flex items-center">
-                        <Input
-                          type="text"
-                          value={pageInputValue}
-                          onChange={handlePageInputChange}
-                          onBlur={handlePageInputSubmit}
-                          className="page-number-input"
-                          disabled={pdfError !== null || !pdf.dataUrl}
-                          aria-label={language === 'ar' ? 'رقم الصفحة' : 'Page number'}
-                        />
-                        <span className="px-2 text-sm text-muted-foreground">/ {numPages || '?'}</span>
-                      </form>
-                      
+                      <span className="text-sm">
+                        {language === 'ar' 
+                          ? `${pageNumber} من ${numPages || '?'}`
+                          : `${pageNumber} of ${numPages || '?'}`
+                        }
+                      </span>
                       <Button 
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8" 
+                        variant="outline" 
+                        size="sm" 
                         onClick={handleNextPage}
                         disabled={!numPages || pageNumber >= numPages || pdfError !== null || !pdf.dataUrl}
                       >
-                        <ArrowLeft className="h-4 w-4 rotate-180" />
+                        {language === 'ar' ? 'التالي' : 'Next'}
                       </Button>
                     </div>
                     
-                    {/* Zoom controls */}
                     <div className="flex items-center space-x-2">
                       <Button 
                         variant="outline" 
-                        size="icon"
-                        className="h-8 w-8"
+                        size="sm" 
                         onClick={handleZoomOut}
                         disabled={pdfError !== null || !pdf.dataUrl}
-                      >
-                        -
-                      </Button>
-                      <span className="text-sm min-w-[50px] text-center">{Math.round(pdfScale * 100)}%</span>
+                      >-</Button>
+                      <span className="text-sm">{Math.round(pdfScale * 100)}%</span>
                       <Button 
                         variant="outline" 
-                        size="icon"
-                        className="h-8 w-8"
+                        size="sm" 
                         onClick={handleZoomIn}
                         disabled={pdfError !== null || !pdf.dataUrl}
-                      >
-                        +
-                      </Button>
-                    </div>
-                    
-                    {/* Rotation controls */}
-                    <div className="flex items-center space-x-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              className="h-8 w-8 rotation-control"
-                              onClick={handleRotateCounterClockwise}
-                              disabled={pdfError !== null || !pdf.dataUrl}
-                            >
-                              <RotateCcw className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {language === 'ar' ? 'تدوير عكس عقارب الساعة' : 'Rotate counterclockwise'}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              className="h-8 w-8 rotation-control"
-                              onClick={handleRotateClockwise}
-                              disabled={pdfError !== null || !pdf.dataUrl}
-                            >
-                              <RotateCw className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {language === 'ar' ? 'تدوير باتجاه عقارب الساعة' : 'Rotate clockwise'}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      
-                      {pdfRotation !== 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          {pdfRotation}°
-                        </span>
-                      )}
+                      >+</Button>
                     </div>
                   </div>
                   
-                  <div className="text-sm text-muted-foreground mt-2 md:mt-0">
+                  <div className="text-sm text-muted-foreground">
                     {language === 'ar' ? 'تم التحميل' : 'Uploaded'}: {pdf.uploadDate}
                   </div>
                 </div>
@@ -929,7 +766,6 @@ const PDFViewer = () => {
                     <Page 
                       pageNumber={pageNumber} 
                       scale={pdfScale}
-                      rotate={pdfRotation}
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
                       error={
@@ -953,40 +789,21 @@ const PDFViewer = () => {
                     {language === 'ar' ? 'دردشة مع هذا الملف' : 'Chat with this PDF'}
                   </h2>
                 </div>
-                <div className="flex items-center gap-1">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={handleResetChat}
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          aria-label={language === 'ar' ? 'إعادة تعيين المحادثة' : 'Reset chat'}
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {language === 'ar' ? 'إعادة تعيين المحادثة' : 'Reset chat'}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => setShowChat(!showChat)}
-                    className="h-8 w-8"
-                  >
-                    {showChat ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                  </Button>
-                </div>
+                <button 
+                  onClick={() => setShowChat(!showChat)}
+                  className="p-1 rounded-md hover:bg-muted transition-colors"
+                >
+                  {showChat ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </button>
               </div>
               
               {showChat && (
                 <>
                   <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: '60vh' }}>
+                    {isAnalyzing && (
+                      <PDFAnalysisProgress analysis={analysisProgress} />
+                    )}
+                    
                     {isLoadingMessages ? (
                       <div className="flex justify-center items-center h-full">
                         <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
@@ -1017,124 +834,58 @@ const PDFViewer = () => {
                           <div 
                             key={message.id}
                             className={cn(
-                              "flex flex-col p-3 rounded-lg max-w-[80%] group relative",
+                              "flex flex-col p-3 rounded-lg max-w-[80%]",
                               message.isUser 
                                 ? "ml-auto bg-primary text-primary-foreground" 
                                 : "mr-auto bg-muted"
                             )}
                           >
-                            <div className="whitespace-pre-wrap text-sm">
+                            <div className="whitespace-pre-wrap break-words">
                               {message.content}
                             </div>
-                            <div className="text-xs opacity-70 mt-1 text-right">
-                              {new Date(message.timestamp).toLocaleTimeString()}
-                            </div>
-
-                            <div className={cn(
-                              "absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity", 
-                              message.isUser ? "left-2" : "right-2",
-                              "flex gap-1"
-                            )}>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="h-6 w-6 bg-background/80 backdrop-blur-sm rounded-full p-1"
-                                      onClick={() => handleCopyMessage(message.content)}
-                                    >
-                                      <Copy className="h-3 w-3" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {language === 'ar' ? 'نسخ' : 'Copy'}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    className="h-6 w-6 bg-background/80 backdrop-blur-sm rounded-full p-1"
-                                  >
-                                    <MoreHorizontal className="h-3 w-3" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-56 p-2">
-                                  <div className="space-y-1">
-                                    <h3 className="text-sm font-medium mb-2">
-                                      {language === 'ar' ? 'تفاصيل اضافية' : 'More Details'}
-                                    </h3>
-                                    <div className="text-xs text-muted-foreground space-y-2">
-                                      <div>
-                                        <span className="font-medium">{language === 'ar' ? 'النوع:' : 'Type:'}</span>{' '}
-                                        {message.isUser 
-                                          ? (language === 'ar' ? 'رسالة مستخدم' : 'User Message') 
-                                          : (language === 'ar' ? 'رد الذكاء الاصطناعي' : 'AI Response')}
-                                      </div>
-                                      <div>
-                                        <span className="font-medium">{language === 'ar' ? 'الوقت:' : 'Time:'}</span>{' '}
-                                        {new Date(message.timestamp).toLocaleString()}
-                                      </div>
-                                      <div>
-                                        <span className="font-medium">{language === 'ar' ? 'المعرف:' : 'ID:'}</span>{' '}
-                                        {message.id.substring(0, 8)}...
-                                      </div>
-                                      <div className="pt-1">
-                                        <Button 
-                                          variant="secondary" 
-                                          size="sm" 
-                                          className="w-full text-xs" 
-                                          onClick={() => handleCopyMessage(message.content)}
-                                        >
-                                          <Copy className="h-3 w-3 mr-1" />
-                                          {language === 'ar' ? 'نسخ الرسالة' : 'Copy Message'}
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
+                            <div className="flex justify-between items-center mt-2">
+                              <span className="text-xs opacity-70">
+                                {message.timestamp instanceof Date 
+                                  ? message.timestamp.toLocaleTimeString() 
+                                  : new Date(message.timestamp).toLocaleTimeString()
+                                }
+                              </span>
                             </div>
                           </div>
                         ))}
-
-                        {isAnalyzing && (
-                          <div className="mr-auto max-w-[80%]">
-                            <PDFAnalysisProgress analysis={analysisProgress} />
-                          </div>
-                        )}
                         <div ref={chatEndRef} />
                       </>
                     )}
                   </div>
                   
-                  <form 
-                    onSubmit={handleChatSubmit} 
-                    className="border-t p-4 flex gap-2 items-end"
-                  >
-                    <Textarea
-                      value={chatInput}
-                      onChange={e => setChatInput(e.target.value)}
-                      placeholder={language === 'ar' 
-                        ? "اكتب سؤالك حول محتوى الملف..."
-                        : "Type your question about the PDF content..."
-                      }
-                      className="resize-none min-h-[80px]"
-                      dir={language === 'ar' ? 'rtl' : 'ltr'}
-                      disabled={isWaitingForResponse}
-                    />
-                    <Button 
-                      type="submit" 
-                      size="icon" 
-                      className="h-10 w-10 rounded-full flex-shrink-0"
-                      disabled={!chatInput.trim() || isWaitingForResponse}
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
+                  <form onSubmit={handleChatSubmit} className="p-4 border-t bg-muted/10">
+                    <div className="flex gap-2">
+                      <Textarea
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder={language === 'ar' ? 'اكتب سؤالك هنا...' : 'Type your question here...'}
+                        className="min-h-[60px] resize-none"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleChatSubmit(e);
+                          }
+                        }}
+                        disabled={isWaitingForResponse}
+                      />
+                      <Button 
+                        type="submit" 
+                        size="icon" 
+                        className="h-auto"
+                        disabled={!chatInput.trim() || isWaitingForResponse}
+                      >
+                        {isWaitingForResponse ? (
+                          <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/20 border-t-current animate-spin" />
+                        ) : (
+                          <Send className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </div>
                   </form>
                 </>
               )}

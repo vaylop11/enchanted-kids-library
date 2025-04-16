@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { supabaseUntyped } from '@/integrations/supabase/client';
-import { Loader2, RefreshCw, Eye, Bold, Heading1, Heading2, Heading3, Link as LinkIcon, Sparkles, PencilLine } from 'lucide-react';
+import { Loader2, RefreshCw, Eye, Bold, Heading1, Heading2, Heading3, Link as LinkIcon } from 'lucide-react';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -19,8 +19,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import BlogManagement from './BlogManagement';
 import ImageUploader from './ImageUploader';
 import UserManagement from './UserManagement';
+import AdsenseManagement from './AdsenseManagement';
 
-// Form schema for blog posts
 const formSchema = z.object({
   title: z.string().min(5, {
     message: "Title must be at least 5 characters.",
@@ -36,27 +36,17 @@ const formSchema = z.object({
   }).optional(),
 });
 
-// Form schema for API keys
-const apiKeySchema = z.object({
-  geminiApiKey: z.string().min(10, {
-    message: "API key must be at least 10 characters.",
-  }),
-});
-
 const AdminPanel = () => {
   const { isAdmin, user } = useAuth();
   const navigate = useNavigate();
   const { language } = useLanguage();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [activeTab, setActiveTab] = useState('create');
   const [imageUrl, setImageUrl] = useState('');
   const [titleSlug, setTitleSlug] = useState('');
-  const [currentApiKey, setCurrentApiKey] = useState('');
 
-  // Blog post form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -66,41 +56,6 @@ const AdminPanel = () => {
       slug: '',
     },
   });
-
-  // API key form
-  const apiKeyForm = useForm<z.infer<typeof apiKeySchema>>({
-    resolver: zodResolver(apiKeySchema),
-    defaultValues: {
-      geminiApiKey: '',
-    },
-  });
-
-  // Fetch current API key on load
-  useEffect(() => {
-    const fetchApiKey = async () => {
-      try {
-        const { data, error } = await supabaseUntyped.functions.invoke('get-gemini-api-key');
-        
-        if (error) throw error;
-        
-        if (data && data.apiKey) {
-          // Show masked version of the API key
-          const maskedKey = data.apiKey.substring(0, 4) + '...' + 
-            data.apiKey.substring(data.apiKey.length - 4);
-          setCurrentApiKey(maskedKey);
-          
-          // Don't set the actual key in the form for security reasons
-          apiKeyForm.setValue('geminiApiKey', '');
-        }
-      } catch (error) {
-        console.error('Error fetching API key:', error);
-      }
-    };
-    
-    if (isAdmin) {
-      fetchApiKey();
-    }
-  }, [isAdmin]);
 
   // Generate slug from title
   const generateSlug = (title: string) => {
@@ -227,7 +182,7 @@ const AdminPanel = () => {
     setImageUrl(url);
   };
 
-  const onSubmitBlogPost = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
       toast.error('You must be logged in to publish a blog post');
       return;
@@ -293,41 +248,6 @@ const AdminPanel = () => {
       );
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const onSubmitApiKey = async (values: z.infer<typeof apiKeySchema>) => {
-    setIsSavingApiKey(true);
-    
-    try {
-      const { error } = await supabaseUntyped.functions.invoke('update-gemini-api-key', {
-        body: { apiKey: values.geminiApiKey }
-      });
-      
-      if (error) throw error;
-      
-      // Update the displayed masked key
-      const maskedKey = values.geminiApiKey.substring(0, 4) + '...' + 
-        values.geminiApiKey.substring(values.geminiApiKey.length - 4);
-      setCurrentApiKey(maskedKey);
-      
-      // Clear the form
-      apiKeyForm.reset();
-      
-      toast.success(
-        language === 'ar'
-          ? 'تم تحديث مفتاح API Gemini بنجاح'
-          : 'Gemini API key updated successfully'
-      );
-    } catch (error) {
-      console.error('Error updating API key:', error);
-      toast.error(
-        language === 'ar'
-          ? 'حدث خطأ أثناء تحديث مفتاح API'
-          : 'Error updating API key'
-      );
-    } finally {
-      setIsSavingApiKey(false);
     }
   };
 
@@ -413,19 +333,14 @@ const AdminPanel = () => {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl py-12">
-      <h1 className="text-3xl font-bold mb-8 text-center">
-        {language === 'ar' ? 'لوحة الإدارة' : 'Admin Dashboard'}
+    <div className="container mx-auto max-w-3xl py-12">
+      <h1 className="text-3xl font-bold mb-8">
+        {language === 'ar' ? 'لوحة الإدارة' : 'Admin Panel'}
       </h1>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="mb-6 w-full justify-start overflow-x-auto p-0.5 flex gap-1">
-          <TabsTrigger value="settings" className="gap-1.5 items-center">
-            <Sparkles className="h-4 w-4" />
-            {language === 'ar' ? 'الإعدادات' : 'API Settings'}
-          </TabsTrigger>
-          <TabsTrigger value="create" className="gap-1.5 items-center">
-            <PencilLine className="h-4 w-4" />
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="create">
             {language === 'ar' ? 'إنشاء مقال' : 'Create Post'}
           </TabsTrigger>
           <TabsTrigger value="manage">
@@ -434,91 +349,14 @@ const AdminPanel = () => {
           <TabsTrigger value="users">
             {language === 'ar' ? 'إدارة المستخدمين' : 'Manage Users'}
           </TabsTrigger>
+          <TabsTrigger value="adsense">
+            {language === 'ar' ? 'إدارة الإعلانات' : 'Manage Ads'}
+          </TabsTrigger>
         </TabsList>
         
-        {/* API Settings Tab */}
-        <TabsContent value="settings">
-          <Card className="border-2 border-opacity-50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
-              <CardTitle>
-                {language === 'ar' ? 'إعدادات API' : 'API Settings'}
-              </CardTitle>
-              <CardDescription>
-                {language === 'ar' 
-                  ? 'قم بتكوين مفاتيح API لتمكين وظائف مختلفة.'
-                  : 'Configure API keys to enable various functionalities.'}
-              </CardDescription>
-            </CardHeader>
-            <Form {...apiKeyForm}>
-              <form onSubmit={apiKeyForm.handleSubmit(onSubmitApiKey)}>
-                <CardContent className="space-y-6 pt-6">
-                  <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg mb-4">
-                    <h3 className="font-medium text-blue-700 dark:text-blue-300 flex items-center gap-2 mb-2">
-                      <Sparkles className="h-4 w-4" />
-                      {language === 'ar' ? 'مفتاح Gemini API' : 'Gemini API Key'}
-                    </h3>
-                    <p className="text-sm text-blue-600/80 dark:text-blue-400/80">
-                      {language === 'ar'
-                        ? 'يُستخدم مفتاح Gemini API لتمكين إنشاء محتوى AI والدردشة مع PDF.'
-                        : 'The Gemini API key is used to enable AI content generation and PDF chat functionalities.'}
-                    </p>
-                  </div>
-
-                  {currentApiKey && (
-                    <div className="flex items-center p-3 bg-muted/30 rounded-md mb-2">
-                      <p className="text-sm font-mono">
-                        {language === 'ar' ? 'المفتاح الحالي: ' : 'Current key: '}
-                        <span className="font-semibold">{currentApiKey}</span>
-                      </p>
-                    </div>
-                  )}
-
-                  <FormField
-                    control={apiKeyForm.control}
-                    name="geminiApiKey"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          {language === 'ar' ? 'مفتاح API الجديد' : 'New API Key'}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type="password"
-                            placeholder={language === 'ar' ? 'أدخل مفتاح Gemini API الجديد' : 'Enter new Gemini API key'}
-                            className="font-mono"
-                            autoComplete="off"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          {language === 'ar'
-                            ? 'أدخل مفتاح API جديد من Google AI Studio'
-                            : 'Enter a new API key from Google AI Studio'}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    type="submit" 
-                    disabled={isSavingApiKey || !apiKeyForm.formState.isDirty} 
-                    className="w-full"
-                  >
-                    {isSavingApiKey && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {language === 'ar' ? 'تحديث مفتاح API' : 'Update API Key'}
-                  </Button>
-                </CardFooter>
-              </form>
-            </Form>
-          </Card>
-        </TabsContent>
-        
-        {/* Create Post Tab */}
         <TabsContent value="create">
-          <Card className="border-2 border-opacity-50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-950/20 dark:to-teal-950/20">
+          <Card>
+            <CardHeader>
               <CardTitle>
                 {language === 'ar' ? 'إنشاء مقال جديد' : 'Create New Blog Post'}
               </CardTitle>
@@ -529,7 +367,7 @@ const AdminPanel = () => {
               </CardDescription>
             </CardHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmitBlogPost)}>
+              <form onSubmit={form.handleSubmit(onSubmit)}>
                 <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
@@ -551,7 +389,6 @@ const AdminPanel = () => {
                             variant="outline" 
                             onClick={() => generateBlogPost(field.value)}
                             disabled={isGenerating || !field.value}
-                            className="shrink-0"
                           >
                             {isGenerating ? (
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -699,11 +536,7 @@ const AdminPanel = () => {
                   />
                 </CardContent>
                 <CardFooter>
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting || isGenerating} 
-                    className="w-full bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
-                  >
+                  <Button type="submit" disabled={isSubmitting || isGenerating} className="w-full">
                     {isSubmitting && (
                       <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent" />
                     )}
@@ -715,10 +548,9 @@ const AdminPanel = () => {
           </Card>
         </TabsContent>
         
-        {/* Manage Posts Tab */}
         <TabsContent value="manage">
-          <Card className="border-2 border-opacity-50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20">
+          <Card>
+            <CardHeader>
               <CardTitle>
                 {language === 'ar' ? 'إدارة المقالات' : 'Manage Blog Posts'}
               </CardTitle>
@@ -734,10 +566,9 @@ const AdminPanel = () => {
           </Card>
         </TabsContent>
 
-        {/* Manage Users Tab */}
         <TabsContent value="users">
-          <Card className="border-2 border-opacity-50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+          <Card>
+            <CardHeader>
               <CardTitle>
                 {language === 'ar' ? 'إدارة المستخدمين' : 'Manage Users'}
               </CardTitle>
@@ -751,6 +582,10 @@ const AdminPanel = () => {
               <UserManagement />
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="adsense">
+          <AdsenseManagement />
         </TabsContent>
       </Tabs>
     </div>

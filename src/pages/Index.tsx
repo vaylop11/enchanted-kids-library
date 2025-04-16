@@ -13,34 +13,13 @@ import SEO from '@/components/SEO';
 const Index = () => {
   const { language } = useLanguage();
 
-  const pageTitle = language === 'ar'
-    ? 'Gemi ChatPDF - اقرأ وتحدث مع ملفات PDF'
-    : 'Gemi ChatPDF - Free AI PDF Chat & Reader';
-  
-  const pageDescription = language === 'ar'
-    ? 'دردش مع ملفات PDF مجانًا باستخدام الذكاء الاصطناعي! قم بتحميل أي ملف PDF واحصل على إجابات فورية. تشات PDF هي الطريقة الذكية لاستخراج المعلومات من المستندات.'
-    : 'Chat with PDFs for free using Gemi AI! Upload any PDF and get instant answers. Gemi ChatPDF is the smart way to extract information from documents.';
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background via-muted/5">
       <SEO 
-        title={pageTitle}
-        description={pageDescription}
+        title="Gemi ChatPDF - Free AI PDF Chat & Reader | Talk to Your Documents"
+        description="Chat with PDFs for free using Gemi AI! Upload any PDF and get instant answers. Gemi ChatPDF is the smart way to extract information from documents."
         keywords="Gemi ChatPDF, PDF chat, AI PDF reader, chat with PDF, free PDF analysis, document AI, PDF assistant"
         ogUrl="https://chatpdf.icu"
-        canonicalUrl="https://chatpdf.icu"
-        schema={{
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          "url": "https://chatpdf.icu",
-          "name": "Gemi ChatPDF",
-          "description": "Chat with PDFs for free using Gemi AI! Upload any PDF and get instant answers.",
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://chatpdf.icu/pdfs?q={search_term_string}",
-            "query-input": "required name=search_term_string"
-          }
-        }}
       />
       
       <Navbar />

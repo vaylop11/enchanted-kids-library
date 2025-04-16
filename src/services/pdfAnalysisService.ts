@@ -12,8 +12,7 @@ export type AnalysisStage =
   | 'analyzing' 
   | 'generating' 
   | 'complete' 
-  | 'error'
-  | 'waiting'; // Added waiting stage
+  | 'error';
 
 export interface AnalysisProgress {
   stage: AnalysisStage;
@@ -21,33 +20,14 @@ export interface AnalysisProgress {
   message: string;
 }
 
-let cachedPDFText: Record<string, string> = {};
-
 /**
  * Extracts text content from a PDF file
- * Added cache to prevent re-extraction of PDFs that were already processed
  */
 export const extractTextFromPDF = async (
   pdfUrl: string, 
-  pdfId: string,
-  updateProgress?: (progress: AnalysisProgress) => void,
-  extractionOptions: {
-    quickMode?: boolean; // If true, only extracts a portion of the document for faster response
-    maxPages?: number;   // Maximum pages to extract in quick mode
-  } = {}
+  updateProgress?: (progress: AnalysisProgress) => void
 ): Promise<string> => {
   try {
-    // Check if we already have the text for this PDF
-    if (cachedPDFText[pdfId]) {
-      console.log('Using cached PDF text');
-      updateProgress?.({
-        stage: 'extracting',
-        progress: 100,
-        message: 'Using cached PDF text'
-      });
-      return cachedPDFText[pdfId];
-    }
-    
     updateProgress?.({
       stage: 'extracting',
       progress: 0,
@@ -59,16 +39,12 @@ export const extractTextFromPDF = async (
     
     // Total pages for progress calculation
     const totalPages = pdf.numPages;
-    const { quickMode, maxPages } = extractionOptions;
     
-    // Always process all pages unless quickMode is explicitly set to true
-    const pagesToProcess = quickMode && maxPages ? Math.min(maxPages, totalPages) : totalPages;
-    
-    for (let i = 1; i <= pagesToProcess; i++) {
+    for (let i = 1; i <= totalPages; i++) {
       updateProgress?.({
         stage: 'extracting',
-        progress: Math.round((i - 1) / pagesToProcess * 100),
-        message: `Extracting text from page ${i} of ${quickMode ? `${pagesToProcess} (quick mode)` : totalPages}...`
+        progress: Math.round((i - 1) / totalPages * 100),
+        message: `Extracting text from page ${i} of ${totalPages}...`
       });
       
       const page = await pdf.getPage(i);
@@ -79,19 +55,10 @@ export const extractTextFromPDF = async (
       // Update progress after each page
       updateProgress?.({
         stage: 'extracting',
-        progress: Math.round(i / pagesToProcess * 100),
-        message: `Extracted page ${i}`
+        progress: Math.round(i / totalPages * 100),
+        message: `Extracted page ${i} of ${totalPages}`
       });
-      
-      // Only break early if quickMode is explicitly set to true
-      if (quickMode && fullText.length > 5000 && i >= Math.min(5, pagesToProcess)) {
-        fullText += `\n\n[Note: Only the first ${i} pages were analyzed for quick response]`;
-        break;
-      }
     }
-    
-    // Cache the extracted text
-    cachedPDFText[pdfId] = fullText.trim();
     
     updateProgress?.({
       stage: 'analyzing',
@@ -117,20 +84,9 @@ export const extractTextFromPDF = async (
 export const analyzePDFWithGemini = async (
   pdfText: string, 
   userQuestion: string,
-  updateProgress?: (progress: AnalysisProgress) => void,
-  previousChat: any[] = []
+  updateProgress?: (progress: AnalysisProgress) => void
 ): Promise<string> => {
   try {
-    // First set the waiting state before starting the analysis
-    updateProgress?.({
-      stage: 'waiting',
-      progress: 20,
-      message: 'Preparing your request...'
-    });
-    
-    // Short delay to show the waiting state
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
     updateProgress?.({
       stage: 'analyzing',
       progress: 30,
@@ -138,11 +94,10 @@ export const analyzePDFWithGemini = async (
     });
     
     const { data, error } = await supabase.functions.invoke('analyze-pdf-with-gemini', {
-      body: { pdfText, userQuestion, previousChat },
+      body: { pdfText, userQuestion },
     });
 
     if (error) {
-      console.error('Gemini API error:', error);
       updateProgress?.({
         stage: 'error',
         progress: 0,
@@ -156,6 +111,9 @@ export const analyzePDFWithGemini = async (
       progress: 70,
       message: 'Generating response...'
     });
+    
+    // Simulate a slight delay for the UI to show the generating stage
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     updateProgress?.({
       stage: 'complete',
@@ -172,14 +130,5 @@ export const analyzePDFWithGemini = async (
       message: error instanceof Error ? error.message : 'Failed to analyze PDF content'
     });
     throw new Error('Failed to analyze PDF content');
-  }
-};
-
-// Clear the cache for a specific PDF or all PDFs
-export const clearPDFTextCache = (pdfId?: string) => {
-  if (pdfId) {
-    delete cachedPDFText[pdfId];
-  } else {
-    cachedPDFText = {};
   }
 };
