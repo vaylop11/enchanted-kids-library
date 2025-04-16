@@ -12,6 +12,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
+      console.log("No current user found:", error?.message);
       return null;
     }
     
@@ -46,27 +47,30 @@ export const signUp = async (email: string, password: string): Promise<User | nu
     }
     
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error signing up:', error);
-    toast.error('Failed to sign up');
+    toast.error(error.message || 'Failed to sign up');
     return null;
   }
 };
 
 export const signIn = async (email: string, password: string): Promise<User | null> => {
   try {
+    console.log("Attempting sign in for:", email);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     
     if (error) {
+      console.error("Sign in error:", error.message);
       toast.error(error.message);
-      return null;
+      throw error;
     }
     
     if (data.user) {
-      // Don't show toast here - it will be handled by the Auth context
+      console.log("Sign in successful for user:", data.user.id);
+      // Let the auth context handle success toast
       return {
         id: data.user.id,
         email: data.user.email
@@ -74,10 +78,9 @@ export const signIn = async (email: string, password: string): Promise<User | nu
     }
     
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error signing in:', error);
-    toast.error('Failed to sign in');
-    return null;
+    throw error;
   }
 };
 
@@ -90,10 +93,10 @@ export const signOut = async (): Promise<void> => {
       return;
     }
     
-    // Don't show toast here - it will be handled by the Auth context
-  } catch (error) {
+    // Auth context will handle toast
+  } catch (error: any) {
     console.error('Error signing out:', error);
-    toast.error('Failed to sign out');
+    toast.error(error.message || 'Failed to sign out');
   }
 };
 
@@ -110,9 +113,9 @@ export const resetPassword = async (email: string): Promise<boolean> => {
     
     toast.success('Password reset email sent');
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error resetting password:', error);
-    toast.error('Failed to send password reset email');
+    toast.error(error.message || 'Failed to send password reset email');
     return false;
   }
 };
