@@ -6,11 +6,17 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlanCards } from '@/components/PlanCards';
+import { useEffect } from 'react';
 
 export const PlanInfo = () => {
-  const { limits, loading } = usePlanLimits();
+  const { limits, loading, refreshLimits } = usePlanLimits();
   const { language } = useLanguage();
   const navigate = useNavigate();
+  
+  // Ensure plan info gets refreshed when language changes
+  useEffect(() => {
+    refreshLimits();
+  }, [language, refreshLimits]);
 
   if (loading) {
     return (
