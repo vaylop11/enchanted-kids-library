@@ -18,6 +18,7 @@ import {
 } from '@/services/subscriptionService';
 import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 const SubscribePage = () => {
   const navigate = useNavigate();
@@ -29,6 +30,8 @@ const SubscribePage = () => {
   const [paypalPlanId, setPaypalPlanId] = useState<string | null>(null);
   const [paypalError, setPaypalError] = useState<string | null>(null);
   const { refreshSubscription } = useSubscription();
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorDetails, setErrorDetails] = useState('');
   
   // Check for subscription_id in URL params (returned by PayPal)
   const subscriptionId = searchParams.get('subscription_id');
@@ -59,11 +62,15 @@ const SubscribePage = () => {
           navigate('/pdfs');
         } catch (error) {
           console.error('Error processing subscription:', error);
+          setErrorDetails(JSON.stringify(error, null, 2));
+          
           toast.error(
             language === 'ar'
               ? 'حدث خطأ أثناء معالجة الاشتراك'
               : 'Error processing subscription'
           );
+          
+          setShowErrorDialog(true);
         } finally {
           setIsLoading(false);
         }
@@ -134,20 +141,54 @@ const SubscribePage = () => {
       }
     } catch (error) {
       console.error('Error processing subscription:', error);
+      setErrorDetails(JSON.stringify(error, null, 2));
+      
       toast.error(language === 'ar'
         ? 'حدث خطأ أثناء معالجة الاشتراك'
         : 'Error processing subscription');
+      
+      setShowErrorDialog(true);
     }
   };
 
   const handlePayPalError = (error: Record<string, unknown>) => {
     console.error('PayPal error:', error);
-    setPaypalError(language === 'ar' 
+    
+    // Store error details for debugging
+    setErrorDetails(JSON.stringify(error, null, 2));
+    
+    // Show more descriptive error message
+    let errorMessage = language === 'ar' 
       ? 'خطأ في معالجة الدفع. يرجى المحاولة مرة أخرى.' 
-      : 'Error processing payment. Please try again.');
+      : 'Error processing payment. Please try again.';
+      
+    // Check for common PayPal errors
+    if (error.message) {
+      if (typeof error.message === 'string' && error.message.includes('canceled')) {
+        errorMessage = language === 'ar'
+          ? 'تم إلغاء عملية الدفع'
+          : 'Payment was canceled';
+      }
+    }
+    
+    setPaypalError(errorMessage);
+    
     toast.error(language === 'ar' 
       ? 'خطأ في PayPal. يرجى المحاولة مرة أخرى لاحقًا.' 
       : 'PayPal error. Please try again later.');
+      
+    // Show error dialog with details for troubleshooting
+    setShowErrorDialog(true);
+  };
+
+  const handleTryAgain = () => {
+    // Reset error states
+    setPaypalError(null);
+    setErrorDetails('');
+    setShowErrorDialog(false);
+    
+    // Refresh the page to reset PayPal components
+    window.location.reload();
   };
 
   return (
@@ -192,11 +233,26 @@ const SubscribePage = () => {
               </div>
             ) : plan ? (
               <div className="bg-background rounded-lg border p-4 mb-4">
+                {paypalError && (
+                  <div className="p-4 mb-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-700 dark:text-amber-300">
+                    {paypalError}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2 w-full"
+                      onClick={handleTryAgain}
+                    >
+                      {language === 'ar' ? 'حاول مرة أخرى' : 'Try Again'}
+                    </Button>
+                  </div>
+                )}
+                
                 <PayPalScriptProvider options={{ 
                   clientId: "AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIuHBIjy_OcQFqtUxUGN2n1DjHnM4A4u62h",
                   vault: true,
                   intent: "subscription",
-                  components: "buttons"
+                  components: "buttons",
+                  debug: true
                 }}>
                   <PayPalButtons
                     createSubscription={(data, actions) => {
@@ -217,11 +273,12 @@ const SubscribePage = () => {
                       label: 'subscribe'
                     }}
                     onApprove={handlePayPalApprove}
-                    onError={(err) => {
-                      console.error('PayPal error:', err);
-                      toast.error(language === 'ar' 
-                        ? 'خطأ في PayPal. يرجى المحاولة مرة أخرى لاحقًا.'
-                        : 'PayPal error. Please try again later.');
+                    onError={handlePayPalError}
+                    onCancel={() => {
+                      console.log('PayPal subscription canceled by user');
+                      toast.info(language === 'ar'
+                        ? 'تم إلغاء الاشتراك'
+                        : 'Subscription canceled');
                     }}
                   />
                 </PayPalScriptProvider>
@@ -246,6 +303,42 @@ const SubscribePage = () => {
           </div>
         </div>
       </main>
+      
+      <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'ar' ? 'خطأ في معالجة الاشتراك' : 'Subscription Error'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'ar' 
+                ? 'حدث خطأ أثناء معالجة اشتراكك. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.'
+                : 'There was an error processing your subscription. Please try again or contact support.'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-4">
+            <Button 
+              variant="default" 
+              className="w-full mb-2"
+              onClick={handleTryAgain}
+            >
+              {language === 'ar' ? 'حاول مرة أخرى' : 'Try Again'}
+            </Button>
+          </div>
+          
+          {errorDetails && (
+            <div className="mt-4">
+              <p className="text-xs text-muted-foreground mb-1">
+                {language === 'ar' ? 'تفاصيل الخطأ (للدعم الفني):' : 'Error details (for technical support):'}
+              </p>
+              <div className="bg-muted p-2 rounded-md overflow-auto max-h-[200px] text-xs">
+                <pre>{errorDetails}</pre>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       
       <Footer />
     </div>
