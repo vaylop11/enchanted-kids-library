@@ -28,6 +28,7 @@ const SubscribePage = () => {
   const [paypalPlanId, setPaypalPlanId] = useState<string | null>(null);
   const [paypalError, setPaypalError] = useState<string | null>(null);
   const [key, setKey] = useState(Date.now()); // Add key for forced re-render
+  const [processingPayment, setProcessingPayment] = useState(false);
   
   // Force re-render when language changes
   useEffect(() => {
@@ -41,9 +42,13 @@ const SubscribePage = () => {
         const plans = await getSubscriptionPlans();
         console.log("Loaded plans:", plans);
         if (plans.length > 0) {
-          // Update the plan with the new price
-          const updatedPlan = { ...plans[0], price: 4.99 };
+          // Find the PRO plan specifically
+          const proPlan = plans.find(p => p.name === 'Gemi PRO') || plans[plans.length - 1];
+          
+          // Update the plan with the new price if needed
+          const updatedPlan = { ...proPlan, price: proPlan.price || 4.99 };
           setPlan(updatedPlan);
+          console.log("Selected plan:", updatedPlan);
           
           // Separately fetch PayPal Plan ID to ensure we have it
           const paypalId = await getPayPalPlanIdFromDatabase();
@@ -77,17 +82,32 @@ const SubscribePage = () => {
     if (!plan) return;
     
     try {
+      setProcessingPayment(true);
       console.log("Subscription approved:", data);
-      await createSubscription(data.subscriptionID, plan.id);
+      
+      // Log more detailed information about the subscription
+      console.log("Subscription ID:", data.subscriptionID);
+      console.log("Plan ID:", plan.id);
+      
+      // Process the subscription
+      const result = await createSubscription(data.subscriptionID, plan.id);
+      console.log("Subscription creation result:", result);
+      
       toast.success(language === 'ar' 
         ? 'تم الاشتراك بنجاح في Gemi PRO!' 
         : 'Successfully subscribed to Gemi PRO!');
-      navigate('/pdfs');
+        
+      // Delay navigation to allow state updates to propagate
+      setTimeout(() => {
+        navigate('/pdfs');
+      }, 1500);
     } catch (error) {
       console.error('Error processing subscription:', error);
       toast.error(language === 'ar'
         ? 'حدث خطأ أثناء معالجة الاشتراك'
         : 'Error processing subscription');
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
@@ -141,6 +161,18 @@ const SubscribePage = () => {
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                 <span className="ml-3">{language === 'ar' ? 'جاري التحميل...' : 'Loading...'}</span>
               </div>
+            ) : processingPayment ? (
+              <div className="bg-background rounded-lg border p-6 mb-4">
+                <div className="flex flex-col items-center justify-center">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent mb-4" />
+                  <p className="text-center text-lg font-medium">
+                    {language === 'ar' ? 'جاري معالجة الاشتراك...' : 'Processing subscription...'}
+                  </p>
+                  <p className="text-center text-sm text-muted-foreground mt-2">
+                    {language === 'ar' ? 'يرجى الانتظار' : 'Please wait'}
+                  </p>
+                </div>
+              </div>
             ) : plan ? (
               <div className="bg-background rounded-lg border p-4 mb-4">
                 <PayPalScriptProvider options={{ 
@@ -151,9 +183,10 @@ const SubscribePage = () => {
                 }}>
                   <PayPalButtons
                     createSubscription={(data, actions) => {
-                      console.log("Creating subscription with plan ID: P-8AR43998YB6934043M77H5AI");
+                      const planIdToUse = paypalPlanId || 'P-8AR43998YB6934043M77H5AI';
+                      console.log("Creating subscription with plan ID:", planIdToUse);
                       return actions.subscription.create({
-                        'plan_id': 'P-8AR43998YB6934043M77H5AI'
+                        'plan_id': planIdToUse
                       });
                     }}
                     style={{

@@ -58,9 +58,11 @@ export const createSubscription = async (subscriptionId: string, planId: string)
 
 export const getPayPalPlanIdFromDatabase = async (): Promise<string> => {
   try {
+    // Get specifically the PRO plan, not just any plan
     const { data, error } = await supabase
       .from('subscription_plans')
       .select('paypal_plan_id')
+      .eq('name', 'Gemi PRO')
       .single();
       
     if (error || !data) {
