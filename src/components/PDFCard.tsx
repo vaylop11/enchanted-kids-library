@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
@@ -50,10 +51,13 @@ const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
     };
   }, [pdf.id]);
 
+  // Add a staggered animation delay based on the index
   const animationDelay = `${index * 100}ms`;
 
+  // Check if this is an uploaded PDF with chat messages
   const hasChatMessages = 'chatMessages' in pdf && Array.isArray((pdf as any).chatMessages) && (pdf as any).chatMessages.length > 0;
 
+  // Handle PDF deletion
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();

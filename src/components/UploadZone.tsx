@@ -49,16 +49,6 @@ const UploadZone = () => {
       navigate('/signin');
       return;
     }
-    
-    if (userPDFCount >= (limits?.max_pdfs ?? 2)) {
-      const message = language === 'ar'
-        ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${limits?.max_pdfs ?? 2}). يرجى حذف بعض الملفات لتحميل المزيد.`
-        : `You have reached the maximum number of PDFs (${limits?.max_pdfs ?? 2}). Please delete some files to upload more.`;
-      
-      toast.error(message);
-      navigate('/pdfs');
-      return;
-    }
 
     const fileSizeMB = file.size / (1024 * 1024);
     const maxSizeMB = limits?.has_paid_subscription ? (limits?.max_file_size_mb ?? 20) : 5;
@@ -69,6 +59,16 @@ const UploadZone = () => {
           ? `حجم الملف كبير جدًا (الحد الأقصى ${maxSizeMB} ميجابايت)`
           : `File size too large (max ${maxSizeMB}MB)`
       );
+      return;
+    }
+
+    if (userPDFCount >= (limits?.max_pdfs ?? 2)) {
+      navigate('/pdfs');
+      const message = language === 'ar'
+        ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${limits?.max_pdfs ?? 2}). يرجى حذف بعض الملفات لتحميل المزيد.`
+        : `You have reached the maximum number of PDFs (${limits?.max_pdfs ?? 2}). Please delete some files to upload more.`;
+
+      toast.error(message);
       return;
     }
 
@@ -381,8 +381,8 @@ const UploadZone = () => {
                 {user && (
                   <p className="text-xs text-muted-foreground mt-2">
                     {language === 'ar'
-                      ? `${userPDFCount}/${limits?.max_pdfs ?? 2} ملفات تم تحميلها`
-                      : `${userPDFCount}/${limits?.max_pdfs ?? 2} PDFs uploaded`
+                      ? `${userPDFCount}/4 ملفات تم تحميلها`
+                      : `${userPDFCount}/4 PDFs uploaded`
                     }
                   </p>
                 )}

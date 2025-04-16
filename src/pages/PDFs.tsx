@@ -29,7 +29,6 @@ const PDFs = () => {
   
   const handlePDFDelete = (deletedPdfId: string) => {
     setPdfs(prevPdfs => prevPdfs.filter(pdf => pdf.id !== deletedPdfId));
-    setFilteredPDFs(prevFiltered => prevFiltered.filter(pdf => pdf.id !== deletedPdfId));
   };
 
   useEffect(() => {
