@@ -5,7 +5,7 @@ import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-interface ChatInputProps extends React.HTMLAttributes<HTMLDivElement> {
+interface ChatInputProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSubmit'> {
   onSubmit: (message: string) => void;
   placeholder?: string;
   disabled?: boolean;
