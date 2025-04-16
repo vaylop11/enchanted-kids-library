@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -10,6 +10,8 @@ import { supabaseUntyped } from '@/integrations/supabase/client';
 
 const AdminPage = () => {
   const { user, loading, isAdmin } = useAuth();
+  const [userCount, setUserCount] = useState<number | null>(null);
+  const [countLoading, setCountLoading] = useState(false);
 
   useEffect(() => {
     // Check if user is authenticated
@@ -35,7 +37,29 @@ const AdminPage = () => {
       }
     };
     
+    // Get total user count
+    const fetchUserCount = async () => {
+      if (isAdmin) {
+        setCountLoading(true);
+        try {
+          const { data, error } = await supabaseUntyped.functions.invoke('get-user-count');
+          
+          if (error) {
+            console.error('Error fetching user count:', error);
+          } else {
+            console.log('User count:', data);
+            setUserCount(data.count);
+          }
+        } catch (error) {
+          console.error('Error fetching user count:', error);
+        } finally {
+          setCountLoading(false);
+        }
+      }
+    };
+    
     checkSupabaseConnection();
+    fetchUserCount();
   }, [user, isAdmin]);
 
   // Show loading state
@@ -62,7 +86,7 @@ const AdminPage = () => {
       <Navbar />
       
       <main className="flex-1 pt-24 pb-20 px-4 md:px-6">
-        <AdminPanel />
+        <AdminPanel userCount={userCount} countLoading={countLoading} />
       </main>
       
       <Footer />
