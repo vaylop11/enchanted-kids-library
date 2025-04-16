@@ -194,6 +194,50 @@ const ChatPage = () => {
     }, 100);
   };
 
+  const handleReaction = async (messageId: string, emoji: string) => {
+    if (!user) return;
+    
+    try {
+      const { data: message, error: fetchError } = await supabase
+        .from('messages')
+        .select('reactions')
+        .eq('id', messageId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      
+      let updatedReactions = message?.reactions || [];
+      const existingReactionIndex = updatedReactions.findIndex(r => r.emoji === emoji);
+      
+      if (existingReactionIndex >= 0) {
+        const userIndex = updatedReactions[existingReactionIndex].users.indexOf(user.id);
+        if (userIndex >= 0) {
+          updatedReactions[existingReactionIndex].users.splice(userIndex, 1);
+          if (updatedReactions[existingReactionIndex].users.length === 0) {
+            updatedReactions.splice(existingReactionIndex, 1);
+          }
+        } else {
+          updatedReactions[existingReactionIndex].users.push(user.id);
+        }
+      } else {
+        updatedReactions.push({
+          emoji,
+          users: [user.id]
+        });
+      }
+
+      const { error: updateError } = await supabase
+        .from('messages')
+        .update({ reactions: updatedReactions })
+        .eq('id', messageId);
+
+      if (updateError) throw updateError;
+    } catch (error) {
+      console.error('Error updating reaction:', error);
+      toast.error('Failed to update reaction');
+    }
+  };
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -217,16 +261,15 @@ const ChatPage = () => {
         };
       }
       
-      const { error } = await supabaseUntyped
+      const { error } = await supabase
         .from('messages')
         .insert(messagePayload);
 
       if (error) throw error;
+      setReplyToMessage(null);
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
-    } finally {
-      setReplyToMessage(null);
     }
   };
 
@@ -263,53 +306,6 @@ const ChatPage = () => {
     } catch (error) {
       console.error('Error clearing messages:', error);
       toast.error('Failed to clear all messages');
-    }
-  };
-
-  const handleReaction = async (messageId: string, emoji: string) => {
-    if (!user) return;
-    
-    try {
-      const { data: message, error: fetchError } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('id', messageId)
-        .single();
-
-      if (fetchError) throw fetchError;
-      
-      let updatedReactions = message?.reactions || [];
-      
-      const existingReactionIndex = updatedReactions.findIndex(r => r.emoji === emoji);
-      
-      if (existingReactionIndex >= 0) {
-        const userIndex = updatedReactions[existingReactionIndex].users.indexOf(user.id);
-        
-        if (userIndex >= 0) {
-          updatedReactions[existingReactionIndex].users.splice(userIndex, 1);
-          
-          if (updatedReactions[existingReactionIndex].users.length === 0) {
-            updatedReactions.splice(existingReactionIndex, 1);
-          }
-        } else {
-          updatedReactions[existingReactionIndex].users.push(user.id);
-        }
-      } else {
-        updatedReactions.push({
-          emoji,
-          users: [user.id]
-        });
-      }
-
-      const { error: updateError } = await supabase
-        .from('messages')
-        .update({ reactions: updatedReactions })
-        .eq('id', messageId);
-
-      if (updateError) throw updateError;
-    } catch (error) {
-      console.error('Error updating reaction:', error);
-      toast.error('Failed to update reaction');
     }
   };
 
