@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,7 +8,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AdSenseScript from "./components/AdSenseScript";
 import Index from "./pages/Index";
 import PDFs from "./pages/PDFs";
-import PDFViewer from "./pages/PDFViewer"; // Import the default export
+import PDFViewer from "./pages/PDFViewer";
 import TranslatePDF from "./pages/TranslatePDF";
 import NotFound from "./pages/NotFound";
 import BlogPage from "./pages/BlogPage";
