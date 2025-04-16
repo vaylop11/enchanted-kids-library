@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -504,7 +505,7 @@ const ChatPage = () => {
               </div>
             </ScrollArea>
             
-            <form onSubmit={sendMessage} className="flex gap-2">
+            <form onSubmit={sendMessage} className="flex flex-col gap-2">
               {(replyTo || privateMessageTo) && (
                 <div className="mb-2 flex items-center justify-between text-sm bg-muted p-2 rounded">
                   <div className="flex items-center gap-2">
@@ -544,6 +545,12 @@ const ChatPage = () => {
                   }
                   className="flex-1"
                   aria-label="Type a message"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage(e);
+                    }
+                  }}
                 />
                 <Button 
                   type="submit" 
