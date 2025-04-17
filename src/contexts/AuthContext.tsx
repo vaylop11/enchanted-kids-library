@@ -68,6 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsAdmin(false);
         }
         
+        // Only show toast for first sign-in event
         if (event === 'SIGNED_IN') {
           toast.success('Signed in successfully');
         }
