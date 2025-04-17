@@ -9,7 +9,6 @@ import FAQSection from '@/components/FAQSection';
 import UploadZone from '@/components/UploadZone';
 import PDFGrid from '@/components/PDFGrid';
 import SEO from '@/components/SEO';
-import { Languages } from 'lucide-react';
 import StatsCard from '@/components/StatsCard';
 import FeatureAnnouncementCard from '@/components/FeatureAnnouncementCard';
 
@@ -76,17 +75,6 @@ const Index = () => {
             </div>
             
             <UploadZone />
-            
-            <div className="mt-6 text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-background/50 text-sm">
-                <Languages className="h-4 w-4 text-primary" />
-                <span>
-                  {language === 'ar'
-                    ? 'ميزة جديدة: يمكنك الآن ترجمة محتوى ملف PDF إلى لغات متعددة'
-                    : 'New feature: You can now translate PDF content to multiple languages'}
-                </span>
-              </div>
-            </div>
           </div>
         </section>
         
