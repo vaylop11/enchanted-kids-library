@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabaseUntyped } from '@/integrations/supabase/client';
-import { Loader2, Users } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -87,8 +87,12 @@ const StatsCard: React.FC<StatsCardProps> = ({ className }) => {
               </p>
             </div>
             
-            <div className="h-12 w-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-              <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <div className="h-12 w-12 rounded-full overflow-hidden flex items-center justify-center">
+              <img 
+                src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/user.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvdXNlci5wbmciLCJpYXQiOjE3NDQ4NTEwOTksImV4cCI6MTc3NjM4NzA5OX0.g8i-GWQ2P6Eut5JEwQCc_5ptBOkR7yibrEMYR5e58ls" 
+                alt="User Community" 
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
         </div>

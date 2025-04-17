@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Languages, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface FeatureAnnouncementCardProps {
@@ -18,8 +18,12 @@ const FeatureAnnouncementCard: React.FC<FeatureAnnouncementCardProps> = ({ class
       <CardContent className="p-0">
         <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 p-6">
           <div className="flex items-center gap-4">
-            <div className="h-12 w-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-              <Languages className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+            <div className="h-12 w-12 rounded-full overflow-hidden flex items-center justify-center">
+              <img 
+                src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/translate.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvdHJhbnNsYXRlLnBuZyIsImlhdCI6MTc0NDg1MTE4MSwiZXhwIjoxNzc2Mzg3MTgxfQ.JC9V-53lhCHKBoFs_dhp_moE51pxmqjvtHy6wZWcU6c" 
+                alt="Translation" 
+                className="w-full h-full object-cover"
+              />
             </div>
             
             <div className="flex-1">
