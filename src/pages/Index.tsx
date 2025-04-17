@@ -90,8 +90,8 @@ const Index = () => {
         <div className="container mx-auto px-4 text-center">
           <p className="text-lg font-medium mb-4 text-primary">
             {language === 'ar' 
-              ? 'ادعم Gemi ChatPDF واستمرارية تطويره' 
-              : 'Support Gemi ChatPDF and its continued development'}
+              ? 'ادعم Gemi ChatPDF' 
+              : 'Support Gemi ChatPDF'}
           </p>
           <a 
             href="https://ko-fi.com/gemichatpdf" 
