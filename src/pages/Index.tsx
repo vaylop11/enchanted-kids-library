@@ -10,6 +10,8 @@ import UploadZone from '@/components/UploadZone';
 import PDFGrid from '@/components/PDFGrid';
 import SEO from '@/components/SEO';
 import { Languages } from 'lucide-react';
+import StatsCard from '@/components/StatsCard';
+import FeatureAnnouncementCard from '@/components/FeatureAnnouncementCard';
 
 const Index = () => {
   const { language } = useLanguage();
@@ -48,6 +50,16 @@ const Index = () => {
 
       <main>
         <HeroSection />
+        
+        {/* Info Cards Section */}
+        <section className="py-6 bg-background">
+          <div className="container mx-auto px-4 md:px-6 max-w-7xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <StatsCard />
+              <FeatureAnnouncementCard />
+            </div>
+          </div>
+        </section>
         
         {/* Upload Section */}
         <section className="py-16 bg-muted/30" id="upload-pdf">
