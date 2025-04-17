@@ -13,11 +13,18 @@ interface StatsCardProps {
 const StatsCard: React.FC<StatsCardProps> = ({ className }) => {
   const { language } = useLanguage();
   
-  const { data: userCount, isLoading } = useQuery({
+  const { data: userCount, isLoading, error } = useQuery({
     queryKey: ['userCount'],
     queryFn: async () => {
+      console.log('Fetching user count from Edge Function');
       const { data, error } = await supabaseUntyped.functions.invoke('get-user-count');
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Error fetching user count:', error);
+        throw error;
+      }
+      
+      console.log('User count data received:', data);
       return data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -41,6 +48,10 @@ const StatsCard: React.FC<StatsCardProps> = ({ className }) => {
                     {language === 'ar' ? 'جاري التحميل...' : 'Loading...'}
                   </span>
                 </div>
+              ) : error ? (
+                <p className="text-sm text-red-500 mt-1">
+                  {language === 'ar' ? 'خطأ في تحميل البيانات' : 'Error loading data'}
+                </p>
               ) : (
                 <p className="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-1">
                   {userCount?.count || 0}

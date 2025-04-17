@@ -20,8 +20,10 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Fetch user count
-    const { data: users, error } = await supabase.auth.admin.listUsers();
+    console.log("Fetching user count...");
+    
+    // Fetch user count from auth.users table
+    const { data: users, error, count } = await supabase.auth.admin.listUsers();
     
     if (error) {
       console.error("Error fetching users:", error);
@@ -34,11 +36,13 @@ serve(async (req) => {
       );
     }
     
+    console.log(`Found ${users?.users?.length || 0} users`);
+    
     // Get total user count
-    const userCount = users.users.length;
+    const userCount = users?.users?.length || 0;
     
     // Get count of banned users
-    const bannedUsers = users.users.filter(user => user.banned_until).length;
+    const bannedUsers = users?.users?.filter(user => user.banned_until)?.length || 0;
     
     return new Response(
       JSON.stringify({ 
