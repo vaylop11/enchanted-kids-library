@@ -43,7 +43,7 @@ const FeatureAnnouncementCard: React.FC<FeatureAnnouncementCardProps> = ({ class
                   className="group border-purple-200 hover:border-purple-300 hover:bg-purple-50 dark:border-purple-900 dark:hover:border-purple-800 dark:hover:bg-purple-900/30"
                   asChild
                 >
-                  <Link to="/translate">
+                  <Link to="/pdfs">
                     {language === 'ar' ? 'جرب الآن' : 'Try it now'} 
                     <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
                   </Link>
