@@ -85,23 +85,38 @@ const Index = () => {
         <BlogSection />
         <FAQSection />
       </main>
-      <section className="bg-muted/10 py-8">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-lg font-medium mb-4 text-primary">
-            {language === 'ar' 
-              ? 'ادعم Gemi ChatPDF' 
-              : 'Support Gemi ChatPDF'}
-          </p>
-          <a 
-            href="https://ko-fi.com/gemichatpdf" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-block px-6 py-3 text-white bg-pink-600 hover:bg-pink-500 transition-colors duration-200 rounded-2xl font-semibold shadow-md"
-          >
-            ☕ {language === 'ar' ? 'اشترِ لنا قهوة على Ko-fi' : 'Buy us a Coffee on Ko-fi'}
-          </a>
-        </div>
-      </section>
+<section className="bg-muted/10 py-8">
+  <div className="container mx-auto px-4 text-center">
+    <p className="text-lg font-medium mb-4 text-primary">
+      {language === 'ar' 
+        ? 'ادعم Gemi ChatPDF' 
+        : 'Support Gemi ChatPDF'}
+    </p>
+
+    <a 
+      href="https://ko-fi.com/gemichatpdf" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="inline-block px-6 py-3 text-white bg-pink-600 hover:bg-pink-500 transition-colors duration-200 rounded-2xl font-semibold shadow-md mb-4"
+    >
+      ☕ {language === 'ar' ? 'اشترِ لنا قهوة على Ko-fi' : 'Buy us a Coffee on Ko-fi'}
+    </a>
+
+    <div className="flex justify-center mt-4">
+      <a
+        href="https://www.producthunt.com/posts/gemi-chat-pdf?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-gemi&#0045;chat&#0045;pdf"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <img
+          src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=955157&theme=light&t=1745012076216"
+          alt="Gemi Chat PDF - Talk to your documents naturally with Gemi ChatPDF | Product Hunt"
+          style={{ width: '250px', height: '54px' }}
+        />
+      </a>
+    </div>
+  </div>
+</section>
       
       <Footer />
     </div>
