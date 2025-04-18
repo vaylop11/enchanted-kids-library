@@ -85,7 +85,6 @@ const Index = () => {
         <BlogSection />
         <FAQSection />
       </main>
-      <a href="https://www.producthunt.com/posts/gemi-chat-pdf?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-gemi&#0045;chat&#0045;pdf" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=955157&theme=light&t=1745011604840" alt="Gemi&#0032;Chat&#0032;PDF - Talk&#0032;to&#0032;your&#0032;documents&#0032;naturally&#0032;with&#0032;Gemi&#0032;ChatPDF | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a> 
       <section className="bg-muted/10 py-8">
         <div className="container mx-auto px-4 text-center">
           <p className="text-lg font-medium mb-4 text-primary">
