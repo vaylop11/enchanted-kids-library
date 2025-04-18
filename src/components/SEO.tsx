@@ -1,5 +1,3 @@
-
-import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 
 interface SEOProps {
@@ -9,184 +7,89 @@ interface SEOProps {
   ogImage?: string;
   ogUrl?: string;
   author?: string;
-  articlePublishedTime?: string;
-  articleModifiedTime?: string;
-  articleSection?: string;
   canonicalUrl?: string;
   noindex?: boolean;
-  schema?: any;
 }
 
-const SEO = ({ 
-  title = 'Gemi ChatPDF - Free AI PDF Chat & Reader',
-  description = 'Chat with PDFs for free using Gemi AI! Upload any PDF and get instant answers.',
-  keywords = 'Gemi ChatPDF, PDF chat, AI PDF reader, chat with PDF, PDF analysis',
+const SEO = ({
+  title = 'Gemi Chat PDF – Chat PDF for Free with AI',
+  description = 'Use Gemi Chat PDF to chat with your PDFs for free. Upload any document and instantly get answers using AI. Fast, free, and accurate PDF chat assistant.',
+  keywords = 'Gemi Chat PDF, chat PDF for free, free PDF chat, AI PDF chat, Gemi AI, document assistant, PDF AI reader',
   ogImage = '/og-image.png',
   ogUrl = 'https://chatpdf.icu',
-  author = 'Gemi ChatPDF Team',
-  articlePublishedTime,
-  articleModifiedTime,
-  articleSection,
-  canonicalUrl,
+  author = 'Gemi Chat PDF Team',
+  canonicalUrl = 'https://chatpdf.icu',
   noindex = false,
-  schema
 }: SEOProps) => {
-  useEffect(() => {
-    // Update title
-    document.title = title;
-    
-    // Update meta tags
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute('content', description);
-    }
+  const fullOgUrl = ogUrl || canonicalUrl || (typeof window !== 'undefined' ? window.location.href : '');
 
-    const metaKeywords = document.querySelector('meta[name="keywords"]');
-    if (metaKeywords) {
-      metaKeywords.setAttribute('content', keywords);
-    }
+  const webAppSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Gemi Chat PDF",
+    "url": "https://chatpdf.icu",
+    "description": description,
+    "applicationCategory": "Productivity",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "operatingSystem": "All",
+    "featureList": [
+      "Free PDF chat",
+      "Gemi AI PDF assistant",
+      "Document Q&A",
+      "Instant PDF search"
+    ],
+    "screenshot": ogImage
+  };
 
-    // Update Open Graph meta tags
-    const ogTitleTag = document.querySelector('meta[property="og:title"]');
-    if (ogTitleTag) {
-      ogTitleTag.setAttribute('content', title);
-    }
-
-    const ogDescTag = document.querySelector('meta[property="og:description"]');
-    if (ogDescTag) {
-      ogDescTag.setAttribute('content', description);
-    }
-
-    const ogImageTag = document.querySelector('meta[property="og:image"]');
-    if (ogImageTag) {
-      ogImageTag.setAttribute('content', ogImage);
-    }
-
-    const ogUrlTag = document.querySelector('meta[property="og:url"]');
-    if (ogUrlTag) {
-      ogUrlTag.setAttribute('content', ogUrl || canonicalUrl || window.location.href);
-    }
-
-    // Update Twitter Card meta tags
-    const twitterTitleTag = document.querySelector('meta[name="twitter:title"]');
-    if (twitterTitleTag) {
-      twitterTitleTag.setAttribute('content', title);
-    }
-
-    const twitterDescTag = document.querySelector('meta[name="twitter:description"]');
-    if (twitterDescTag) {
-      twitterDescTag.setAttribute('content', description);
-    }
-
-    const twitterImageTag = document.querySelector('meta[name="twitter:image"]');
-    if (twitterImageTag) {
-      twitterImageTag.setAttribute('content', ogImage);
-    }
-
-    // Update article meta tags for blog posts
-    if (articlePublishedTime) {
-      // Create or update article:published_time meta tag
-      let articlePublishedTag = document.querySelector('meta[property="article:published_time"]');
-      if (!articlePublishedTag) {
-        articlePublishedTag = document.createElement('meta');
-        articlePublishedTag.setAttribute('property', 'article:published_time');
-        document.head.appendChild(articlePublishedTag);
-      }
-      articlePublishedTag.setAttribute('content', articlePublishedTime);
-
-      // Set Open Graph type to article for blog posts
-      const ogTypeTag = document.querySelector('meta[property="og:type"]');
-      if (ogTypeTag) {
-        ogTypeTag.setAttribute('content', 'article');
-      }
-
-      // Create or update article:author meta tag
-      let articleAuthorTag = document.querySelector('meta[property="article:author"]');
-      if (!articleAuthorTag) {
-        articleAuthorTag = document.createElement('meta');
-        articleAuthorTag.setAttribute('property', 'article:author');
-        document.head.appendChild(articleAuthorTag);
-      }
-      articleAuthorTag.setAttribute('content', author);
-    }
-
-    // Set article:modified_time if provided
-    if (articleModifiedTime) {
-      let articleModifiedTag = document.querySelector('meta[property="article:modified_time"]');
-      if (!articleModifiedTag) {
-        articleModifiedTag = document.createElement('meta');
-        articleModifiedTag.setAttribute('property', 'article:modified_time');
-        document.head.appendChild(articleModifiedTag);
-      }
-      articleModifiedTag.setAttribute('content', articleModifiedTime);
-    }
-
-    // Set article:section if provided
-    if (articleSection) {
-      let articleSectionTag = document.querySelector('meta[property="article:section"]');
-      if (!articleSectionTag) {
-        articleSectionTag = document.createElement('meta');
-        articleSectionTag.setAttribute('property', 'article:section');
-        document.head.appendChild(articleSectionTag);
-      }
-      articleSectionTag.setAttribute('content', articleSection);
-    }
-
-    // Set robots meta for noindex if needed
-    if (noindex) {
-      let robotsTag = document.querySelector('meta[name="robots"]');
-      if (!robotsTag) {
-        robotsTag = document.createElement('meta');
-        robotsTag.setAttribute('name', 'robots');
-        document.head.appendChild(robotsTag);
-      }
-      robotsTag.setAttribute('content', 'noindex,nofollow');
-    } else {
-      // Ensure robots meta tag is set to index,follow if it exists
-      const existingRobotsTag = document.querySelector('meta[name="robots"]');
-      if (existingRobotsTag) {
-        existingRobotsTag.setAttribute('content', 'index,follow');
-      }
-    }
-
-  }, [title, description, keywords, ogImage, ogUrl, author, articlePublishedTime, articleModifiedTime, articleSection, canonicalUrl, noindex]);
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Gemi Chat PDF",
+    "url": "https://chatpdf.icu",
+    "logo": ogImage,
+    "sameAs": [
+      "https://twitter.com/GemiChatPDF",
+      "https://www.linkedin.com/company/gemichatpdf"
+    ]
+  };
 
   return (
     <Helmet>
+      {/* Primary Tags */}
       <title>{title}</title>
       <meta name="description" content={description} />
       <meta name="keywords" content={keywords} />
-      
-      {/* Open Graph / Facebook */}
-      <meta property="og:type" content={articlePublishedTime ? 'article' : 'website'} />
+      <meta name="author" content={author} />
+      <meta name="robots" content={noindex ? 'noindex,nofollow' : 'index,follow'} />
+      <link rel="canonical" href={canonicalUrl} />
+
+      {/* Open Graph */}
+      <meta property="og:type" content="website" />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={ogImage} />
-      <meta property="og:url" content={ogUrl || canonicalUrl || window.location.href} />
-      
+      <meta property="og:url" content={fullOgUrl} />
+      <meta property="og:site_name" content="Gemi Chat PDF" />
+
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={title} />
-      <meta name="twitter:description" content={description} />
+      <meta name="twitter:title" content="Gemi Chat PDF – Free AI PDF Chat Assistant" />
+      <meta name="twitter:description" content="Chat with PDFs for free using Gemi Chat PDF. Upload your file and ask questions instantly." />
       <meta name="twitter:image" content={ogImage} />
-      
-      {/* Article specific tags */}
-      {articlePublishedTime && <meta property="article:published_time" content={articlePublishedTime} />}
-      {articleModifiedTime && <meta property="article:modified_time" content={articleModifiedTime} />}
-      {articleSection && <meta property="article:section" content={articleSection} />}
-      {articlePublishedTime && <meta property="article:author" content={author} />}
-      
-      {/* Canonical URL */}
-      {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
-      
-      {/* Robots */}
-      {noindex ? 
-        <meta name="robots" content="noindex,nofollow" /> : 
-        <meta name="robots" content="index,follow" />
-      }
-      
-      {/* Structured data */}
-      {schema && <script type="application/ld+json">{JSON.stringify(schema)}</script>}
+
+      {/* Mobile Meta */}
+      <meta name="theme-color" content="#4f46e5" />
+      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      <meta name="format-detection" content="telephone=no" />
+
+      {/* JSON-LD */}
+      <script type="application/ld+json">{JSON.stringify(webAppSchema)}</script>
+      <script type="application/ld+json">{JSON.stringify(organizationSchema)}</script>
     </Helmet>
   );
 };
