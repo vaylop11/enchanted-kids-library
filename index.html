@@ -1,91 +1,85 @@
+
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
-  <title>Gemi Chat PDF – Chat PDF for Free with AI</title>
-  <meta name="description" content="Use Gemi Chat PDF to chat with your PDFs for free. Upload any document and instantly get answers using AI. Fast, free, and accurate PDF chat assistant." />
-  <meta name="keywords" content="Gemi Chat PDF, chat PDF for free, free PDF chat, AI PDF chat, Gemi AI, document assistant, PDF AI reader" />
-  <meta name="author" content="Gemi Chat PDF Team" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <title>Gemi Chat PDF – Chat PDF for Free with AI</title>
+    <meta name="description" content="Chat with PDFs for free using Gemi AI! Upload any PDF and get instant answers. Gemi ChatPDF is the smart way to extract, analyze, and explore your PDF documents." />
+    <meta name="keywords" content="Gemi ChatPDF, PDF chat, AI PDF reader, chat with PDF, PDF analysis, document AI, PDF assistant, free PDF chat" />
+    <meta name="author" content="Gemi ChatPDF Team" />
+    
+    <!-- Open Graph (OG) Meta Tags -->
+    <meta property="og:title" content="Gemi ChatPDF - Free AI PDF Chat & Reader" />
+    <meta property="og:description" content="Upload PDFs and chat with AI instantly. Gemi ChatPDF is your free AI-powered PDF reader and assistant." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:url" content="https://chatpdf.icu" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Gemi ChatPDF" />
 
-  <!-- Open Graph -->
-  <meta property="og:title" content="Gemi Chat PDF – Chat PDF for Free with AI" />
-  <meta property="og:description" content="Upload any PDF and chat for free using Gemi Chat PDF. Get instant answers powered by AI." />
-  <meta property="og:image" content="/og-image.png" />
-  <meta property="og:url" content="https://chatpdf.icu" />
-  <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Gemi Chat PDF" />
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Gemi ChatPDF - Free AI PDF Chat & Reader" />
+    <meta name="twitter:description" content="Chat with PDFs for free using Gemi AI! Upload any PDF and get instant answers." />
+    <meta name="twitter:image" content="/og-image.png" />
 
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Gemi Chat PDF – Free AI PDF Chat Assistant" />
-  <meta name="twitter:description" content="Chat with PDFs for free using Gemi Chat PDF. Upload your file and ask questions instantly." />
-  <meta name="twitter:image" content="/og-image.png" />
+    <!-- Canonical Link -->
+    <link rel="canonical" href="https://chatpdf.icu" />
+    
+    <!-- Mobile/Device Optimization -->
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="format-detection" content="telephone=no" />
 
-  <!-- Canonical -->
-  <link rel="canonical" href="https://chatpdf.icu" />
+    <!-- Favicon -->
+    <link rel="icon" href="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/gemi-fav.ico?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvZ2VtaS1mYXYuaWNvIiwiaWF0IjoxNzQzODc1Mjg1LCJleHAiOjE3NzU0MTEyODV9.8YEl4Y3bTRRpQMdzsIs-3F_XPyUQt3w85o0foeOTw7E" type="image/x-icon" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <!-- JSON-LD structured data for better SEO -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Gemi ChatPDF",
+        "url": "https://chatpdf.icu",
+        "description": "Chat with PDFs for free using Gemi AI! Upload any PDF and get instant answers.",
+        "applicationCategory": "Productivity",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": "Upload PDFs, Chat with documents, Extract information, Analyze content",
+        "screenshot": "/og-image.png",
+        "operatingSystem": "All"
+      }
+    </script>
+    
+    <!-- Organization Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Gemi ChatPDF",
+        "url": "https://chatpdf.icu",
+        "logo": "/og-image.png",
+        "sameAs": [
+          "https://twitter.com/GemiChatPDF",
+          "https://www.linkedin.com/company/gemichatpdf"
+        ]
+      }
+    </script>
+    
+  </head>
 
-  <!-- Mobile Optimization -->
-  <meta name="theme-color" content="#4f46e5" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="format-detection" content="telephone=no" />
-
-  <!-- Favicon -->
-  <link rel="icon" href="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/gemi-fav.ico?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvZ2VtaS1mYXYuaWNvIiwiaWF0IjoxNzQzODc1Mjg1LCJleHAiOjE3NzU0MTEyODV9.8YEl4Y3bTRRpQMdzsIs-3F_XPyUQt3w85o0foeOTw7E" type="image/x-icon" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-
-  <!-- Web App JSON-LD -->
-  <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Gemi Chat PDF",
-      "url": "https://chatpdf.icu",
-      "description": "Use Gemi Chat PDF to chat with your PDFs for free. Upload, ask, and analyze any document using AI.",
-      "applicationCategory": "Productivity",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "operatingSystem": "All",
-      "featureList": [
-        "Free PDF chat",
-        "Gemi AI PDF assistant",
-        "Document Q&A",
-        "Instant PDF search"
-      ],
-      "screenshot": "/og-image.png"
-    }
-  </script>
-
-  <!-- Organization JSON-LD -->
-  <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "Gemi Chat PDF",
-      "url": "https://chatpdf.icu",
-      "logo": "/og-image.png",
-      "sameAs": [
-        "https://twitter.com/GemiChatPDF",
-        "https://www.linkedin.com/company/gemichatpdf"
-      ]
-    }
-  </script>
-</head>
-
-<body>
-  <div id="root"></div>
-
-  <!-- Scripts -->
-  <script src="https://cdn.gpteng.co/gptengineer.js" type="module" defer></script>
-  <script src="/src/main.tsx" type="module" defer></script>
-
-  <noscript>
-    <p>Please enable JavaScript to use Gemi Chat PDF – your free AI assistant to chat with any PDF.</p>
-  </noscript>
-</body>
+  <body>
+    <div id="root"></div>
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <script type="module" src="/src/main.tsx"></script>
+    <noscript>
+      <p>Please enable JavaScript to use Gemi ChatPDF - the free AI PDF chat and reader application.</p>
+    </noscript>
+  </body>
 </html>
