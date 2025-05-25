@@ -84,6 +84,8 @@ serve(async (req) => {
       """
       
       User question: ${userQuestion}
+
+      Detect the language of the user's question. Your response must be in the same language as the user's question. Format your entire response in Markdown.
       
       Provide a relevant, accurate, and comprehensive response based on the PDF content. If the answer cannot be determined from the PDF content, clearly state that. 
       Make sure your response is well-structured and easy to understand. Include specific information from the document when relevant.

@@ -81,23 +81,28 @@ serve(async (req) => {
     // Determine the appropriate prompt based on enhancedFormat flag
     const getPrompt = (chunk: string) => {
       if (enhancedFormat) {
-        return `Translate the following text to ${targetLanguage} with professional quality and formatting. 
-               
-Use proper markdown formatting to enhance readability:
-- Use headings (## and ###) for section titles
-- Format lists properly with bullet points or numbers
-- Use **bold** for emphasis on important terms
-- Maintain paragraph structure and spacing
-- Use appropriate formatting for quotes, code blocks, or special content
-- Ensure consistent and professional tone throughout
+        return `Translate the following text to ${targetLanguage}. Your response MUST be ONLY the translated text, formatted in Markdown.
 
-Only respond with the translated text in well-formatted markdown, nothing else. Do not include any notes, comments or original text:
+Preserve the original text's structure, including headings (e.g., ## H1, ### H2), lists (e.g., * item or 1. item), paragraphs, and emphasis (e.g., **bold**, *italic*).
+Use appropriate Markdown for these elements.
+Ensure a professional tone and high-quality translation.
+Do not include any original text, notes, or conversational output.
 
-${chunk}`;
+Original text to translate:
+"""
+${chunk}
+"""`;
       } else {
-        return `Translate the following text to ${targetLanguage}. Format the output in markdown to preserve formatting, headings, and structure. Only respond with the translated text in markdown format, nothing else:
+        return `Translate the following text to ${targetLanguage}. Your response MUST be ONLY the translated text, formatted in Markdown.
 
-${chunk}`;
+Preserve the original text's structure, such as headings, lists, and paragraphs.
+Use appropriate Markdown for these elements.
+Do not include any original text, notes, or conversational output.
+
+Original text to translate:
+"""
+${chunk}
+"""`;
       }
     };
     
