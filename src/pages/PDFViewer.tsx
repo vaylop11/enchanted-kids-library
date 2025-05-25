@@ -39,7 +39,8 @@ import {
   getChatMessagesForPDF,
   addChatMessageToPDF as addSupabaseChatMessage,
   updatePDFMetadata,
-  deletePDF as deleteSupabasePDF
+  deletePDF as deleteSupabasePDF,
+  clearChatMessagesForPDF // Added import
 } from '@/services/pdfSupabaseService';
 import {
   extractTextFromPDF,
@@ -615,16 +616,16 @@ const PDFViewer = () => {
     }
   };
 
-  const handleResetChat = () => {
+  const handleResetChat = async () => { // Made async
     if (!id || !pdf) return;
-    
-    const confirmMessage = language === 'ar' 
-      ? 'هل أنت متأكد أنك تريد مسح جميع الرسائل؟'
-      : 'Are you sure you want to clear all messages?';
-      
+
+    const confirmMessage = language === 'ar'
+      ? 'هل أنت متأكد أنك تريد مسح جميع الرسائل؟ سيتم حذفها نهائياً.'
+      : 'Are you sure you want to clear all messages? This action is permanent.';
+
     if (window.confirm(confirmMessage)) {
-      setChatMessages([]);
-      
+      setChatMessages([]); // Clear UI immediately
+
       if (isTempPdf) {
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
         if (tempPdfData) {
@@ -632,15 +633,31 @@ const PDFViewer = () => {
             const parsedData = JSON.parse(tempPdfData);
             parsedData.fileData.chatMessages = [];
             sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+            toast.success(language === 'ar' ? 'تم مسح المحادثة المؤقتة' : 'Temporary chat cleared');
           } catch (error) {
             console.error('Error clearing chat messages from temporary PDF:', error);
+            toast.error(language === 'ar' ? 'فشل مسح المحادثة المؤقتة' : 'Failed to clear temporary chat');
           }
         }
+      } else if (user) { // Logged-in user
+        const success = await clearChatMessagesForPDF(id);
+        if (success) {
+          toast.success(language === 'ar' ? 'تم مسح المحادثة من السحابة' : 'Chat cleared from cloud');
+        } else {
+          // Error toast is handled by clearChatMessagesForPDF, but we might want to restore messages if it failed
+          // For simplicity now, we assume it worked or user can refresh.
+          toast.error(language === 'ar' ? 'فشل مسح المحادثة من السحابة' : 'Failed to clear chat from cloud');
+        }
+      } else { // Guest user, not temporary PDF
+        const currentPdf = getPDFById(id);
+        if (currentPdf) {
+          currentPdf.chatMessages = [];
+          savePDF(currentPdf);
+          toast.success(language === 'ar' ? 'تم مسح المحادثة المحلية' : 'Local chat cleared');
+        } else {
+          toast.error(language === 'ar' ? 'لم يتم العثور على الملف المحلي لمسح المحادثة' : 'Local PDF not found to clear chat');
+        }
       }
-      
-      toast.success(language === 'ar' 
-        ? 'تم مسح المحادثة بنجاح'
-        : 'Chat cleared successfully');
     }
   };
 
@@ -1028,10 +1045,30 @@ const PDFViewer = () => {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
+                        <Button
+                          variant="outline" // Changed variant
+                          size="icon"
+                          onClick={handleResetChat}
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" // Destructive intent
+                          aria-label={language === 'ar' ? 'مسح جميع الرسائل' : 'Clear all chat messages'}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-destructive">{language === 'ar' ? 'مسح جميع الرسائل' : 'Clear all chat messages'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
+                  {/* Optional: Keep RefreshCw for other purposes or remove if Trash2 is the main reset now */}
+                  {/* <TooltipProvider> 
+                    <Tooltip>
+                      <TooltipTrigger asChild>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          onClick={handleResetChat}
+                          // onClick={someOtherResetFunctionMaybe} // Or keep handleResetChat if it's a soft reset
                           className="h-8 w-8 text-muted-foreground hover:text-foreground"
                           aria-label={language === 'ar' ? 'إعادة تعيين المحادثة' : 'Reset chat'}
                         >
@@ -1042,7 +1079,7 @@ const PDFViewer = () => {
                         {language === 'ar' ? 'إعادة تعيين المحادثة' : 'Reset chat'}
                       </TooltipContent>
                     </Tooltip>
-                  </TooltipProvider>
+                  </TooltipProvider> */}
                   
                   <Button 
                     variant="ghost" 

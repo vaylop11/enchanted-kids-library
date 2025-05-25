@@ -261,6 +261,30 @@ export const getUserPDFs = async (userId: string): Promise<SupabasePDF[]> => {
   }
 };
 
+// Clear all chat messages for a PDF
+export const clearChatMessagesForPDF = async (pdfId: string): Promise<boolean> => {
+  try {
+    console.log(`Attempting to clear chat messages for PDF ID: ${pdfId}`);
+    const { error } = await supabase
+      .from('pdf_chats') // Correct table name based on existing code
+      .delete()
+      .match({ pdf_id: pdfId }); // Correct column name based on existing code
+
+    if (error) {
+      console.error('Error clearing chat messages from Supabase:', error);
+      toast.error('Failed to clear chat messages from storage.');
+      return false;
+    }
+    
+    console.log(`Successfully cleared chat messages for PDF ID: ${pdfId}`);
+    return true;
+  } catch (error) {
+    console.error('Supabase service error clearing chat messages:', error);
+    toast.error('An error occurred while clearing chat messages.');
+    return false;
+  }
+};
+
 // Get a PDF by ID
 export const getPDFById = async (pdfId: string): Promise<SupabasePDF | null> => {
   try {
