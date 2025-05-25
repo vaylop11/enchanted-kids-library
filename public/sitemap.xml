@@ -1,4 +1,3 @@
-
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
@@ -7,7 +6,7 @@
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
     <loc>https://chatpdf.icu/</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/" />
@@ -15,7 +14,7 @@
   </url>
   <url>
     <loc>https://chatpdf.icu/pdfs</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/pdfs" />
@@ -23,7 +22,7 @@
   </url>
   <url>
     <loc>https://chatpdf.icu/blog</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/blog" />
@@ -31,7 +30,7 @@
   </url>
   <url>
     <loc>https://chatpdf.icu/chat</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/chat" />
@@ -39,7 +38,7 @@
   </url>
   <url>
     <loc>https://chatpdf.icu/signin</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/signin" />
@@ -47,7 +46,7 @@
   </url>
   <url>
     <loc>https://chatpdf.icu/signup</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/signup" />
@@ -55,7 +54,7 @@
   </url>
   <url>
     <loc>https://chatpdf.icu/privacy-policy</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/privacy-policy" />
@@ -63,7 +62,7 @@
   </url>
   <url>
     <loc>https://chatpdf.icu/terms-of-service</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/terms-of-service" />
@@ -72,7 +71,7 @@
   <!-- Blog categories -->
   <url>
     <loc>https://chatpdf.icu/blog/category/ai</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/blog/category/ai" />
@@ -80,7 +79,7 @@
   </url>
   <url>
     <loc>https://chatpdf.icu/blog/category/tutorial</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/blog/category/tutorial" />
@@ -88,7 +87,7 @@
   </url>
   <url>
     <loc>https://chatpdf.icu/blog/category/technology</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/blog/category/technology" />
@@ -96,7 +95,7 @@
   </url>
   <url>
     <loc>https://chatpdf.icu/blog/category/education</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/blog/category/education" />
@@ -104,7 +103,7 @@
   </url>
   <url>
     <loc>https://chatpdf.icu/blog/category/business</loc>
-    <lastmod>2025-04-04</lastmod>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://chatpdf.icu/blog/category/business" />
