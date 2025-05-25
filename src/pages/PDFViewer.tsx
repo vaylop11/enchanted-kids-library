@@ -257,21 +257,20 @@ const PDFViewer = () => {
   
     if (pdf && pdf.pageCount !== loadedNumPages) {
       const updatedPdf = { ...pdf, pageCount: loadedNumPages };
-      const updatedPdf = { ...pdf, pageCount: numPages };
       setPdf(updatedPdf);
       
       if (!isTempPdf) {
         if (user) {
-          updatePDFMetadata(updatedPdf.id, { pageCount: numPages });
+          updatePDFMetadata(updatedPdf.id, { pageCount: loadedNumPages });
         } else {
-          savePDF(updatedPdf);
+          savePDF(updatedPdf); // updatedPdf already has loadedNumPages
         }
       } else if (updatedPdf.id.startsWith('temp-')) {
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
         if (tempPdfData) {
           try {
             const parsedData = JSON.parse(tempPdfData);
-            parsedData.fileData.pageCount = numPages;
+            parsedData.fileData.pageCount = loadedNumPages;
             sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
           } catch (error) {
             console.error('Error updating temporary PDF page count:', error);
