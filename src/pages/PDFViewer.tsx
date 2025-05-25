@@ -1046,13 +1046,14 @@ const PDFViewer = () => {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
-                          variant="outline" // Changed variant
-                          size="icon"
+                          variant="outline"
+                          size="sm" // Changed from icon to sm
                           onClick={handleResetChat}
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" // Destructive intent
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive" // Kept destructive intent styling
                           aria-label={language === 'ar' ? 'مسح جميع الرسائل' : 'Clear all chat messages'}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} /> {/* Added margin based on language */}
+                          {language === 'ar' ? 'مسح' : 'Clear'} {/* Added text */}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
