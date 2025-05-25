@@ -59,9 +59,11 @@ const PDFViewer = () => {
   
   const [isLoaded, setIsLoaded] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
+  const [pageNumber, setPageNumber] = useState(1); // Represents the page to scroll to or current top page
   const [pageInputValue, setPageInputValue] = useState("1");
   const [pdfScale, setPdfScale] = useState(1.0);
+  const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const scrollableContainerRef = useRef<HTMLDivElement>(null);
   const [pdfRotation, setPdfRotation] = useState(0);
   const [showPdfControls, setShowPdfControls] = useState(true);
   const [chatInput, setChatInput] = useState('');
@@ -204,12 +206,57 @@ const PDFViewer = () => {
     };
   }, [id, navigate, language, retryCount, user]);
 
-  const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
+
+  // Intersection Observer to update current page number based on scroll
+  useEffect(() => {
+    if (!numPages || !scrollableContainerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            // Find the index of the intersecting page
+            const pageIndex = pageRefs.current.findIndex(ref => ref === entry.target);
+            if (pageIndex !== -1) {
+              const newPageNum = pageIndex + 1;
+              // Only update if it's a new page to avoid rapid state updates and ensure relevance
+              // This check helps if multiple pages are partially visible.
+              // A more sophisticated approach might find the page with the largest intersection area.
+              if (entry.intersectionRatio > 0.5 || pageNumber !== newPageNum ) { 
+                setPageNumber(newPageNum);
+                setPageInputValue(String(newPageNum));
+              }
+            }
+          }
+        });
+      },
+      { 
+        root: scrollableContainerRef.current, // Observe within the scrollable container
+        threshold: [0.2, 0.5, 0.8], // Trigger at different visibility levels for finer control if needed
+      }
+    );
+
+    pageRefs.current.forEach(ref => {
+      if (ref) observer.observe(ref);
+    });
+
+    return () => {
+      pageRefs.current.forEach(ref => {
+        if (ref) observer.unobserve(ref);
+      });
+      observer.disconnect();
+    };
+  }, [numPages, scrollableContainerRef.current]); // Rerun when numPages changes or container is ready
+
+  const handleDocumentLoadSuccess = ({ numPages: loadedNumPages }: { numPages: number }) => {
+    setNumPages(loadedNumPages);
     setIsLoadingPdf(false);
     setPdfError(null);
-    
-    if (pdf && pdf.pageCount !== numPages) {
+    // Initialize pageRefs array, preserving existing refs if any (e.g., on re-render)
+    pageRefs.current = Array(loadedNumPages).fill(null).map((_, i) => pageRefs.current[i] || null);
+  
+    if (pdf && pdf.pageCount !== loadedNumPages) {
+      const updatedPdf = { ...pdf, pageCount: loadedNumPages };
       const updatedPdf = { ...pdf, pageCount: numPages };
       setPdf(updatedPdf);
       
@@ -606,16 +653,18 @@ const PDFViewer = () => {
   };
 
   const handlePrevPage = () => {
-    if (pageNumber > 1) {
-      setPageNumber(pageNumber - 1);
-      setPageInputValue(String(pageNumber - 1));
-    }
+    const newPageNumber = Math.max(1, pageNumber - 1);
+    // setPageNumber(newPageNumber); // Updated by IntersectionObserver
+    setPageInputValue(String(newPageNumber));
+    pageRefs.current[newPageNumber - 1]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleNextPage = () => {
     if (numPages && pageNumber < numPages) {
-      setPageNumber(pageNumber + 1);
-      setPageInputValue(String(pageNumber + 1));
+      const newPageNumber = Math.min(numPages, pageNumber + 1);
+      // setPageNumber(newPageNumber); // Updated by IntersectionObserver
+      setPageInputValue(String(newPageNumber));
+      pageRefs.current[newPageNumber - 1]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -625,11 +674,14 @@ const PDFViewer = () => {
 
   const handlePageInputSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
     const pageNum = parseInt(pageInputValue, 10);
     if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= (numPages || 1)) {
-      setPageNumber(pageNum);
+      // setPageNumber(pageNum); // Updated by IntersectionObserver
+      pageRefs.current[pageNum - 1]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Optionally, if you want to force pageNumber state update immediately without waiting for observer:
+      // setPageNumber(pageNum); 
     } else {
+      // Reset input to current actual page if invalid
       setPageInputValue(String(pageNumber));
     }
   };
@@ -853,7 +905,7 @@ const PDFViewer = () => {
                 </div>
               )}
               
-              <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
+              <div ref={scrollableContainerRef} className="overflow-y-auto bg-muted/10 flex justify-center" style={{ height: 'calc(100vh - 220px)' /* Adjust height as needed, can be tuned */ }}>
                 {isLoadingPdf ? (
                   <div className="flex flex-col items-center justify-center h-full w-full">
                     <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
@@ -928,21 +980,39 @@ const PDFViewer = () => {
                       </div>
                     }
                   >
-                    <Page 
-                      pageNumber={pageNumber} 
-                      scale={pdfScale}
-                      rotate={pdfRotation}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
-                      error={
-                        <div className="flex flex-col items-center justify-center p-6">
-                          <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
-                          <p className="text-sm text-center">
-                            {language === 'ar' ? 'خطأ في عرض الصفحة' : 'Error rendering page'}
-                          </p>
+                    <div className="p-4"> {/* Container for all pages with padding */}
+                      {numPages && Array.from(new Array(numPages), (el, index) => (
+                        <div 
+                          key={`page_wrapper_${index + 1}`} 
+                          ref={elem => pageRefs.current[index] = elem} 
+                          className="mb-4 shadow-lg last:mb-0" /* Add margin between pages */
+                        >
+                          <Page
+                            pageNumber={index + 1}
+                            scale={pdfScale}
+                            rotate={pdfRotation}
+                            renderTextLayer={false} // Improve performance
+                            renderAnnotationLayer={false} // Improve performance
+                            error={
+                              <div className="flex flex-col items-center justify-center p-6 bg-red-50 border border-red-200 rounded-md">
+                                <AlertTriangle className="h-8 w-8 text-red-500 mb-2" />
+                                <p className="text-sm text-center text-red-700">
+                                  {language === 'ar' ? `خطأ في عرض الصفحة ${index + 1}` : `Error rendering page ${index + 1}`}
+                                </p>
+                              </div>
+                            }
+                            loading={
+                              <div className="flex flex-col items-center justify-center p-6 min-h-[300px]">
+                                <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/20 border-t-primary animate-spin mb-2" />
+                                <p className="text-xs text-muted-foreground">
+                                  {language === 'ar' ? `تحميل صفحة ${index + 1}...` : `Loading page ${index + 1}...`}
+                                </p>
+                              </div>
+                            }
+                          />
                         </div>
-                      }
-                    />
+                      ))}
+                    </div>
                   </Document>
                 )}
               </div>
