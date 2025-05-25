@@ -1,16 +1,15 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--helmet-outlet-->
     
-    <title>Gemi Chat PDF – Chat PDF for Free with AI</title>
-    <meta name="description" content="Chat with PDFs for free using Gemi AI! Upload any PDF and get instant answers. Gemi ChatPDF is the smart way to extract, analyze, and explore your PDF documents." />
-    <meta name="keywords" content="Gemi ChatPDF, PDF chat, AI PDF reader, chat with PDF, PDF analysis, document AI, PDF assistant, free PDF chat" />
-    <meta name="author" content="Gemi ChatPDF Team" />
-    
-    <!-- Open Graph (OG) Meta Tags -->
+    <!-- Favicon -->
+    <link rel="icon" href="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/gemi-fav.ico?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvZ2VtaS1mYXYuaWNvIiwiaWF0IjoxNzQzODc1Mjg1LCJleHAiOjE3NzU0MTEyODV9.8YEl4Y3bTRRpQMdzsIs-3F_XPyUQt3w85o0foeOTw7E" type="image/x-icon" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Fallback Open Graph (OG) Meta Tags -->
     <meta property="og:title" content="Gemi ChatPDF - Free AI PDF Chat & Reader" />
     <meta property="og:description" content="Upload PDFs and chat with AI instantly. Gemi ChatPDF is your free AI-powered PDF reader and assistant." />
     <meta property="og:image" content="/og-image.png" />
@@ -18,13 +17,13 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Gemi ChatPDF" />
 
-    <!-- Twitter Card -->
+    <!-- Fallback Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Gemi ChatPDF - Free AI PDF Chat & Reader" />
     <meta name="twitter:description" content="Chat with PDFs for free using Gemi AI! Upload any PDF and get instant answers." />
     <meta name="twitter:image" content="/og-image.png" />
 
-    <!-- Canonical Link -->
+    <!-- Fallback Canonical Link -->
     <link rel="canonical" href="https://chatpdf.icu" />
     
     <!-- Mobile/Device Optimization -->
@@ -32,12 +31,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="format-detection" content="telephone=no" />
-
-    <!-- Favicon -->
-    <link rel="icon" href="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/gemi-fav.ico?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvZ2VtaS1mYXYuaWNvIiwiaWF0IjoxNzQzODc1Mjg1LCJleHAiOjE3NzU0MTEyODV9.8YEl4Y3bTRRpQMdzsIs-3F_XPyUQt3w85o0foeOTw7E" type="image/x-icon" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     
-    <!-- JSON-LD structured data for better SEO -->
+    <!-- JSON-LD structured data for better SEO (can also be managed by Helmet if dynamic) -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -57,7 +52,6 @@
       }
     </script>
     
-    <!-- Organization Structured Data -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -75,7 +69,7 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root"><!--ssr-outlet--></div>
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
     <noscript>
