@@ -89,7 +89,7 @@ const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
     <Card 
       id={`pdf-card-${pdf.id}`}
       className={cn(
-        'group relative flex flex-col overflow-hidden h-full hover-lift',
+        'group relative flex flex-col overflow-hidden h-full hover-lift hover:border-primary/50',
         isInView ? 'animate-fade-in opacity-100' : 'opacity-0',
         isDeleting ? 'opacity-50 pointer-events-none' : ''
       )}

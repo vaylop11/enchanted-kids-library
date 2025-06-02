@@ -67,7 +67,7 @@ const Navbar = () => {
                     <NavigationMenuLink 
                       className={cn(
                         navigationMenuTriggerStyle(),
-                        location.pathname === '/' && "bg-accent text-accent-foreground",
+                        location.pathname === '/' ? "bg-accent text-accent-foreground" : "hover:bg-muted/50 hover:text-foreground/80",
                         "px-3 py-2 text-sm font-medium rounded-full"
                       )}
                     >
@@ -80,7 +80,7 @@ const Navbar = () => {
                     <NavigationMenuLink 
                       className={cn(
                         navigationMenuTriggerStyle(),
-                        location.pathname === '/pdfs' && "bg-accent text-accent-foreground",
+                        location.pathname === '/pdfs' ? "bg-accent text-accent-foreground" : "hover:bg-muted/50 hover:text-foreground/80",
                         "px-3 py-2 text-sm font-medium rounded-full"
                       )}
                     >
@@ -93,7 +93,7 @@ const Navbar = () => {
                     <NavigationMenuLink 
                       className={cn(
                         navigationMenuTriggerStyle(),
-                        location.pathname === '/blog' && "bg-accent text-accent-foreground",
+                        location.pathname === '/blog' ? "bg-accent text-accent-foreground" : "hover:bg-muted/50 hover:text-foreground/80",
                         "px-3 py-2 text-sm font-medium rounded-full"
                       )}
                     >

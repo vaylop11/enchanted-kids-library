@@ -314,7 +314,7 @@ const UploadZone = () => {
               <div className="w-full max-w-xs">
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-purple-800 transition-all duration-300 ease-out"
+                    className="h-full bg-primary transition-all duration-300 ease-out"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
@@ -324,12 +324,12 @@ const UploadZone = () => {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
-                <p className="text-sm text-purple-800 font-medium">
+                <p className="text-sm text-primary font-medium">
                   {language === 'ar' ? 'الحد الأقصى 10 ميجابايت' : 'Max 10MB'}
                 </p>
                 <Button 
                   variant="outline" 
-                  className="border-purple-800 text-purple-800 hover:bg-purple-50"
+                  className="border-primary text-primary hover:bg-primary/10"
                   onClick={(e) => {
                     e.stopPropagation();
                     triggerFileInput();
@@ -373,7 +373,7 @@ const UploadZone = () => {
           <Button 
             variant="link" 
             onClick={handleSignIn}
-            className="text-xs text-purple-800 hover:text-purple-900"
+            className="text-xs text-primary hover:text-primary/80"
           >
             {language === 'ar'
               ? 'تسجيل الدخول لحفظ ملفات PDF الخاصة بك'

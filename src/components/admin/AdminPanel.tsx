@@ -438,8 +438,8 @@ const AdminPanel = () => {
         
         {/* API Settings Tab */}
         <TabsContent value="settings">
-          <Card className="border-2 border-opacity-50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
+          <Card className="border shadow-md hover:shadow-lg transition-all">
+            <CardHeader className="bg-secondary">
               <CardTitle>
                 {language === 'ar' ? 'إعدادات API' : 'API Settings'}
               </CardTitle>
@@ -517,8 +517,8 @@ const AdminPanel = () => {
         
         {/* Create Post Tab */}
         <TabsContent value="create">
-          <Card className="border-2 border-opacity-50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-950/20 dark:to-teal-950/20">
+          <Card className="border shadow-md hover:shadow-lg transition-all">
+            <CardHeader className="bg-secondary">
               <CardTitle>
                 {language === 'ar' ? 'إنشاء مقال جديد' : 'Create New Blog Post'}
               </CardTitle>
@@ -702,7 +702,7 @@ const AdminPanel = () => {
                   <Button 
                     type="submit" 
                     disabled={isSubmitting || isGenerating} 
-                    className="w-full bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
+                    className="w-full"
                   >
                     {isSubmitting && (
                       <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent" />
@@ -717,8 +717,8 @@ const AdminPanel = () => {
         
         {/* Manage Posts Tab */}
         <TabsContent value="manage">
-          <Card className="border-2 border-opacity-50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20">
+          <Card className="border shadow-md hover:shadow-lg transition-all">
+            <CardHeader className="bg-secondary">
               <CardTitle>
                 {language === 'ar' ? 'إدارة المقالات' : 'Manage Blog Posts'}
               </CardTitle>
@@ -736,8 +736,8 @@ const AdminPanel = () => {
 
         {/* Manage Users Tab */}
         <TabsContent value="users">
-          <Card className="border-2 border-opacity-50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+          <Card className="border shadow-md hover:shadow-lg transition-all">
+            <CardHeader className="bg-secondary">
               <CardTitle>
                 {language === 'ar' ? 'إدارة المستخدمين' : 'Manage Users'}
               </CardTitle>
