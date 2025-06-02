@@ -741,7 +741,7 @@ const PDFViewer = () => {
               </div>
               
               {showPdfControls && (
-                <div className="flex flex-wrap justify-between items-center p-4 bg-muted/20 border-b">
+                <div className="flex flex-wrap justify-between items-center p-4 bg-muted/40 border-b">
                   <div className="flex items-center flex-wrap gap-4 w-full md:w-auto">
                     <div className="flex items-center space-x-2">
                       <Button 
@@ -853,7 +853,7 @@ const PDFViewer = () => {
                 </div>
               )}
               
-              <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
+              <div className="p-4 overflow-auto bg-muted/20 min-h-[60vh] flex justify-center">
                 {isLoadingPdf ? (
                   <div className="flex flex-col items-center justify-center h-full w-full">
                     <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />

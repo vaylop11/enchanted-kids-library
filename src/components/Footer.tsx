@@ -8,7 +8,7 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-muted/30 border-t border-border py-10" aria-labelledby="footer-heading">
+    <footer className="bg-secondary border-t border-border py-10" aria-labelledby="footer-heading">
       <h2 id="footer-heading" className="sr-only">
         {language === 'ar' ? 'تذييل الصفحة' : 'Footer'}
       </h2>
@@ -36,7 +36,7 @@ const Footer = () => {
           
           <nav className={`grid grid-cols-2 gap-8 ${direction === 'rtl' ? 'text-right' : 'text-left'}`} aria-label={language === 'ar' ? 'روابط تذييل الصفحة' : 'Footer navigation'}>
             <div>
-              <h3 className="text-sm font-medium mb-3" id="footer-explore">
+              <h3 className="text-sm font-semibold text-foreground/90 mb-3" id="footer-explore">
                 {language === 'ar' ? 'استكشف' : 'Explore'}
               </h3>
               <ul className="space-y-2" aria-labelledby="footer-explore">
@@ -71,7 +71,7 @@ const Footer = () => {
             </div>
             
             <div>
-              <h3 className="text-sm font-medium mb-3" id="footer-legal">
+              <h3 className="text-sm font-semibold text-foreground/90 mb-3" id="footer-legal">
                 {language === 'ar' ? 'قانوني' : 'Legal'}
               </h3>
               <ul className="space-y-2" aria-labelledby="footer-legal">
@@ -98,7 +98,7 @@ const Footer = () => {
           </nav>
         </div>
         
-        <div className="mt-8 pt-4 border-t border-border/50 text-center text-sm text-muted-foreground">
+        <div className="mt-8 pt-6 border-t border-border/50 text-center text-sm text-muted-foreground">
           <p>
             {language === 'ar' 
               ? `© ${currentYear} تشات PDF. جميع الحقوق محفوظة.`
