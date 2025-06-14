@@ -28,15 +28,18 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
   const [scale, setScale] = useState(1.0);
   const [rotation, setRotation] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<{ [key: number]: HTMLDivElement }>({});
 
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
+    setIsLoading(false);
     onDocumentLoadSuccess?.({ numPages });
   };
 
   const handleDocumentLoadError = (error: Error) => {
+    setIsLoading(false);
     onDocumentLoadError?.(error);
   };
 
@@ -96,13 +99,30 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
     }
   }, []);
 
+  // Responsive style helpers
+  const viewerContainerClasses = cn(
+    "flex flex-col h-full",
+    "md:h-[calc(100vh-160px)]",
+    "bg-muted/10",
+    "transition-all duration-200 ease-in-out",
+    className
+  );
+
+  const pdfPagesWrapperClasses = cn(
+    "p-2 space-y-4 flex flex-col items-center",
+    "sm:p-4",
+    "w-full",
+    "md:max-w-3xl",
+    "mx-auto"
+  );
+
   return (
-    <div className={cn("flex flex-col h-full", className)}>
+    <div className={viewerContainerClasses}>
       {/* Controls */}
-      <div className="flex items-center justify-between p-4 bg-muted/20 border-b">
+      <div className="flex items-center justify-between p-2 sm:p-4 bg-muted/20 border-b">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">
-            Page {currentPage} of {numPages || '?'}
+          <span className="text-xs sm:text-sm font-medium">
+            صفحة {currentPage} من {numPages || '?'}
           </span>
         </div>
         
@@ -112,11 +132,12 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
             size="sm"
             onClick={handleZoomOut}
             className="h-8 w-8 p-0"
+            aria-label="تصغير"
           >
             <ZoomOut className="h-4 w-4" />
           </Button>
           
-          <span className="text-sm min-w-[50px] text-center">
+          <span className="text-xs sm:text-sm min-w-[38px] text-center">
             {Math.round(scale * 100)}%
           </span>
           
@@ -125,17 +146,19 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
             size="sm"
             onClick={handleZoomIn}
             className="h-8 w-8 p-0"
+            aria-label="تكبير"
           >
             <ZoomIn className="h-4 w-4" />
           </Button>
           
-          <div className="mx-2 h-4 border-r border-border" />
+          <div className="mx-1 h-4 border-r border-border" />
           
           <Button
             variant="outline"
             size="sm"
             onClick={handleRotateLeft}
             className="h-8 w-8 p-0"
+            aria-label="تدوير لليسار"
           >
             <RotateCcw className="h-4 w-4" />
           </Button>
@@ -145,6 +168,7 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
             size="sm"
             onClick={handleRotateRight}
             className="h-8 w-8 p-0"
+            aria-label="تدوير لليمين"
           >
             <RotateCw className="h-4 w-4" />
           </Button>
@@ -169,23 +193,26 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
       )}
 
       {/* Scrollable PDF Content */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 w-full">
         <div
           ref={containerRef}
-          className="p-4 space-y-4 bg-muted/10"
+          className={pdfPagesWrapperClasses}
         >
           <Document
             file={pdfUrl}
             onLoadSuccess={handleDocumentLoadSuccess}
             onLoadError={handleDocumentLoadError}
             loading={
-              <div className="flex items-center justify-center h-96">
-                <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+              <div className="flex flex-col items-center justify-center min-h-72 py-10 w-full">
+                <div className="h-14 w-14 rounded-full border-4 border-primary border-t-muted-foreground/30 animate-spin mb-2" />
+                <span className="mt-2 text-sm text-muted-foreground font-medium animate-pulse">
+                  جاري تحميل الملف...
+                </span>
               </div>
             }
             error={
-              <div className="flex flex-col items-center justify-center h-96">
-                <p className="text-muted-foreground">Failed to load PDF</p>
+              <div className="flex flex-col items-center justify-center min-h-40">
+                <p className="text-muted-foreground">فشل في تحميل الملف</p>
               </div>
             }
           >
@@ -197,7 +224,12 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
                     if (el) pageRefs.current[pageNumber] = el;
                   }}
                   data-page-number={pageNumber}
-                  className="flex justify-center mb-4 p-2 bg-white rounded-lg shadow-sm border"
+                  className={cn(
+                    "flex justify-center items-center mb-3 sm:mb-4 p-1 sm:p-2 bg-white rounded-lg shadow-sm border",
+                    "transition-all duration-150",
+                    "w-full"
+                  )}
+                  style={{ minHeight: 220 }}
                 >
                   <Page
                     pageNumber={pageNumber}
@@ -208,13 +240,13 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
                     className="max-w-full"
                     loading={
                       <div className="flex items-center justify-center h-96 w-full">
-                        <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/20 border-t-primary animate-spin" />
+                        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-muted-foreground/40 animate-spin" />
                       </div>
                     }
                     error={
-                      <div className="flex items-center justify-center h-96 w-full bg-muted/20 rounded">
-                        <p className="text-sm text-muted-foreground">
-                          Error loading page {pageNumber}
+                      <div className="flex items-center justify-center h-56 w-full bg-muted/20 rounded">
+                        <p className="text-xs sm:text-sm text-muted-foreground">
+                          خطأ في تحميل الصفحة {pageNumber}
                         </p>
                       </div>
                     }
@@ -229,3 +261,4 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
 };
 
 export default ScrollablePDFViewer;
+
