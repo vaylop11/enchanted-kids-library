@@ -64,7 +64,23 @@ const ChatSpace = () => {
       channel
         .on('presence', { event: 'sync' }, () => {
           const newState = channel.presenceState();
-          const users = Object.values(newState).flat() as UserPresence[];
+          const users: UserPresence[] = [];
+          
+          // Extract user data from presence state
+          Object.values(newState).forEach((presenceArray: any) => {
+            if (Array.isArray(presenceArray)) {
+              presenceArray.forEach((presence: any) => {
+                if (presence.user_id && presence.email && presence.online_at) {
+                  users.push({
+                    user_id: presence.user_id,
+                    email: presence.email,
+                    online_at: presence.online_at
+                  });
+                }
+              });
+            }
+          });
+          
           setOnlineUsers(users);
         })
         .on('presence', { event: 'join' }, ({ key, newPresences }) => {
