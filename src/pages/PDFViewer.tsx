@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -14,6 +15,7 @@ import { ChatInput } from '@/components/ui/chat-input';
 import { MarkdownMessage } from '@/components/ui/markdown-message';
 import ScrollablePDFViewer from '@/components/ui/scrollable-pdf-viewer';
 import ReactMarkdown from 'react-markdown';
+import { pdfjs } from 'react-pdf';
 import {
   Tooltip,
   TooltipContent,
