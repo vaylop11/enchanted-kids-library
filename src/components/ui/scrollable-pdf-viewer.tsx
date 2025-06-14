@@ -89,16 +89,6 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
     setRotation((prev) => (prev + 90) % 360);
   };
 
-  const scrollToPage = useCallback((pageNumber: number) => {
-    const pageElement = pageRefs.current[pageNumber];
-    if (pageElement && containerRef.current) {
-      pageElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
-  }, []);
-
   // Responsive style helpers
   const viewerContainerClasses = cn(
     "flex flex-col h-full",
@@ -175,28 +165,12 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
         </div>
       </div>
 
-      {/* Page Navigator */}
-      {numPages && numPages > 1 && (
-        <div className="flex items-center gap-1 p-2 bg-muted/10 border-b overflow-x-auto">
-          {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
-            <Button
-              key={pageNum}
-              variant={currentPage === pageNum ? "default" : "outline"}
-              size="sm"
-              onClick={() => scrollToPage(pageNum)}
-              className="h-8 min-w-8 text-xs"
-            >
-              {pageNum}
-            </Button>
-          ))}
-        </div>
-      )}
-
-      {/* Scrollable PDF Content */}
+      {/* Scrollable PDF Content with smooth scrolling */}
       <ScrollArea className="flex-1 w-full">
         <div
           ref={containerRef}
           className={pdfPagesWrapperClasses}
+          style={{ scrollBehavior: 'smooth' }}
         >
           <Document
             file={pdfUrl}
@@ -226,10 +200,13 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
                   data-page-number={pageNumber}
                   className={cn(
                     "flex justify-center items-center mb-3 sm:mb-4 p-1 sm:p-2 bg-white rounded-lg shadow-sm border",
-                    "transition-all duration-150",
+                    "transition-all duration-300 ease-in-out",
                     "w-full"
                   )}
-                  style={{ minHeight: 220 }}
+                  style={{ 
+                    minHeight: 220,
+                    scrollMarginTop: '20px'
+                  }}
                 >
                   <Page
                     pageNumber={pageNumber}
@@ -237,7 +214,7 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
                     rotate={rotation}
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
-                    className="max-w-full"
+                    className="max-w-full transition-transform duration-300 ease-in-out"
                     loading={
                       <div className="flex items-center justify-center h-96 w-full">
                         <div className="h-8 w-8 rounded-full border-2 border-primary border-t-muted-foreground/40 animate-spin" />
@@ -261,4 +238,3 @@ const ScrollablePDFViewer: React.FC<ScrollablePDFViewerProps> = ({
 };
 
 export default ScrollablePDFViewer;
-
