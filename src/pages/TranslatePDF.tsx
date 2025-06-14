@@ -34,7 +34,6 @@ const TranslatePDF = () => {
   const [targetLanguage, setTargetLanguage] = useState('en');
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTempPdf, setIsTempPdf] = useState(false);
-  const [autoTranslate, setAutoTranslate] = useState(true);
   const [translatedPages, setTranslatedPages] = useState<number[]>([]);
   const [pageTexts, setPageTexts] = useState<Map<number, string>>(new Map());
   const [isCachedTranslation, setIsCachedTranslation] = useState(false);
@@ -188,13 +187,8 @@ const TranslatePDF = () => {
   }, [pdfUrl, id, language, extractPageText]);
 
   const handlePageChange = useCallback(async (newPage: number) => {
-    console.log(`Page changed to: ${newPage}`);
     setCurrentPage(newPage);
-    
-    if (autoTranslate && targetLanguage && newPage !== currentPage) {
-      await translateCurrentPage(newPage, targetLanguage);
-    }
-  }, [autoTranslate, targetLanguage, currentPage, translateCurrentPage]);
+  }, []);
 
   const handleCopyText = async () => {
     if (translatedText) {
@@ -223,20 +217,24 @@ const TranslatePDF = () => {
     }
   };
 
-  const handleTranslateAll = async (onProgress: (page: number, total: number) => void) => {
+  const handleTranslateAll = async (
+    onProgress: (page: number, total: number) => void, 
+    fromPage?: number, 
+    toPage?: number
+  ) => {
     if (!numPages || !targetLanguage) return;
 
-    for (let page = 1; page <= numPages; page++) {
-      onProgress(page, numPages);
-      
-      // Skip if already translated (cached)
+    const startPage = fromPage ?? 1;
+    const endPage = toPage ?? numPages;
+
+    for (let page = startPage; page <= endPage; page++) {
+      onProgress(page, endPage - startPage + 1);
+
       if (translationCache.hasTranslation(id || '', page, targetLanguage)) {
         continue;
       }
-
       await translateCurrentPage(page, targetLanguage);
-      
-      // Small delay to prevent overwhelming the API
+
       await new Promise(resolve => setTimeout(resolve, 500));
     }
   };
@@ -272,10 +270,7 @@ const TranslatePDF = () => {
   };
 
   useEffect(() => {
-    if (isLoaded && targetLanguage && currentPage) {
-      translateCurrentPage(currentPage, targetLanguage);
-    }
-  }, [targetLanguage, isLoaded, currentPage, translateCurrentPage]);
+  }, []);
 
   useEffect(() => {
     if (id && targetLanguage) {
@@ -332,14 +327,7 @@ const TranslatePDF = () => {
               </span>
               
               <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => setAutoTranslate(!autoTranslate)}
-                  variant={autoTranslate ? "default" : "outline"}
-                  size="sm"
-                  className="text-xs"
-                >
-                  {language === 'ar' ? 'ترجمة تلقائية' : 'Auto Translate'}
-                </Button>
+                
                 
                 {translatedText && (
                   <Button
