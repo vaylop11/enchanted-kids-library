@@ -3,27 +3,19 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowLeft, FileText, Languages, Loader2, ZoomIn, ZoomOut, RotateCcw, RotateCw, ArrowLeftCircle, ArrowRightCircle } from 'lucide-react';
-import { Document, Page, pdfjs } from 'react-pdf';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ArrowLeft, FileText, Copy, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { getPDFById } from '@/services/pdfStorage';
 import { getSupabasePDFById } from '@/services/pdfSupabaseService';
 import { useAuth } from '@/contexts/AuthContext';
 import { extractTextFromPDF } from '@/services/pdfAnalysisService';
-import { translateText, supportedLanguages } from '@/services/translationService';
+import { translateText } from '@/services/translationService';
 import SEO from '@/components/SEO';
 import { MarkdownMessage } from '@/components/ui/markdown-message';
 import ScrollablePDFViewer from '@/components/ui/scrollable-pdf-viewer';
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+import TranslationProgress from '@/components/ui/translation-progress';
+import LanguageSelector from '@/components/ui/language-selector';
+import { Button } from '@/components/ui/button';
 
 const TranslatePDF = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,9 +32,6 @@ const TranslatePDF = () => {
   const [targetLanguage, setTargetLanguage] = useState('en');
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTempPdf, setIsTempPdf] = useState(false);
-  
-  const [scale, setScale] = useState(1);
-  const [rotation, setRotation] = useState(0);
 
   useEffect(() => {
     if (!id) {
@@ -133,22 +122,6 @@ const TranslatePDF = () => {
     }
   };
 
-  const handleZoomIn = () => {
-    setScale((prev) => Math.min(prev + 0.2, 3));
-  };
-
-  const handleZoomOut = () => {
-    setScale((prev) => Math.max(prev - 0.2, 0.4));
-  };
-
-  const handleRotateLeft = () => {
-    setRotation((prev) => (prev - 90) % 360);
-  };
-
-  const handleRotateRight = () => {
-    setRotation((prev) => (prev + 90) % 360);
-  };
-
   const translateCurrentPage = async (page: number, lang: string) => {
     if (!pdfUrl) return;
     
@@ -164,6 +137,10 @@ const TranslatePDF = () => {
       
       const result = await translateText(extractedText, lang);
       setTranslatedText(result.translatedText);
+      
+      toast.success(language === 'ar' 
+        ? 'تمت الترجمة بنجاح' 
+        : 'Translation completed successfully');
     } catch (error) {
       console.error('Translation error:', error);
       toast.error(language === 'ar'
@@ -171,6 +148,33 @@ const TranslatePDF = () => {
         : 'Failed to translate text');
     } finally {
       setIsTranslating(false);
+    }
+  };
+
+  const handleCopyText = async () => {
+    if (translatedText) {
+      try {
+        await navigator.clipboard.writeText(translatedText);
+        toast.success(language === 'ar' ? 'تم نسخ النص' : 'Text copied');
+      } catch (error) {
+        toast.error(language === 'ar' ? 'فشل في نسخ النص' : 'Failed to copy text');
+      }
+    }
+  };
+
+  const handleDownloadTranslation = () => {
+    if (translatedText) {
+      const blob = new Blob([translatedText], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${pdfTitle}_translation_page_${currentPage}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success(language === 'ar' ? 'تم تحميل الملف' : 'File downloaded');
     }
   };
 
@@ -192,7 +196,8 @@ const TranslatePDF = () => {
       
       <main className="flex-1 pt-24 pb-10">
         <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-          <div className="flex justify-between items-center mb-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <Link 
               to={id ? `/pdf/${id}` : '/pdfs'} 
               className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -201,44 +206,46 @@ const TranslatePDF = () => {
               {language === 'ar' ? 'العودة إلى عارض الملف' : 'Back to PDF Viewer'}
             </Link>
             
-            <div className="flex items-center gap-4">
-              <Select
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+              <LanguageSelector
                 value={targetLanguage}
                 onValueChange={setTargetLanguage}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder={language === 'ar' ? 'اختر لغة' : 'Select language'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {supportedLanguages.map((lang) => (
-                    <SelectItem key={lang.code} value={lang.code}>
-                      {lang.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                disabled={isTranslating}
+              />
               
               <div className="flex items-center gap-2">
-                <Languages className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-semibold">
+                <FileText className="h-5 w-5 text-primary" />
+                <h1 className="text-lg sm:text-xl font-semibold">
                   {language === 'ar' ? 'ترجمة الملف' : 'Translate PDF'}
                 </h1>
               </div>
             </div>
           </div>
+
+          {/* Current page indicator */}
+          {numPages && (
+            <div className="mb-4 text-center">
+              <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                {language === 'ar' 
+                  ? `الصفحة ${currentPage} من ${numPages}` 
+                  : `Page ${currentPage} of ${numPages}`}
+              </span>
+            </div>
+          )}
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* PDF Viewer */}
             <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-              <div className="p-4 border-b">
-                <h2 className="font-semibold text-lg">
+              <div className="p-4 border-b bg-muted/20">
+                <h2 className="font-semibold text-base sm:text-lg">
                   {language === 'ar' ? 'استعراض الملف' : 'PDF Preview'}
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-muted-foreground mt-1 truncate">
                   {pdfTitle}
                 </p>
               </div>
               
-              <div className="overflow-hidden bg-muted/10 h-[70vh]">
+              <div className="overflow-hidden bg-muted/10 h-[60vh] sm:h-[70vh]">
                 {!isLoaded ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
@@ -260,33 +267,57 @@ const TranslatePDF = () => {
               </div>
             </div>
             
+            {/* Translation Panel */}
             <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-              <div className="p-4 border-b">
-                <h2 className="font-semibold text-lg">
-                  {language === 'ar' ? 'النص المترجم' : 'Translated Text'}
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {isTranslating 
-                    ? (language === 'ar' ? 'جار الترجمة...' : 'Translating...') 
-                    : (language === 'ar' ? 'الترجمة جاهزة' : 'Translation ready')}
-                </p>
+              <div className="p-4 border-b bg-muted/20 flex justify-between items-center">
+                <div>
+                  <h2 className="font-semibold text-base sm:text-lg">
+                    {language === 'ar' ? 'النص المترجم' : 'Translated Text'}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {isTranslating 
+                      ? (language === 'ar' ? 'جار الترجمة...' : 'Translating...') 
+                      : translatedText 
+                        ? (language === 'ar' ? 'الترجمة جاهزة' : 'Translation ready')
+                        : (language === 'ar' ? 'اختر لغة للترجمة' : 'Select language to translate')}
+                  </p>
+                </div>
+                
+                {translatedText && !isTranslating && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopyText}
+                      className="h-8 w-8 p-0"
+                      title={language === 'ar' ? 'نسخ النص' : 'Copy text'}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDownloadTranslation}
+                      className="h-8 w-8 p-0"
+                      title={language === 'ar' ? 'تحميل الترجمة' : 'Download translation'}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
               
-              <div className="p-4 overflow-auto bg-muted/10 h-[70vh]">
-                {isTranslating ? (
-                  <div className="flex flex-col items-center justify-center h-full gap-4">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                    <p className="text-sm text-muted-foreground">
-                      {language === 'ar' ? 'جار الترجمة...' : 'Translating...'}
-                    </p>
-                  </div>
-                ) : translatedText ? (
-                  <MarkdownMessage content={translatedText} />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                    {language === 'ar' 
-                      ? 'اختر لغة لبدء الترجمة'
-                      : 'Select a language to start translation'}
+              <div className="overflow-auto bg-muted/10 h-[60vh] sm:h-[70vh]">
+                <TranslationProgress
+                  isTranslating={isTranslating}
+                  translatedText={translatedText}
+                  targetLanguage={targetLanguage}
+                  currentPage={currentPage}
+                />
+                
+                {translatedText && !isTranslating && (
+                  <div className="p-4">
+                    <MarkdownMessage content={translatedText} />
                   </div>
                 )}
               </div>
