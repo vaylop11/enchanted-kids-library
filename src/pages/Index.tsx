@@ -1,9 +1,9 @@
+
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import HeroSection from '@/components/HeroSection';
 import FeaturesSection from '@/components/FeaturesSection';
-import BlogSection from '@/components/BlogSection';
 import FAQSection from '@/components/FAQSection';
 import UploadZone from '@/components/UploadZone';
 import PDFGrid from '@/components/PDFGrid';
@@ -85,7 +85,6 @@ const Index = () => {
         <PDFGrid />
         
         <FeaturesSection />
-        <BlogSection />
         <FAQSection />
       </main>
       <section className="bg-muted/10 py-8">
