@@ -269,15 +269,34 @@ const TranslatePDF = () => {
     translateCurrentPage(currentPage, targetLanguage, true);
   };
 
+  // Trigger translation automatically on page/language change, unless already translating or translation exists
   useEffect(() => {
-  }, []);
+    if (!id || !targetLanguage || !numPages) return;
 
-  useEffect(() => {
-    if (id && targetLanguage) {
-      const cachedPages = translationCache.getCachedPages(id, targetLanguage);
-      setTranslatedPages(cachedPages);
+    const cached = translationCache.getCachedTranslation(id, currentPage, targetLanguage);
+
+    if (cached) {
+      setTranslatedText(cached);
+      setIsCachedTranslation(true);
+      setIsTranslating(false);
+      return;
     }
-  }, [id, targetLanguage]);
+
+    // If no cached translation, clear previous text (for better feedback)
+    setTranslatedText('');
+    setIsCachedTranslation(false);
+    setIsTranslating(true);
+
+    // Auto-translate
+    translateCurrentPage(currentPage, targetLanguage)
+      .finally(() => setIsTranslating(false));
+  // Only re-run when these change
+  }, [id, currentPage, targetLanguage, numPages, translateCurrentPage]);
+
+  // Manual translation button handler
+  const handleManualTranslate = async () => {
+    await translateCurrentPage(currentPage, targetLanguage, true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -317,7 +336,7 @@ const TranslatePDF = () => {
             </div>
           </div>
 
-          {/* Current page indicator and controls */}
+          {/* Current page indicator and translation controls */}
           {numPages && (
             <div className="mb-4 flex items-center justify-between">
               <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
@@ -325,10 +344,18 @@ const TranslatePDF = () => {
                   ? `الصفحة ${currentPage} من ${numPages}` 
                   : `Page ${currentPage} of ${numPages}`}
               </span>
-              
               <div className="flex items-center gap-2">
-                
-                
+                {/* Manual translate button (always available) */}
+                <Button
+                  onClick={handleManualTranslate}
+                  variant="default"
+                  size="sm"
+                  disabled={isTranslating}
+                  className="text-xs"
+                  title={language === 'ar' ? "ترجمة الصفحة يدوياً" : "Translate page manually"}
+                >
+                  {language === 'ar' ? "ترجمة الصفحة" : "Translate Page"}
+                </Button>
                 {translatedText && (
                   <Button
                     onClick={handleRefreshTranslation}
@@ -402,8 +429,10 @@ const TranslatePDF = () => {
                       {isTranslating 
                         ? (language === 'ar' ? 'جار الترجمة...' : 'Translating...') 
                         : translatedText 
-                          ? (language === 'ar' ? 'الترجمة جاهزة' : 'Translation ready')
-                          : (language === 'ar' ? 'اختر لغة للترجمة' : 'Select language to translate')}
+                          ? (language === 'ar' ? 
+                              (isCachedTranslation ? 'تم تحميل الترجمة المحفوظة' : 'الترجمة جاهزة')
+                              : (isCachedTranslation ? 'Loaded cached translation' : 'Translation ready'))
+                          : (language === 'ar' ? 'اختر لغة للترجمة أو ترجم الصفحة' : 'Select a language or translate the page')}
                     </p>
                   </div>
                   
@@ -444,6 +473,11 @@ const TranslatePDF = () => {
                   {translatedText && !isTranslating && (
                     <div className="p-4">
                       <MarkdownMessage content={translatedText} />
+                    </div>
+                  )}
+                  {!translatedText && !isTranslating && (
+                    <div className="text-center text-sm text-muted-foreground mt-10">
+                      {language === 'ar' ? "ترجم الصفحة للعرض هنا" : "Translate the page to display its text here."}
                     </div>
                   )}
                 </div>
