@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import PDFs from "./pages/PDFs";
 import PDFViewer from "./pages/PDFViewer";
 import TranslatePDF from "./pages/TranslatePDF";
+import ChatSpace from "./pages/ChatSpace";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
@@ -65,6 +66,14 @@ const App = () => {
                     <TranslatePDF />
                   </ProtectedRoute>
                 } />
+                <Route 
+                  path="/chat" 
+                  element={
+                    <ProtectedRoute>
+                      <ChatSpace />
+                    </ProtectedRoute>
+                  } 
+                />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/terms-of-service" element={<TermsOfService />} />
                 <Route path="/signin" element={<AuthPage><SignIn /></AuthPage>} />
