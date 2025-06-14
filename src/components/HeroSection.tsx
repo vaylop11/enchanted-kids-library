@@ -84,7 +84,7 @@ const HeroSection = () => {
         <div className="flex-1 flex items-center justify-center md:justify-end min-w-[280px]">
           <div className="rounded-3xl overflow-hidden shadow-xl bg-white/40 backdrop-blur-lg border border-purple-100/70 max-w-xs md:max-w-sm p-4">
             <DotLottieReact
-              src="https://lottie.host/527bc09d-c2d7-4d91-9eb9-fb516d4d892d/JdkJrUWRhX.lottie"
+              src="https://lottie.host/bad7d1d7-7774-4f1e-a0e6-1f39049481c7/IexjqgAIYx.lottie"
               loop
               autoplay
               className="w-full h-64 md:h-80"
