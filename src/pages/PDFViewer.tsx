@@ -1,8 +1,7 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, Share, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, Languages } from 'lucide-react';
+import { ArrowLeft, FileText, Share, ChevronUp, ChevronDown, AlertTriangle, Trash2, Languages, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
@@ -10,11 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
-import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
-import { ChatInput } from '@/components/ui/chat-input';
-import { MarkdownMessage } from '@/components/ui/markdown-message';
+import { EnhancedChatInput } from '@/components/ui/enhanced-chat-input';
+import { ChatMessageBubble } from '@/components/ui/chat-message-bubble';
 import ScrollablePDFViewer from '@/components/ui/scrollable-pdf-viewer';
-import ReactMarkdown from 'react-markdown';
 import { pdfjs } from 'react-pdf';
 import {
   Tooltip,
@@ -22,11 +19,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   getPDFById,
   addChatMessageToPDF,
@@ -45,8 +37,7 @@ import {
 import {
   extractTextFromPDF,
   analyzePDFWithGemini,
-  AnalysisProgress,
-  AnalysisStage
+  AnalysisProgress
 } from '@/services/pdfAnalysisService';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -62,7 +53,6 @@ const PDFViewer = () => {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [showPdfControls, setShowPdfControls] = useState(true);
-  const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [showChat, setShowChat] = useState(true);
   const [pdf, setPdf] = useState<UploadedPDF | null>(null);
@@ -79,7 +69,17 @@ const PDFViewer = () => {
     message: 'Preparing to analyze PDF...'
   });
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
+  const [messagesLoaded, setMessagesLoaded] = useState(false);
 
+  // Chat suggestions based on PDF content
+  const chatSuggestions = [
+    language === 'ar' ? 'ما هو الموضوع الرئيسي لهذا المستند؟' : 'What is the main topic of this document?',
+    language === 'ar' ? 'لخص النقاط المهمة' : 'Summarize the key points',
+    language === 'ar' ? 'ما هي الاستنتاجات الرئيسية؟' : 'What are the main conclusions?',
+    language === 'ar' ? 'اشرح الأقسام المعقدة' : 'Explain the complex sections',
+  ];
+
+  // Load PDF and messages on component mount
   useEffect(() => {
     if (!id) {
       navigate('/');
@@ -87,6 +87,8 @@ const PDFViewer = () => {
     }
 
     const loadPdf = async () => {
+      console.log('Loading PDF with ID:', id);
+      
       if (id.startsWith('temp-') || window.location.pathname.includes('/pdf/temp/')) {
         setIsTempPdf(true);
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
@@ -96,6 +98,7 @@ const PDFViewer = () => {
             if (parsedData.fileData && parsedData.fileData.id === id) {
               setPdf(parsedData.fileData);
               setChatMessages(parsedData.fileData.chatMessages || []);
+              setMessagesLoaded(true);
               setIsLoadingPdf(false);
               setIsLoaded(true);
               return;
@@ -109,16 +112,21 @@ const PDFViewer = () => {
         return;
       }
 
+      // Try loading from local storage first
       const loadedPdf = getPDFById(id);
       if (loadedPdf) {
+        console.log('PDF loaded from local storage:', loadedPdf);
         setPdf(loadedPdf);
-        if (loadedPdf.chatMessages) {
+        
+        // Load messages from local storage
+        if (loadedPdf.chatMessages && loadedPdf.chatMessages.length > 0) {
           setChatMessages(loadedPdf.chatMessages);
+          console.log('Loaded messages from local storage:', loadedPdf.chatMessages.length);
         }
         
         if (!loadedPdf.dataUrl) {
           if (user) {
-            tryLoadFromSupabase(id);
+            await tryLoadFromSupabase(id);
           } else {
             setPdfError(language === 'ar' 
               ? 'تعذر تحميل بيانات PDF بسبب قيود التخزين' 
@@ -131,8 +139,16 @@ const PDFViewer = () => {
         } else {
           setIsLoadingPdf(false);
         }
+        
+        // If user is logged in, also try to load messages from Supabase
+        if (user && !messagesLoaded) {
+          await loadMessagesFromSupabase(id);
+        } else {
+          setMessagesLoaded(true);
+        }
       } else {
-        tryLoadFromSupabase(id);
+        // PDF not in local storage, try Supabase
+        await tryLoadFromSupabase(id);
       }
     };
 
@@ -164,19 +180,8 @@ const PDFViewer = () => {
           setPdf(newPdf);
           setIsLoadingPdf(false);
           
-          setIsLoadingMessages(true);
-          const messages = await getChatMessagesForPDF(pdfId);
-          if (messages && messages.length > 0) {
-            const convertedMessages: ChatMessage[] = messages.map(msg => ({
-              id: msg.id,
-              content: msg.content,
-              isUser: msg.isUser,
-              timestamp: msg.timestamp
-            }));
-            
-            setChatMessages(convertedMessages);
-          }
-          setIsLoadingMessages(false);
+          // Load messages from Supabase
+          await loadMessagesFromSupabase(pdfId);
         } else {
           console.error('PDF data not found in Supabase');
           toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
@@ -188,6 +193,32 @@ const PDFViewer = () => {
         toast.error(language === 'ar' ? 'لم يتم العثور على الملف' : 'PDF not found');
         navigate('/pdfs');
         return;
+      }
+    };
+
+    const loadMessagesFromSupabase = async (pdfId: string) => {
+      if (!user) return;
+      
+      setIsLoadingMessages(true);
+      try {
+        console.log('Loading messages from Supabase for PDF:', pdfId);
+        const messages = await getChatMessagesForPDF(pdfId);
+        if (messages && messages.length > 0) {
+          const convertedMessages: ChatMessage[] = messages.map(msg => ({
+            id: msg.id,
+            content: msg.content,
+            isUser: msg.isUser,
+            timestamp: msg.timestamp
+          }));
+          
+          console.log('Loaded messages from Supabase:', convertedMessages.length);
+          setChatMessages(convertedMessages);
+        }
+      } catch (error) {
+        console.error('Error loading messages from Supabase:', error);
+      } finally {
+        setIsLoadingMessages(false);
+        setMessagesLoaded(true);
       }
     };
 
@@ -293,10 +324,6 @@ const PDFViewer = () => {
     }
   };
 
-  const handleTranslate = () => {
-    navigate(`/translate/${id}`);
-  };
-
   const handleRetryLoading = () => {
     setIsLoadingPdf(true);
     setPdfError(null);
@@ -308,7 +335,7 @@ const PDFViewer = () => {
   };
 
   const extractPDFContent = async () => {
-    if (!pdf?.dataUrl || pdfTextContent) return;
+    if (!pdf?.dataUrl || pdfTextContent) return pdfTextContent;
     
     try {
       setAnalysisProgress({
@@ -344,12 +371,17 @@ const PDFViewer = () => {
     }
   };
 
-  const handleChatSubmit = async (message: string) => {
-    if (!message || !id || !pdf) return;
+  const saveMessage = async (messageContent: string, isUser: boolean): Promise<ChatMessage | null> => {
+    if (!id || !pdf) return null;
+
+    const newMessage: ChatMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      content: messageContent,
+      isUser,
+      timestamp: new Date()
+    };
 
     try {
-      let savedUserMessage: ChatMessage | null = null;
-      
       if (isTempPdf) {
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
         if (tempPdfData) {
@@ -359,24 +391,17 @@ const PDFViewer = () => {
               parsedData.fileData.chatMessages = [];
             }
             
-            savedUserMessage = {
-              id: `temp-msg-${Date.now()}`,
-              content: message,
-              isUser: true,
-              timestamp: new Date()
-            };
-            
-            parsedData.fileData.chatMessages.push(savedUserMessage);
-            
+            parsedData.fileData.chatMessages.push(newMessage);
             sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
+            return newMessage;
           } catch (error) {
-            console.error('Error adding user message to temporary PDF:', error);
+            console.error('Error saving message to temporary PDF:', error);
           }
         }
       } else if (user) {
-        const result = await addSupabaseChatMessage(id, message, true);
+        const result = await addSupabaseChatMessage(id, messageContent, isUser);
         if (result) {
-          savedUserMessage = {
+          return {
             id: result.id,
             content: result.content,
             isUser: result.isUser,
@@ -384,15 +409,39 @@ const PDFViewer = () => {
           };
         }
       } else {
-        savedUserMessage = addChatMessageToPDF(id, {
-          content: message,
-          isUser: true,
+        const savedMessage = addChatMessageToPDF(id, {
+          content: messageContent,
+          isUser,
           timestamp: new Date()
         });
+        
+        if (savedMessage) {
+          // Update local PDF state
+          const updatedPdf = {
+            ...pdf,
+            chatMessages: [...(pdf.chatMessages || []), savedMessage]
+          };
+          setPdf(updatedPdf);
+          return savedMessage;
+        }
       }
-      
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
+
+    return newMessage; // Return the message even if saving fails
+  };
+
+  const handleChatSubmit = async (message: string) => {
+    if (!message || !id || !pdf) return;
+
+    console.log('Submitting chat message:', message);
+
+    try {
+      // Save user message
+      const savedUserMessage = await saveMessage(message, true);
       if (savedUserMessage) {
-        setChatMessages(prev => [...prev, savedUserMessage!]);
+        setChatMessages(prev => [...prev, savedUserMessage]);
       }
 
       setIsAnalyzing(true);
@@ -411,14 +460,6 @@ const PDFViewer = () => {
       try {
         let textContent = pdfTextContent;
         if (!textContent) {
-          setAnalysisProgress({
-            stage: 'extracting',
-            progress: 25,
-            message: language === 'ar'
-              ? 'استخراج النص من ملف PDF...'
-              : 'Extracting text from PDF...'
-          });
-          
           textContent = await extractPDFContent();
           
           if (!textContent) {
@@ -448,54 +489,12 @@ const PDFViewer = () => {
           textContent, 
           message, 
           updateAnalysisProgress, 
-          chatMessages.filter(m => m.isUser === false).slice(-5)
+          chatMessages.filter(m => !m.isUser).slice(-5)
         );
         
-        let savedAiMessage: ChatMessage | null = null;
-        
-        if (isTempPdf) {
-          const tempPdfData = sessionStorage.getItem('tempPdfFile');
-          if (tempPdfData) {
-            try {
-              const parsedData = JSON.parse(tempPdfData);
-              if (!parsedData.fileData.chatMessages) {
-                parsedData.fileData.chatMessages = [];
-              }
-              
-              savedAiMessage = {
-                id: `temp-msg-${Date.now()}`,
-                content: aiContent,
-                isUser: false,
-                timestamp: new Date()
-              };
-              
-              parsedData.fileData.chatMessages.push(savedAiMessage);
-              
-              sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
-            } catch (error) {
-              console.error('Error adding AI message to temporary PDF:', error);
-            }
-          }
-        } else if (user) {
-          const result = await addSupabaseChatMessage(id, aiContent, false);
-          if (result) {
-            savedAiMessage = {
-              id: result.id,
-              content: result.content,
-              isUser: result.isUser,
-              timestamp: result.timestamp
-            };
-          }
-        } else {
-          savedAiMessage = addChatMessageToPDF(id, {
-            content: aiContent,
-            isUser: false,
-            timestamp: new Date()
-          });
-        }
-        
+        const savedAiMessage = await saveMessage(aiContent, false);
         if (savedAiMessage) {
-          setChatMessages(prev => [...prev, savedAiMessage!]);
+          setChatMessages(prev => [...prev, savedAiMessage]);
         }
       } catch (error) {
         console.error('Error in AI analysis:', error);
@@ -511,51 +510,9 @@ const PDFViewer = () => {
           ? "عذرًا، حدث خطأ أثناء تحليل الملف. يرجى المحاولة مرة أخرى لاحقًا."
           : "Sorry, there was an error analyzing the PDF. Please try again later.";
           
-        let savedFallbackMessage: ChatMessage | null = null;
-        
-        if (isTempPdf) {
-          const tempPdfData = sessionStorage.getItem('tempPdfFile');
-          if (tempPdfData) {
-            try {
-              const parsedData = JSON.parse(tempPdfData);
-              if (!parsedData.fileData.chatMessages) {
-                parsedData.fileData.chatMessages = [];
-              }
-              
-              savedFallbackMessage = {
-                id: `temp-msg-${Date.now()}`,
-                content: fallbackResponse,
-                isUser: false,
-                timestamp: new Date()
-              };
-              
-              parsedData.fileData.chatMessages.push(savedFallbackMessage);
-              
-              sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
-            } catch (error) {
-              console.error('Error adding fallback message to temporary PDF:', error);
-            }
-          }
-        } else if (user) {
-          const result = await addSupabaseChatMessage(id, fallbackResponse, false);
-          if (result) {
-            savedFallbackMessage = {
-              id: result.id,
-              content: result.content,
-              isUser: result.isUser,
-              timestamp: result.timestamp
-            };
-          }
-        } else {
-          savedFallbackMessage = addChatMessageToPDF(id, {
-            content: fallbackResponse,
-            isUser: false,
-            timestamp: new Date()
-          });
-        }
-        
+        const savedFallbackMessage = await saveMessage(fallbackResponse, false);
         if (savedFallbackMessage) {
-          setChatMessages(prev => [...prev, savedFallbackMessage!]);
+          setChatMessages(prev => [...prev, savedFallbackMessage]);
         }
       } finally {
         setIsAnalyzing(false);
@@ -601,10 +558,27 @@ const PDFViewer = () => {
   };
 
   const handleCopyMessage = (content: string) => {
-    navigator.clipboard.writeText(content);
     toast.success(language === 'ar' 
       ? 'تم نسخ الرسالة إلى الحافظة'
       : 'Message copied to clipboard');
+  };
+
+  const handleRegenerateMessage = (messageId: string) => {
+    // Find the user message before this AI message and re-submit it
+    const messageIndex = chatMessages.findIndex(m => m.id === messageId);
+    if (messageIndex > 0) {
+      const previousMessage = chatMessages[messageIndex - 1];
+      if (previousMessage.isUser) {
+        // Remove the AI message and regenerate
+        setChatMessages(prev => prev.slice(0, messageIndex));
+        handleChatSubmit(previousMessage.content);
+      }
+    }
+  };
+
+  const handleMessageFeedback = (messageId: string, feedback: 'positive' | 'negative') => {
+    // This could be used to improve the AI responses in the future
+    console.log('Message feedback:', messageId, feedback);
   };
 
   if (!pdf) {
@@ -760,9 +734,15 @@ const PDFViewer = () => {
             <div className="lg:w-1/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm flex flex-col">
               <div className="flex justify-between items-center p-4 border-b">
                 <div className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary" />
                   <h2 className="font-display text-lg font-medium">
-                    {language === 'ar' ? 'دردشة مع هذا الملف' : 'Chat with this PDF'}
+                    {language === 'ar' ? 'دردشة ذكية' : 'AI Chat'}
                   </h2>
+                  {chatMessages.length > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {chatMessages.length}
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex items-center gap-1">
                   <TooltipProvider>
@@ -775,11 +755,11 @@ const PDFViewer = () => {
                           className="h-8 w-8 text-muted-foreground hover:text-foreground"
                           aria-label={language === 'ar' ? 'إعادة تعيين المحادثة' : 'Reset chat'}
                         >
-                          <RefreshCw className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {language === 'ar' ? 'إعادة تعيين المحادثة' : 'Reset chat'}
+                        {language === 'ar' ? 'مسح المحادثة' : 'Clear chat'}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -804,20 +784,20 @@ const PDFViewer = () => {
                       </div>
                     ) : chatMessages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                        <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                        <MessageSquare className="h-12 w-12 text-muted-foreground/50 mb-4" />
                         <p className="font-medium mb-2">
-                          {language === 'ar' ? 'اطرح سؤالاً حول هذا الملف' : 'Ask a question about this PDF'}
+                          {language === 'ar' ? 'ابدأ محادثة ذكية مع الملف' : 'Start an intelligent conversation with your PDF'}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground mb-4">
                           {language === 'ar' 
-                            ? 'يمكنك طرح أسئلة حول محتوى الملف والحصول على إجابات دقيقة باستخدام الذكاء الاصطناعي من Gemini'
-                            : 'Ask questions about the PDF content and get accurate AI-powered answers from Gemini'
+                            ? 'اطرح أسئلة معقدة واحصل على إجابات دقيقة باستخدام ذكاء Gemini الاصطناعي'
+                            : 'Ask complex questions and get accurate answers powered by Gemini AI'
                           }
                         </p>
                         {isTempPdf && (
-                          <p className="text-xs text-amber-600 mt-4">
+                          <p className="text-xs text-amber-600 mt-2 p-2 bg-amber-50 rounded-lg">
                             {language === 'ar'
-                              ? 'ملاحظة: هذا ملف مؤقت. سيتم فقدان المحادثة عند إغلاق المتصفح.'
+                              ? 'ملاحظة: هذا ملف مؤقت. ستفقد المحادثة عند إغلاق المتصفح.'
                               : 'Note: This is a temporary file. Chat will be lost when you close the browser.'}
                           </p>
                         )}
@@ -825,93 +805,14 @@ const PDFViewer = () => {
                     ) : (
                       <>
                         {chatMessages.map(message => (
-                          <div 
+                          <ChatMessageBubble
                             key={message.id}
-                            className={cn(
-                              "flex flex-col p-3 rounded-lg max-w-[80%] group relative",
-                              message.isUser 
-                                ? "ml-auto bg-primary text-primary-foreground" 
-                                : "mr-auto bg-muted"
-                            )}
-                          >
-                            <MarkdownMessage 
-                              content={message.content} 
-                              className={message.isUser ? "text-primary-foreground" : ""}
-                            />
-                            <div className="text-xs opacity-70 mt-1 text-right">
-                              {new Date(message.timestamp).toLocaleTimeString()}
-                            </div>
-
-                            <div className={cn(
-                              "absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity", 
-                              message.isUser ? "left-2" : "right-2",
-                              "flex gap-1"
-                            )}>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="h-6 w-6 bg-background/80 backdrop-blur-sm rounded-full p-1"
-                                      onClick={() => handleCopyMessage(message.content)}
-                                    >
-                                      <Copy className="h-3 w-3" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {language === 'ar' ? 'نسخ' : 'Copy'}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    className="h-6 w-6 bg-background/80 backdrop-blur-sm rounded-full p-1"
-                                  >
-                                    <MoreHorizontal className="h-3 w-3" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-56 p-2">
-                                  <div className="space-y-1">
-                                    <h3 className="text-sm font-medium mb-2">
-                                      {language === 'ar' ? 'تفاصيل إضافية' : 'More Details'}
-                                    </h3>
-                                    <div className="text-xs text-muted-foreground space-y-2">
-                                      <div>
-                                        <span className="font-medium">{language === 'ar' ? 'النوع:' : 'Type:'}</span>{' '}
-                                        {message.isUser 
-                                          ? (language === 'ar' ? 'رسالة مستخدم' : 'User Message') 
-                                          : (language === 'ar' ? 'رد الذكاء الاصطناعي' : 'AI Response')}
-                                      </div>
-                                      <div>
-                                        <span className="font-medium">{language === 'ar' ? 'الوقت:' : 'Time:'}</span>{' '}
-                                        {new Date(message.timestamp).toLocaleString()}
-                                      </div>
-                                      <div>
-                                        <span className="font-medium">{language === 'ar' ? 'المعرف:' : 'ID:'}</span>{' '}
-                                        {message.id.substring(0, 8)}...
-                                      </div>
-                                      <div className="pt-1">
-                                        <Button 
-                                          variant="secondary" 
-                                          size="sm" 
-                                          className="w-full text-xs" 
-                                          onClick={() => handleCopyMessage(message.content)}
-                                        >
-                                          <Copy className="h-3 w-3 mr-1" />
-                                          {language === 'ar' ? 'نسخ الرسالة' : 'Copy Message'}
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                          </div>
+                            message={message}
+                            language={language}
+                            onCopy={handleCopyMessage}
+                            onRegenerate={handleRegenerateMessage}
+                            onFeedback={handleMessageFeedback}
+                          />
                         ))}
 
                         {isAnalyzing && (
@@ -924,14 +825,16 @@ const PDFViewer = () => {
                     )}
                   </div>
                   
-                  <ChatInput 
+                  <EnhancedChatInput 
                     onSubmit={handleChatSubmit}
                     placeholder={language === 'ar' 
-                      ? "اكتب سؤالك حول محتوى الملف..."
-                      : "Type your question about the PDF content..."
+                      ? "اطرح سؤالاً ذكياً حول محتوى الملف..."
+                      : "Ask an intelligent question about the PDF content..."
                     }
                     dir={language === 'ar' ? 'rtl' : 'ltr'}
                     disabled={isWaitingForResponse}
+                    suggestions={chatSuggestions}
+                    isAnalyzing={isAnalyzing}
                   />
                 </>
               )}
