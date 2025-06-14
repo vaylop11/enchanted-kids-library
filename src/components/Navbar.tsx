@@ -42,28 +42,24 @@ const Navbar = () => {
 
   return (
     <header className={cn(
-      'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
-      isScrolled 
-        ? 'bg-white/90 backdrop-blur-xl shadow-xl shadow-slate-200/20 border-b border-white/20' 
-        : 'bg-transparent'
+      'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+      isScrolled ? 'bg-background/80 backdrop-blur-lg shadow-sm' : 'bg-transparent'
     )}>
       <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-        <div className="flex h-18 items-center justify-between">
+        <div className="flex h-16 items-center justify-between">
           <Link 
             to="/" 
-            className="flex items-center transition-all duration-300 hover:opacity-80 group"
-            style={{ gap: '0.75rem' }}
+            className="flex items-center transition-opacity hover:opacity-80"
+            style={{ gap: '0.5rem' }}
             aria-label="ChatPDF Home"
           >
-            <div className="p-2 rounded-xl bg-gradient-to-br from-purple-600 to-violet-600 shadow-lg group-hover:shadow-xl transition-all duration-300">
-              <BookOpen className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-display text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+            <BookOpen className="h-6 w-6" />
+            <span className="font-display text-lg font-medium">
               {language === 'ar' ? 'تشات PDF' : 'ChatPDF'}
             </span>
           </Link>
 
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-6">
             <NavigationMenu className="z-[49]">
               <NavigationMenuList className={`${direction === 'rtl' ? 'space-x-reverse' : ''} space-x-2`}>
                 <NavigationMenuItem>
@@ -71,8 +67,8 @@ const Navbar = () => {
                     <NavigationMenuLink 
                       className={cn(
                         navigationMenuTriggerStyle(),
-                        location.pathname === '/' && "bg-gradient-to-r from-purple-100 to-violet-100 text-purple-700 font-semibold",
-                        "px-4 py-2 text-sm font-medium rounded-xl hover:bg-slate-100 transition-all duration-300 hover:shadow-md"
+                        location.pathname === '/' && "bg-accent text-accent-foreground",
+                        "px-3 py-2 text-sm font-medium rounded-full"
                       )}
                     >
                       {t('home')}
@@ -84,8 +80,8 @@ const Navbar = () => {
                     <NavigationMenuLink 
                       className={cn(
                         navigationMenuTriggerStyle(),
-                        location.pathname === '/pdfs' && "bg-gradient-to-r from-purple-100 to-violet-100 text-purple-700 font-semibold",
-                        "px-4 py-2 text-sm font-medium rounded-xl hover:bg-slate-100 transition-all duration-300 hover:shadow-md"
+                        location.pathname === '/pdfs' && "bg-accent text-accent-foreground",
+                        "px-3 py-2 text-sm font-medium rounded-full"
                       )}
                     >
                       {t('pdfs')}
@@ -97,8 +93,8 @@ const Navbar = () => {
                     <NavigationMenuLink 
                       className={cn(
                         navigationMenuTriggerStyle(),
-                        location.pathname === '/blog' && "bg-gradient-to-r from-purple-100 to-violet-100 text-purple-700 font-semibold",
-                        "px-4 py-2 text-sm font-medium rounded-xl hover:bg-slate-100 transition-all duration-300 hover:shadow-md"
+                        location.pathname === '/blog' && "bg-accent text-accent-foreground",
+                        "px-3 py-2 text-sm font-medium rounded-full"
                       )}
                     >
                       {t('blog')}
@@ -116,7 +112,7 @@ const Navbar = () => {
                 <Button 
                   variant="outline" 
                   onClick={() => navigate('/signin')}
-                  className="rounded-xl border-2 border-slate-300 hover:border-purple-400 hover:bg-purple-50 transition-all duration-300 font-medium"
+                  className="rounded-full"
                 >
                   {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
                 </Button>
@@ -132,7 +128,7 @@ const Navbar = () => {
                 <Button 
                   variant="ghost"
                   size="icon"
-                  className="text-foreground rounded-xl hover:bg-slate-100 transition-all duration-300"
+                  className="text-foreground rounded-full hover:bg-muted transition-colors"
                 >
                   {isDrawerOpen ? (
                     <X className="h-5 w-5" />
@@ -141,19 +137,17 @@ const Navbar = () => {
                   )}
                 </Button>
               </DrawerTrigger>
-              <DrawerContent className="h-[85vh] rounded-t-3xl pt-8 bg-white/95 backdrop-blur-xl">
-                <div className="px-6">
-                  <div className="flex flex-col items-center justify-center space-y-8 text-center">
+              <DrawerContent className="h-[85vh] rounded-t-xl pt-6">
+                <div className="px-4">
+                  <div className="flex flex-col items-center justify-center space-y-6 text-center">
                     <Link 
                       to="/" 
                       className="flex items-center justify-center transition-opacity hover:opacity-80"
                       onClick={() => setIsDrawerOpen(false)}
                       aria-label="ChatPDF Home"
                     >
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-purple-600 to-violet-600 shadow-lg mb-4">
-                        <BookOpen className="h-8 w-8 text-white" />
-                      </div>
-                      <span className="font-display text-2xl font-bold ml-3 mb-4 bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                      <BookOpen className="h-8 w-8 mb-4" />
+                      <span className="font-display text-xl font-medium ml-2 mb-4">
                         {language === 'ar' ? 'تشات PDF' : 'ChatPDF'}
                       </span>
                     </Link>
@@ -197,7 +191,7 @@ const Navbar = () => {
                           navigate('/signin');
                           setIsDrawerOpen(false);
                         }}
-                        className="mt-8 w-full bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold py-3 rounded-xl shadow-lg"
+                        className="mt-6 w-full"
                       >
                         {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
                       </Button>
