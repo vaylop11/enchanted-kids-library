@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
 
@@ -55,8 +54,79 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-gradient-to-b from-[#f8fafc] via-[#f1f5f9] to-[#e0e7ef] text-foreground;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    min-height: 100vh;
+  }
+
+  /* تحسين خلفية البطاقات والظلال */
+  .bg-card, .card, .rounded-xl, .rounded-lg, .border {
+    @apply bg-white/95 shadow-lg shadow-primary/5 border border-slate-200 rounded-2xl;
+    transition: box-shadow 0.2s, background-color 0.2s;
+  }
+
+  /* تدرج خفيف للعنصر الرئيسي */
+  main, .container, .max-w-7xl {
+    @apply bg-gradient-to-br from-[#f9fafb] to-[#e5eaf4] rounded-2xl shadow-md p-2 md:p-4;
+  }
+
+  /* الأزرار */
+  button, .btn, .shadcn-ui-btn {
+    @apply rounded-full shadow transition transform duration-200 hover:scale-105;
+  }
+
+  /* العناوين */
+  h1, .heading-1 {
+    @apply font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight 
+    text-primary drop-shadow-md mb-2;
+  }
+  h2, .heading-2 {
+    @apply font-display text-2xl sm:text-3xl font-bold tracking-tight text-primary mb-2;
+  }
+  h3, .heading-3 {
+    @apply font-display text-xl sm:text-2xl font-semibold tracking-tight text-primary mb-2;
+  }
+
+  /* نصوص الوصف */
+  p, .paragraph, .caption, .text-muted-foreground {
+    @apply text-[17px] leading-relaxed text-gray-600 sm:text-lg;
+  }
+
+  /* تحسين مظهر الروابط */
+  a {
+    @apply underline underline-offset-2 transition-colors duration-150 hover:text-primary hover:decoration-primary;
+  }
+
+  /* حواف أكثر سلاسة للعناصر */
+  .rounded, .rounded-lg, .rounded-xl, .rounded-2xl, .rounded-full {
+    border-radius: 1.25rem !important;
+  }
+
+  /* بطاقات الإحصائيات/التنويهات */
+  .stat-card, .feature-card {
+    @apply bg-white/90 border border-primary/10 shadow-xl hover:shadow-primary/10 p-6 rounded-2xl;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+
+  /* خطوط فاصلة ناعمة وزوايا هادئة */
+  hr, .border-b {
+    @apply border-t-2 border-slate-100 my-6;
+  }
+
+  /* تحسين مظهر الحقول */
+  input, textarea, select {
+    @apply bg-white/90 border border-input rounded-lg px-3 py-2 transition-shadow 
+      focus:ring-2 focus:ring-primary/30 focus:border-primary;
+  }
+
+  /* تحسين ظهور قائمة التصفح الجانبية أو الدرور */
+  .drawer-content, .sidebar, .navigation-menu, .dropdown-menu {
+    @apply bg-white/95 shadow-2xl rounded-2xl border border-slate-100 z-50;
+  }
+
+  /* إخفاء الحدود الكثيرة */
+  .border {
+    border-width: 1.5px !important;
   }
 
   /* Set appropriate font family based on language */
