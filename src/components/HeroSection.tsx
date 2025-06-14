@@ -2,10 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Link } from "react-router-dom";
-
-// Placeholder image (photo-1488590528505-98d2b5aba04b)
-const heroImg =
-  "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=900&q=80";
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 const HeroSection = () => {
   const { language } = useLanguage();
@@ -83,14 +80,14 @@ const HeroSection = () => {
             </Button>
           </div>
         </div>
-        {/* Hero image (with glass effect) */}
+        {/* Lottie Animation */}
         <div className="flex-1 flex items-center justify-center md:justify-end min-w-[280px]">
-          <div className="rounded-3xl overflow-hidden shadow-xl bg-white/40 backdrop-blur-lg border border-purple-100/70 max-w-xs md:max-w-sm">
-            <img
-              src={heroImg}
-              alt="Laptop with PDF Preview"
-              className="object-cover w-full h-64 md:h-80"
-              loading="lazy"
+          <div className="rounded-3xl overflow-hidden shadow-xl bg-white/40 backdrop-blur-lg border border-purple-100/70 max-w-xs md:max-w-sm p-4">
+            <DotLottieReact
+              src="https://lottie.host/527bc09d-c2d7-4d91-9eb9-fb516d4d892d/JdkJrUWRhX.lottie"
+              loop
+              autoplay
+              className="w-full h-64 md:h-80"
             />
           </div>
         </div>
@@ -100,4 +97,3 @@ const HeroSection = () => {
 };
 
 export default HeroSection;
-
