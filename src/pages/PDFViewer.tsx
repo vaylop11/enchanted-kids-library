@@ -1,19 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, Share, DownloadCloud, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, RotateCcw, RotateCw, Languages } from 'lucide-react';
+import { ArrowLeft, FileText, Share, ChevronUp, ChevronDown, AlertTriangle, Trash2, Copy, MoreHorizontal, RefreshCw, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Document, Page, pdfjs } from 'react-pdf';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import PDFAnalysisProgress from '@/components/PDFAnalysisProgress';
 import { Skeleton, ChatMessageSkeleton } from '@/components/ui/skeleton';
 import { ChatInput } from '@/components/ui/chat-input';
 import { MarkdownMessage } from '@/components/ui/markdown-message';
+import ScrollablePDFViewer from '@/components/ui/scrollable-pdf-viewer';
 import ReactMarkdown from 'react-markdown';
 import {
   Tooltip,
@@ -59,10 +58,7 @@ const PDFViewer = () => {
   
   const [isLoaded, setIsLoaded] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageInputValue, setPageInputValue] = useState("1");
-  const [pdfScale, setPdfScale] = useState(1.0);
-  const [pdfRotation, setPdfRotation] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [showPdfControls, setShowPdfControls] = useState(true);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -240,6 +236,10 @@ const PDFViewer = () => {
       ? 'فشل في تحميل ملف PDF. قد يكون الملف تالفًا أو غير متوافق.'
       : 'Failed to load PDF. The file may be corrupted or incompatible.');
     setIsLoadingPdf(false);
+  };
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
   };
 
   const handleDeletePDF = () => {
@@ -605,51 +605,6 @@ const PDFViewer = () => {
       : 'Message copied to clipboard');
   };
 
-  const handlePrevPage = () => {
-    if (pageNumber > 1) {
-      setPageNumber(pageNumber - 1);
-      setPageInputValue(String(pageNumber - 1));
-    }
-  };
-
-  const handleNextPage = () => {
-    if (numPages && pageNumber < numPages) {
-      setPageNumber(pageNumber + 1);
-      setPageInputValue(String(pageNumber + 1));
-    }
-  };
-
-  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPageInputValue(e.target.value);
-  };
-
-  const handlePageInputSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    
-    const pageNum = parseInt(pageInputValue, 10);
-    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= (numPages || 1)) {
-      setPageNumber(pageNum);
-    } else {
-      setPageInputValue(String(pageNumber));
-    }
-  };
-
-  const handleZoomIn = () => {
-    setPdfScale(prevScale => Math.min(prevScale + 0.25, 3.0));
-  };
-
-  const handleZoomOut = () => {
-    setPdfScale(prevScale => Math.max(prevScale - 0.25, 0.5));
-  };
-
-  const handleRotateClockwise = () => {
-    setPdfRotation(prevRotation => (prevRotation + 90) % 360);
-  };
-
-  const handleRotateCounterClockwise = () => {
-    setPdfRotation(prevRotation => (prevRotation - 90 + 360) % 360);
-  };
-
   if (!pdf) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -740,120 +695,7 @@ const PDFViewer = () => {
                 </button>
               </div>
               
-              {showPdfControls && (
-                <div className="flex flex-wrap justify-between items-center p-4 bg-muted/20 border-b">
-                  <div className="flex items-center flex-wrap gap-4 w-full md:w-auto">
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        className="h-8 w-8" 
-                        onClick={handlePrevPage}
-                        disabled={pageNumber <= 1 || pdfError !== null || !pdf.dataUrl}
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                      
-                      <form onSubmit={handlePageInputSubmit} className="flex items-center">
-                        <Input
-                          type="text"
-                          value={pageInputValue}
-                          onChange={handlePageInputChange}
-                          onBlur={handlePageInputSubmit}
-                          className="page-number-input"
-                          disabled={pdfError !== null || !pdf.dataUrl}
-                          aria-label={language === 'ar' ? 'رقم الصفحة' : 'Page number'}
-                        />
-                        <span className="px-2 text-sm text-muted-foreground">/ {numPages || '?'}</span>
-                      </form>
-                      
-                      <Button 
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8" 
-                        onClick={handleNextPage}
-                        disabled={!numPages || pageNumber >= numPages || pdfError !== null || !pdf.dataUrl}
-                      >
-                        <ArrowLeft className="h-4 w-4 rotate-180" />
-                      </Button>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={handleZoomOut}
-                        disabled={pdfError !== null || !pdf.dataUrl}
-                      >
-                        -
-                      </Button>
-                      <span className="text-sm min-w-[50px] text-center">{Math.round(pdfScale * 100)}%</span>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={handleZoomIn}
-                        disabled={pdfError !== null || !pdf.dataUrl}
-                      >
-                        +
-                      </Button>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              className="h-8 w-8 rotation-control"
-                              onClick={handleRotateCounterClockwise}
-                              disabled={pdfError !== null || !pdf.dataUrl}
-                            >
-                              <RotateCcw className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {language === 'ar' ? 'تدوير عكس عقارب الساعة' : 'Rotate counterclockwise'}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              className="h-8 w-8 rotation-control"
-                              onClick={handleRotateClockwise}
-                              disabled={pdfError !== null || !pdf.dataUrl}
-                            >
-                              <RotateCw className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {language === 'ar' ? 'تدوير باتجاه عقارب الساعة' : 'Rotate clockwise'}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      
-                      {pdfRotation !== 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          {pdfRotation}°
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="text-sm text-muted-foreground mt-2 md:mt-0">
-                    {language === 'ar' ? 'تم التحميل' : 'Uploaded'}: {pdf.uploadDate}
-                  </div>
-                </div>
-              )}
-              
-              <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
+              <div className="flex-1 overflow-hidden bg-muted/10" style={{ height: 'calc(100vh - 300px)' }}>
                 {isLoadingPdf ? (
                   <div className="flex flex-col items-center justify-center h-full w-full">
                     <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
@@ -902,48 +744,13 @@ const PDFViewer = () => {
                     </Button>
                   </div>
                 ) : (
-                  <Document
-                    file={pdf.dataUrl}
-                    onLoadSuccess={handleDocumentLoadSuccess}
-                    onLoadError={handleDocumentLoadError}
-                    loading={
-                      <div className="flex items-center justify-center h-full w-full">
-                        <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
-                      </div>
-                    }
-                    error={
-                      <div className="flex flex-col items-center justify-center h-full w-full">
-                        <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground text-center mb-2">
-                          {language === 'ar' ? 'فشل تحميل الملف' : 'Failed to load PDF'}
-                        </p>
-                        <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
-                          {language === 'ar' 
-                            ? 'قد تكون هناك مشكلة في تنسيق الملف أو أن الملف قد يكون كبيرًا جدًا للعرض.' 
-                            : 'There might be an issue with the file format or the file may be too large to display.'}
-                        </p>
-                        <Button variant="outline" onClick={handleRetryLoading}>
-                          {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
-                        </Button>
-                      </div>
-                    }
-                  >
-                    <Page 
-                      pageNumber={pageNumber} 
-                      scale={pdfScale}
-                      rotate={pdfRotation}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
-                      error={
-                        <div className="flex flex-col items-center justify-center p-6">
-                          <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
-                          <p className="text-sm text-center">
-                            {language === 'ar' ? 'خطأ في عرض الصفحة' : 'Error rendering page'}
-                          </p>
-                        </div>
-                      }
-                    />
-                  </Document>
+                  <ScrollablePDFViewer
+                    pdfUrl={pdf.dataUrl}
+                    onDocumentLoadSuccess={handleDocumentLoadSuccess}
+                    onDocumentLoadError={handleDocumentLoadError}
+                    onPageChange={handlePageChange}
+                    className="h-full"
+                  />
                 )}
               </div>
             </div>
@@ -1069,7 +876,7 @@ const PDFViewer = () => {
                                 <PopoverContent className="w-56 p-2">
                                   <div className="space-y-1">
                                     <h3 className="text-sm font-medium mb-2">
-                                      {language === 'ar' ? 'تفاصيل اضافية' : 'More Details'}
+                                      {language === 'ar' ? 'تفاصيل إضافية' : 'More Details'}
                                     </h3>
                                     <div className="text-xs text-muted-foreground space-y-2">
                                       <div>

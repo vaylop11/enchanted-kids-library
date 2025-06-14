@@ -21,6 +21,7 @@ import { extractTextFromPDF } from '@/services/pdfAnalysisService';
 import { translateText, supportedLanguages } from '@/services/translationService';
 import SEO from '@/components/SEO';
 import { MarkdownMessage } from '@/components/ui/markdown-message';
+import ScrollablePDFViewer from '@/components/ui/scrollable-pdf-viewer';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
@@ -32,7 +33,7 @@ const TranslatePDF = () => {
   
   const [isLoaded, setIsLoaded] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfTitle, setPdfTitle] = useState('');
   const [translatedText, setTranslatedText] = useState('');
@@ -126,8 +127,8 @@ const TranslatePDF = () => {
   };
 
   const handlePageChange = async (newPage: number) => {
-    if (newPage >= 1 && newPage <= (numPages || 1)) {
-      setPageNumber(newPage);
+    setCurrentPage(newPage);
+    if (targetLanguage) {
       await translateCurrentPage(newPage, targetLanguage);
     }
   };
@@ -175,7 +176,7 @@ const TranslatePDF = () => {
 
   useEffect(() => {
     if (isLoaded && targetLanguage) {
-      translateCurrentPage(pageNumber, targetLanguage);
+      translateCurrentPage(currentPage, targetLanguage);
     }
   }, [targetLanguage, isLoaded]);
 
@@ -237,101 +238,24 @@ const TranslatePDF = () => {
                 </p>
               </div>
               
-              <div className="bg-muted/20 p-3 flex justify-between items-center border-b">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pageNumber - 1)}
-                  disabled={pageNumber <= 1}
-                  className="rounded-full"
-                >
-                  <ArrowLeftCircle className="h-4 w-4" />
-                </Button>
-                
-                <div className="text-sm font-medium">
-                  {language === 'ar' 
-                    ? `صفحة ${pageNumber} من ${numPages || '?'}`
-                    : `Page ${pageNumber} of ${numPages || '?'}`}
-                </div>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pageNumber + 1)}
-                  disabled={!numPages || pageNumber >= numPages}
-                  className="rounded-full"
-                >
-                  <ArrowRightCircle className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="bg-muted/10 p-3 flex justify-center items-center gap-3 border-b">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleZoomOut}
-                  className="rounded-full h-9 w-9 p-0"
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                
-                <span className="text-sm font-medium">
-                  {Math.round(scale * 100)}%
-                </span>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleZoomIn}
-                  className="rounded-full h-9 w-9 p-0"
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-                
-                <div className="mx-2 h-6 border-r border-border" />
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRotateLeft}
-                  className="rounded-full h-9 w-9 p-0"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRotateRight}
-                  className="rounded-full h-9 w-9 p-0"
-                >
-                  <RotateCw className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh] flex justify-center">
+              <div className="overflow-hidden bg-muted/10 h-[70vh]">
                 {!isLoaded ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
                   </div>
+                ) : pdfUrl ? (
+                  <ScrollablePDFViewer
+                    pdfUrl={pdfUrl}
+                    onDocumentLoadSuccess={handleDocumentLoadSuccess}
+                    onPageChange={handlePageChange}
+                    className="h-full"
+                  />
                 ) : (
-                  <Document
-                    file={pdfUrl}
-                    onLoadSuccess={handleDocumentLoadSuccess}
-                    loading={
-                      <div className="flex items-center justify-center h-full w-full">
-                        <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
-                      </div>
-                    }
-                  >
-                    <Page 
-                      pageNumber={pageNumber} 
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
-                      scale={scale}
-                      rotate={rotation}
-                    />
-                  </Document>
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">
+                      {language === 'ar' ? 'لا يمكن تحميل الملف' : 'Cannot load PDF'}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
@@ -348,7 +272,7 @@ const TranslatePDF = () => {
                 </p>
               </div>
               
-              <div className="p-4 overflow-auto bg-muted/10 min-h-[60vh]">
+              <div className="p-4 overflow-auto bg-muted/10 h-[70vh]">
                 {isTranslating ? (
                   <div className="flex flex-col items-center justify-center h-full gap-4">
                     <Loader2 className="h-8 w-8 animate-spin" />
