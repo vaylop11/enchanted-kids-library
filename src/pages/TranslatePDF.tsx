@@ -1,9 +1,10 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowLeft, FileText, Copy, Download, RotateCcw } from 'lucide-react';
+import { ArrowLeft, FileText, Copy, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { getPDFById } from '@/services/pdfStorage';
 import { getSupabasePDFById } from '@/services/pdfSupabaseService';
@@ -14,10 +15,8 @@ import { translationCache } from '@/services/translationCacheService';
 import SEO from '@/components/SEO';
 import { MarkdownMessage } from '@/components/ui/markdown-message';
 import ScrollablePDFViewer from '@/components/ui/scrollable-pdf-viewer';
-import TranslationProgress from '@/components/ui/translation-progress';
-import LanguageSelector from '@/components/ui/language-selector';
-import BatchTranslationManager from '@/components/ui/batch-translation-manager';
 import { Button } from '@/components/ui/button';
+import LanguageSelector from '@/components/ui/language-selector';
 
 const TranslatePDF = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,12 +30,13 @@ const TranslatePDF = () => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfTitle, setPdfTitle] = useState('');
   const [translatedText, setTranslatedText] = useState('');
-  const [targetLanguage, setTargetLanguage] = useState('en');
+  const [targetLanguage, setTargetLanguage] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTempPdf, setIsTempPdf] = useState(false);
-  const [translatedPages, setTranslatedPages] = useState<number[]>([]);
-  const [pageTexts, setPageTexts] = useState<Map<number, string>>(new Map());
-  const [isCachedTranslation, setIsCachedTranslation] = useState(false);
+
+  // For translation range
+  const [fromPage, setFromPage] = useState(1);
+  const [toPage, setToPage] = useState<number | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -116,79 +116,86 @@ const TranslatePDF = () => {
     loadPdf();
   }, [id, navigate, language, user]);
 
+  // Set PDF page count and max value for toPage
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
+    setToPage(numPages);
   };
 
+  // Extract text from a given page
   const extractPageText = useCallback(async (page: number): Promise<string> => {
     if (!pdfUrl || !id) return '';
-    
-    // Check if we already have the text cached
-    if (pageTexts.has(page)) {
-      return pageTexts.get(page)!;
-    }
-
     try {
       const extractedText = await extractTextFromPDF(pdfUrl, id, undefined, {
         quickMode: true,
         maxPages: 1,
         specificPage: page
       });
-      
-      setPageTexts(prev => new Map(prev).set(page, extractedText));
       return extractedText;
     } catch (error) {
       console.error(`Error extracting text from page ${page}:`, error);
       return '';
     }
-  }, [pdfUrl, id, pageTexts]);
+  }, [pdfUrl, id]);
 
-  const translateCurrentPage = useCallback(async (page: number, lang: string, forceRefresh = false) => {
-    if (!pdfUrl || !id || !lang) return;
-    
-    // Check cache first (unless forced refresh)
-    if (!forceRefresh) {
-      const cachedTranslation = translationCache.getCachedTranslation(id, page, lang);
-      if (cachedTranslation) {
-        setTranslatedText(cachedTranslation);
-        setIsCachedTranslation(true);
-        setTranslatedPages(prev => [...new Set([...prev, page])]);
-        toast.success(language === 'ar' ? 'تم تحميل الترجمة من التخزين المؤقت' : 'Loaded cached translation');
-        return;
-      }
+  // --- Controls user input for page range ---
+  const handleFromPageChange = (val: string) => {
+    const value = Number(val);
+    if (value < 1) setFromPage(1);
+    else if (toPage && value > toPage) setFromPage(toPage);
+    else setFromPage(value);
+  };
+  const handleToPageChange = (val: string) => {
+    const value = Number(val);
+    if (!numPages) return;
+    if (value < fromPage) setToPage(fromPage);
+    else if (value > numPages) setToPage(numPages);
+    else setToPage(value);
+  };
+
+
+  // --- Manual translation of page range ---
+  const handleTranslateRange = async () => {
+    // Prevent if language or range are not set
+    if (!targetLanguage) {
+      toast.error(language === "ar" ? "يرجى اختيار اللغة أولاً" : "Please select a language first");
+      return;
     }
-    
+    if (!fromPage || !toPage || !numPages) {
+      toast.error(language === "ar" ? "حدد نطاق الصفحات بدقة" : "Specify a valid page range");
+      return;
+    }
+    if (fromPage < 1 || toPage > numPages || fromPage > toPage) {
+      toast.error(language === "ar" ? "نطاق صفحات غير صحيح" : "Invalid page range");
+      return;
+    }
+
     setIsTranslating(true);
     setTranslatedText('');
-    setIsCachedTranslation(false);
-    
-    try {
-      const extractedText = await extractPageText(page);
-      if (!extractedText.trim()) {
-        toast.warning(language === 'ar' ? 'لا يوجد نص للترجمة في هذه الصفحة' : 'No text to translate on this page');
-        setIsTranslating(false);
-        return;
-      }
-      
-      const result = await translateText(extractedText, lang);
-      setTranslatedText(result.translatedText);
-      
-      // Cache the translation
-      translationCache.storeTranslation(id, page, extractedText, lang, result.translatedText);
-      setTranslatedPages(prev => [...new Set([...prev, page])]);
-      
-      toast.success(language === 'ar' ? 'تمت الترجمة بنجاح' : 'Translation completed successfully');
-    } catch (error) {
-      console.error('Translation error:', error);
-      toast.error(language === 'ar' ? 'فشل في ترجمة النص' : 'Failed to translate text');
-    } finally {
-      setIsTranslating(false);
-    }
-  }, [pdfUrl, id, language, extractPageText]);
 
-  const handlePageChange = useCallback(async (newPage: number) => {
-    setCurrentPage(newPage);
-  }, []);
+    let combined = '';
+    for (let page = fromPage; page <= (toPage ?? fromPage); page++) {
+      const pageText = await extractPageText(page);
+      if (!pageText.trim()) {
+        combined += (language === 'ar' 
+          ? `\n=== الصفحة ${page} (لا يوجد نص) ===\n\n` 
+          : `\n=== Page ${page} (empty) ===\n\n`);
+        continue;
+      }
+      try {
+        const result = await translateText(pageText, targetLanguage);
+        combined += `${language === 'ar' ? `=== الصفحة ${page} ===` : `=== Page ${page} ===`}\n\n${result.translatedText}\n\n`;
+      } catch {
+        combined += (language === "ar"
+          ? `\n=== الصفحة ${page} (فشل الترجمة) ===\n\n`
+          : `\n=== Page ${page} (translation failed) ===\n\n`);
+      }
+    }
+
+    setTranslatedText(combined.trim());
+    setIsTranslating(false);
+    toast.success(language === 'ar' ? "تمت الترجمة!" : "Translation completed!");
+  };
 
   const handleCopyText = async () => {
     if (translatedText) {
@@ -207,7 +214,7 @@ const TranslatePDF = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${pdfTitle}_translation_page_${currentPage}.txt`;
+      a.download = `${pdfTitle}_translation_${fromPage}_${toPage}.txt`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -215,87 +222,6 @@ const TranslatePDF = () => {
       
       toast.success(language === 'ar' ? 'تم تحميل الملف' : 'File downloaded');
     }
-  };
-
-  const handleTranslateAll = async (
-    onProgress: (page: number, total: number) => void, 
-    fromPage?: number, 
-    toPage?: number
-  ) => {
-    if (!numPages || !targetLanguage) return;
-
-    const startPage = fromPage ?? 1;
-    const endPage = toPage ?? numPages;
-
-    for (let page = startPage; page <= endPage; page++) {
-      onProgress(page, endPage - startPage + 1);
-
-      if (translationCache.hasTranslation(id || '', page, targetLanguage)) {
-        continue;
-      }
-      await translateCurrentPage(page, targetLanguage);
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-  };
-
-  const handleDownloadAll = () => {
-    if (!id || translatedPages.length === 0) return;
-
-    let allTranslations = '';
-    translatedPages.sort((a, b) => a - b).forEach(page => {
-      const cached = translationCache.getCachedTranslation(id, page, targetLanguage);
-      if (cached) {
-        allTranslations += `=== ${language === 'ar' ? 'الصفحة' : 'Page'} ${page} ===\n\n${cached}\n\n`;
-      }
-    });
-
-    if (allTranslations) {
-      const blob = new Blob([allTranslations], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${pdfTitle}_all_translations_${targetLanguage}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast.success(language === 'ar' ? 'تم تحميل جميع الترجمات' : 'All translations downloaded');
-    }
-  };
-
-  const handleRefreshTranslation = () => {
-    translateCurrentPage(currentPage, targetLanguage, true);
-  };
-
-  // Trigger translation automatically on page/language change, unless already translating or translation exists
-  useEffect(() => {
-    if (!id || !targetLanguage || !numPages) return;
-
-    const cached = translationCache.getCachedTranslation(id, currentPage, targetLanguage);
-
-    if (cached) {
-      setTranslatedText(cached);
-      setIsCachedTranslation(true);
-      setIsTranslating(false);
-      return;
-    }
-
-    // If no cached translation, clear previous text (for better feedback)
-    setTranslatedText('');
-    setIsCachedTranslation(false);
-    setIsTranslating(true);
-
-    // Auto-translate
-    translateCurrentPage(currentPage, targetLanguage)
-      .finally(() => setIsTranslating(false));
-  // Only re-run when these change
-  }, [id, currentPage, targetLanguage, numPages, translateCurrentPage]);
-
-  // Manual translation button handler
-  const handleManualTranslate = async () => {
-    await translateCurrentPage(currentPage, targetLanguage, true);
   };
 
   return (
@@ -307,10 +233,8 @@ const TranslatePDF = () => {
           : `Translate PDF "${pdfTitle}" to multiple languages`}
       />
       <Navbar />
-      
       <main className="flex-1 pt-24 pb-10">
         <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-          {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <Link 
               to={id ? `/pdf/${id}` : '/pdfs'} 
@@ -319,58 +243,12 @@ const TranslatePDF = () => {
               <ArrowLeft className={`h-4 w-4 ${direction === 'rtl' ? 'ml-2 rotate-180' : 'mr-2'}`} />
               {language === 'ar' ? 'العودة إلى عارض الملف' : 'Back to PDF Viewer'}
             </Link>
-            
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-              <LanguageSelector
-                value={targetLanguage}
-                onValueChange={setTargetLanguage}
-                disabled={isTranslating}
-              />
-              
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                <h1 className="text-lg sm:text-xl font-semibold">
-                  {language === 'ar' ? 'ترجمة الملف' : 'Translate PDF'}
-                </h1>
-              </div>
+              <FileText className="h-5 w-5 text-primary" />
+              <h1 className="text-lg sm:text-xl font-semibold">{language === 'ar' ? 'ترجمة الملف' : 'Translate PDF'}</h1>
             </div>
           </div>
 
-          {/* Current page indicator and translation controls */}
-          {numPages && (
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                {language === 'ar' 
-                  ? `الصفحة ${currentPage} من ${numPages}` 
-                  : `Page ${currentPage} of ${numPages}`}
-              </span>
-              <div className="flex items-center gap-2">
-                {/* Manual translate button (always available) */}
-                <Button
-                  onClick={handleManualTranslate}
-                  variant="default"
-                  size="sm"
-                  disabled={isTranslating}
-                  className="text-xs"
-                  title={language === 'ar' ? "ترجمة الصفحة يدوياً" : "Translate page manually"}
-                >
-                  {language === 'ar' ? "ترجمة الصفحة" : "Translate Page"}
-                </Button>
-                {translatedText && (
-                  <Button
-                    onClick={handleRefreshTranslation}
-                    variant="outline"
-                    size="sm"
-                    disabled={isTranslating}
-                    className="text-xs"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* PDF Viewer */}
             <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
@@ -391,8 +269,8 @@ const TranslatePDF = () => {
                 ) : pdfUrl ? (
                   <ScrollablePDFViewer
                     pdfUrl={pdfUrl}
-                    onDocumentLoadSuccess={({ numPages }) => setNumPages(numPages)}
-                    onPageChange={handlePageChange}
+                    onDocumentLoadSuccess={handleDocumentLoadSuccess}
+                    onPageChange={setCurrentPage}
                     className="h-full"
                   />
                 ) : (
@@ -404,80 +282,94 @@ const TranslatePDF = () => {
                 )}
               </div>
             </div>
-            
+
             {/* Translation Panel */}
-            <div className="space-y-4">
-              {/* Batch Translation Manager */}
-              {numPages && (
-                <BatchTranslationManager
-                  totalPages={numPages}
-                  currentTargetLanguage={targetLanguage}
-                  onTranslateAll={handleTranslateAll}
-                  onDownloadAll={handleDownloadAll}
-                  translatedPages={translatedPages}
-                />
-              )}
-              
-              {/* Translation Panel */}
+            <div className="space-y-6">
               <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-                <div className="p-4 border-b bg-muted/20 flex justify-between items-center">
-                  <div>
-                    <h2 className="font-semibold text-base sm:text-lg">
-                      {language === 'ar' ? 'النص المترجم' : 'Translated Text'}
-                    </h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {isTranslating 
-                        ? (language === 'ar' ? 'جار الترجمة...' : 'Translating...') 
-                        : translatedText 
-                          ? (language === 'ar' ? 
-                              (isCachedTranslation ? 'تم تحميل الترجمة المحفوظة' : 'الترجمة جاهزة')
-                              : (isCachedTranslation ? 'Loaded cached translation' : 'Translation ready'))
-                          : (language === 'ar' ? 'اختر لغة للترجمة أو ترجم الصفحة' : 'Select a language or translate the page')}
-                    </p>
+                <div className="p-4 border-b bg-muted/20 flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+                  <div className="flex-1 flex flex-col gap-1">
+                    <h2 className="font-semibold text-base sm:text-lg">{language === 'ar' ? 'إعدادات الترجمة' : 'Translation Settings'}</h2>
+                    <p className="text-sm text-muted-foreground">{language === 'ar'
+                      ? "اختر اللغة وحدد نطاق الصفحات ثم اضغط 'ترجمة'"
+                      : "Select language and page range, then press 'Translate'."
+                    }</p>
                   </div>
-                  
-                  {translatedText && !isTranslating && (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCopyText}
-                        className="h-8 w-8 p-0"
-                        title={language === 'ar' ? 'نسخ النص' : 'Copy text'}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleDownloadTranslation}
-                        className="h-8 w-8 p-0"
-                        title={language === 'ar' ? 'تحميل الترجمة' : 'Download translation'}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex flex-col sm:flex-row gap-2 items-center">
+                    <LanguageSelector
+                      value={targetLanguage}
+                      onValueChange={v => setTargetLanguage(v)}
+                      disabled={isTranslating}
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={numPages ?? 1}
+                      value={fromPage}
+                      onChange={e => handleFromPageChange(e.target.value)}
+                      className="w-20 mx-1 py-1 px-2 rounded border border-input text-sm focus-visible:ring-2"
+                      placeholder={language === "ar" ? "من صفحة" : "From page"}
+                      disabled={isTranslating || !numPages}
+                    />
+                    <span className="font-bold px-1">-</span>
+                    <input
+                      type="number"
+                      min={fromPage}
+                      max={numPages ?? 1}
+                      value={toPage ?? ''}
+                      onChange={e => handleToPageChange(e.target.value)}
+                      className="w-20 py-1 px-2 rounded border border-input text-sm focus-visible:ring-2"
+                      placeholder={language === "ar" ? "إلى صفحة" : "To page"}
+                      disabled={isTranslating || !numPages}
+                    />
+                    <Button
+                      onClick={handleTranslateRange}
+                      disabled={isTranslating || !targetLanguage || !numPages}
+                      className="text-xs ml-2"
+                      variant="default"
+                    >
+                      {isTranslating
+                        ? (language === 'ar' ? "جار الترجمة..." : "Translating...")
+                        : (language === 'ar' ? "ترجمة" : "Translate")}
+                    </Button>
+                  </div>
                 </div>
-                
-                <div className="overflow-auto bg-muted/10 h-[50vh] sm:h-[60vh]">
-                  <TranslationProgress
-                    isTranslating={isTranslating}
-                    translatedText={translatedText}
-                    targetLanguage={targetLanguage}
-                    currentPage={currentPage}
-                    totalPages={numPages}
-                    isCached={isCachedTranslation}
-                  />
-                  
-                  {translatedText && !isTranslating && (
-                    <div className="p-4">
-                      <MarkdownMessage content={translatedText} />
+                <div className="flex items-center justify-between py-2 px-4 border-b bg-muted/40">
+                  <span className="text-xs text-muted-foreground">{language === 'ar' 
+                    ? `النص المترجم للصفحات من ${fromPage} إلى ${toPage ?? '?'}`
+                    : `Translated text for pages ${fromPage} to ${toPage ?? '?'}`}</span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopyText}
+                      className="h-8 w-8 p-0"
+                      disabled={!translatedText}
+                      title={language === 'ar' ? 'نسخ النص' : 'Copy text'}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDownloadTranslation}
+                      className="h-8 w-8 p-0"
+                      disabled={!translatedText}
+                      title={language === 'ar' ? 'تحميل الترجمة' : 'Download translation'}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="overflow-auto h-[45vh] sm:h-[55vh] p-4">
+                  {translatedText ? (
+                    <div className="w-full">
+                      <MarkdownMessage content={translatedText} className="break-words" />
                     </div>
-                  )}
-                  {!translatedText && !isTranslating && (
+                  ) : (
                     <div className="text-center text-sm text-muted-foreground mt-10">
-                      {language === 'ar' ? "ترجم الصفحة للعرض هنا" : "Translate the page to display its text here."}
+                      {language === 'ar' 
+                        ? "حدد اللغة ونطاق الصفحات ثم اضغط ترجمة." 
+                        : "Choose language and page range, then press Translate."}
                     </div>
                   )}
                 </div>
