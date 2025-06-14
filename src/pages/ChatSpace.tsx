@@ -90,6 +90,7 @@ const ChatSpace = () => {
           console.log('User left:', key, leftPresences);
         })
         .on('broadcast', { event: 'new_message' }, ({ payload }) => {
+          console.log('Received message:', payload);
           const newMessage: ChatMessage = {
             id: payload.id,
             content: payload.content,
@@ -101,6 +102,7 @@ const ChatSpace = () => {
           setMessages(prev => [...prev, newMessage]);
         })
         .subscribe(async (status) => {
+          console.log('Channel status:', status);
           if (status === 'SUBSCRIBED') {
             // Track this user's presence
             await channel.track({
@@ -133,10 +135,15 @@ const ChatSpace = () => {
   };
 
   const handleSendMessage = async (content: string) => {
-    if (!user || !channelRef.current) return;
+    if (!user || !channelRef.current) {
+      console.error('User or channel not available');
+      return;
+    }
 
     const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const timestamp = new Date().toISOString();
+
+    console.log('Sending message:', { content, userId: user.id, userEmail: user.email });
 
     // Broadcast the message to all connected users
     const { error } = await channelRef.current.send({
@@ -154,6 +161,8 @@ const ChatSpace = () => {
     if (error) {
       console.error('Error sending message:', error);
       toast.error(language === 'ar' ? 'فشل في إرسال الرسالة' : 'Failed to send message');
+    } else {
+      console.log('Message sent successfully');
     }
   };
 
