@@ -60,16 +60,9 @@
   }
 
   /* تحسين خلفية البطاقات والظلال */
-  .bg-card, .card, .rounded-xl, .rounded-lg {
+  .bg-card, .card, .rounded-xl, .rounded-lg, .border {
     @apply bg-white/95 shadow-lg shadow-primary/5 border border-slate-200 rounded-2xl;
     transition: box-shadow 0.2s, background-color 0.2s;
-  }
-
-  /* تحسين حواف العناصر */
-  .custom-border {
-    @apply border border-slate-200;
-    border-width: 1.5px;
-    border-radius: 1.25rem;
   }
 
   /* تدرج خفيف للعنصر الرئيسي */
@@ -129,6 +122,11 @@
   /* تحسين ظهور قائمة التصفح الجانبية أو الدرور */
   .drawer-content, .sidebar, .navigation-menu, .dropdown-menu {
     @apply bg-white/95 shadow-2xl rounded-2xl border border-slate-100 z-50;
+  }
+
+  /* إخفاء الحدود الكثيرة */
+  .border {
+    border-width: 1.5px !important;
   }
 
   /* Set appropriate font family based on language */
