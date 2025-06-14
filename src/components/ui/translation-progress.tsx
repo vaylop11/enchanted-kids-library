@@ -1,13 +1,16 @@
 
 import React from 'react';
-import { Loader2, Languages, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Languages, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TranslationProgressProps {
   isTranslating: boolean;
   translatedText: string;
   targetLanguage: string;
   currentPage: number;
+  totalPages?: number;
+  isCached?: boolean;
   className?: string;
 }
 
@@ -16,8 +19,12 @@ const TranslationProgress: React.FC<TranslationProgressProps> = ({
   translatedText,
   targetLanguage,
   currentPage,
+  totalPages,
+  isCached = false,
   className
 }) => {
+  const { language } = useLanguage();
+
   if (isTranslating) {
     return (
       <div className={cn(
@@ -30,9 +37,13 @@ const TranslationProgress: React.FC<TranslationProgressProps> = ({
         </div>
         
         <div className="text-center space-y-2">
-          <h3 className="text-lg font-semibold">جاري الترجمة...</h3>
+          <h3 className="text-lg font-semibold">
+            {language === 'ar' ? 'جاري الترجمة...' : 'Translating...'}
+          </h3>
           <p className="text-sm text-muted-foreground">
-            ترجمة الصفحة {currentPage} إلى {targetLanguage}
+            {language === 'ar' 
+              ? `ترجمة الصفحة ${currentPage}${totalPages ? ` من ${totalPages}` : ''} إلى ${targetLanguage}`
+              : `Translating page ${currentPage}${totalPages ? ` of ${totalPages}` : ''} to ${targetLanguage}`}
           </p>
           
           {/* Animated dots */}
@@ -56,13 +67,37 @@ const TranslationProgress: React.FC<TranslationProgressProps> = ({
   if (translatedText) {
     return (
       <div className={cn(
-        "flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 mb-4",
+        "flex items-center gap-2 p-3 rounded-lg border mb-4",
+        isCached 
+          ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+          : "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
         className
       )}>
-        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-        <span className="text-sm font-medium text-green-800 dark:text-green-200">
-          تمت الترجمة بنجاح
-        </span>
+        {isCached ? (
+          <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        ) : (
+          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+        )}
+        <div className="flex-1">
+          <span className={cn(
+            "text-sm font-medium",
+            isCached 
+              ? "text-blue-800 dark:text-blue-200"
+              : "text-green-800 dark:text-green-200"
+          )}>
+            {isCached 
+              ? (language === 'ar' ? 'ترجمة محفوظة مسبقاً' : 'Cached translation')
+              : (language === 'ar' ? 'تمت الترجمة بنجاح' : 'Translation completed')
+            }
+          </span>
+          {totalPages && (
+            <div className="text-xs text-muted-foreground mt-1">
+              {language === 'ar' 
+                ? `الصفحة ${currentPage} من ${totalPages}`
+                : `Page ${currentPage} of ${totalPages}`}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -74,8 +109,21 @@ const TranslationProgress: React.FC<TranslationProgressProps> = ({
     )}>
       <div className="text-center space-y-3">
         <Languages className="h-12 w-12 mx-auto text-muted-foreground/50" />
-        <p className="text-lg font-medium">اختر لغة لبدء الترجمة</p>
-        <p className="text-sm">سيتم ترجمة محتوى الصفحة الحالية فورًا</p>
+        <p className="text-lg font-medium">
+          {language === 'ar' ? 'اختر لغة لبدء الترجمة' : 'Select language to start translation'}
+        </p>
+        <p className="text-sm">
+          {language === 'ar' 
+            ? 'سيتم ترجمة محتوى الصفحة الحالية فورًا' 
+            : 'Current page content will be translated instantly'}
+        </p>
+        {totalPages && (
+          <p className="text-xs text-muted-foreground">
+            {language === 'ar' 
+              ? `الصفحة ${currentPage} من ${totalPages}`
+              : `Page ${currentPage} of ${totalPages}`}
+          </p>
+        )}
       </div>
     </div>
   );
