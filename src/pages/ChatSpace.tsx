@@ -49,6 +49,8 @@ const ChatSpace = () => {
     if (!user) return;
 
     const setupRealtimeChat = async () => {
+      console.log('Setting up realtime chat for user:', user.id);
+      
       // Create a channel for the chat room
       const channel = supabase.channel('chat_room', {
         config: {
@@ -66,6 +68,8 @@ const ChatSpace = () => {
           const newState = channel.presenceState();
           const users: UserPresence[] = [];
           
+          console.log('Presence sync, new state:', newState);
+          
           // Extract user data from presence state
           Object.values(newState).forEach((presenceArray: any) => {
             if (Array.isArray(presenceArray)) {
@@ -81,6 +85,7 @@ const ChatSpace = () => {
             }
           });
           
+          console.log('Updated online users:', users);
           setOnlineUsers(users);
         })
         .on('presence', { event: 'join' }, ({ key, newPresences }) => {
@@ -90,7 +95,13 @@ const ChatSpace = () => {
           console.log('User left:', key, leftPresences);
         })
         .on('broadcast', { event: 'new_message' }, ({ payload }) => {
-          console.log('Received message:', payload);
+          console.log('Received broadcast message:', payload);
+          
+          if (!payload || !payload.id || !payload.content) {
+            console.error('Invalid message payload:', payload);
+            return;
+          }
+
           const newMessage: ChatMessage = {
             id: payload.id,
             content: payload.content,
@@ -99,17 +110,30 @@ const ChatSpace = () => {
             userId: payload.userId,
             userEmail: payload.userEmail,
           };
-          setMessages(prev => [...prev, newMessage]);
+          
+          console.log('Adding new message to state:', newMessage);
+          setMessages(prev => {
+            // Check if message already exists to prevent duplicates
+            const exists = prev.find(msg => msg.id === newMessage.id);
+            if (exists) {
+              console.log('Message already exists, skipping duplicate');
+              return prev;
+            }
+            console.log('Adding message to messages array');
+            return [...prev, newMessage];
+          });
         })
         .subscribe(async (status) => {
-          console.log('Channel status:', status);
+          console.log('Channel subscription status:', status);
           if (status === 'SUBSCRIBED') {
+            console.log('Successfully subscribed to channel, tracking presence');
             // Track this user's presence
-            await channel.track({
+            const trackResult = await channel.track({
               user_id: user.id,
               email: user.email,
               online_at: new Date().toISOString(),
             });
+            console.log('Presence tracking result:', trackResult);
           }
         });
 
@@ -120,6 +144,7 @@ const ChatSpace = () => {
 
     // Cleanup on unmount
     return () => {
+      console.log('Cleaning up chat channel');
       if (channelRef.current) {
         channelRef.current.unsubscribe();
       }
@@ -137,32 +162,53 @@ const ChatSpace = () => {
   const handleSendMessage = async (content: string) => {
     if (!user || !channelRef.current) {
       console.error('User or channel not available');
+      toast.error(language === 'ar' ? 'خطأ في الإرسال' : 'Send error');
       return;
     }
 
     const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const timestamp = new Date().toISOString();
 
-    console.log('Sending message:', { content, userId: user.id, userEmail: user.email });
-
-    // Broadcast the message to all connected users
-    const { error } = await channelRef.current.send({
-      type: 'broadcast',
-      event: 'new_message',
-      payload: {
-        id: messageId,
-        content,
-        userId: user.id,
-        userEmail: user.email,
-        timestamp,
-      },
+    console.log('Attempting to send message:', { 
+      content, 
+      userId: user.id, 
+      userEmail: user.email,
+      messageId,
+      timestamp 
     });
 
-    if (error) {
-      console.error('Error sending message:', error);
-      toast.error(language === 'ar' ? 'فشل في إرسال الرسالة' : 'Failed to send message');
-    } else {
-      console.log('Message sent successfully');
+    // Create the message payload
+    const messagePayload = {
+      id: messageId,
+      content: content.trim(),
+      userId: user.id,
+      userEmail: user.email,
+      timestamp,
+    };
+
+    console.log('Sending message payload:', messagePayload);
+
+    // Broadcast the message to all connected users
+    try {
+      const result = await channelRef.current.send({
+        type: 'broadcast',
+        event: 'new_message',
+        payload: messagePayload,
+      });
+
+      console.log('Broadcast result:', result);
+
+      if (result.error) {
+        console.error('Error sending message:', result.error);
+        toast.error(language === 'ar' ? 'فشل في إرسال الرسالة' : 'Failed to send message');
+      } else {
+        console.log('Message sent successfully');
+        // Optionally show success feedback
+        // toast.success(language === 'ar' ? 'تم إرسال الرسالة' : 'Message sent');
+      }
+    } catch (error) {
+      console.error('Exception while sending message:', error);
+      toast.error(language === 'ar' ? 'خطأ في إرسال الرسالة' : 'Error sending message');
     }
   };
 
@@ -181,6 +227,8 @@ const ChatSpace = () => {
       </div>
     );
   }
+
+  console.log('Rendering ChatSpace with messages:', messages);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/20">
