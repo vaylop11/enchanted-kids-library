@@ -1,14 +1,13 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User, getCurrentUser, signOut as authSignOut } from '@/services/authService';
+import { User, getCurrentUser } from '@/services/authService';
 import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   checkUser: () => Promise<void>;
-  signOut: () => Promise<void>;
   isAdmin: boolean;
 }
 
@@ -16,7 +15,6 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   checkUser: async () => {},
-  signOut: async () => {},
   isAdmin: false,
 });
 
@@ -46,10 +44,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
-
-  const signOut = async () => {
-    await authSignOut();
   };
 
   useEffect(() => {
@@ -94,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, checkUser, signOut, isAdmin }}>
+    <AuthContext.Provider value={{ user, loading, checkUser, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );
