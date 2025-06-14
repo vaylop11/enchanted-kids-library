@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowLeft, FileText, Copy, Download } from 'lucide-react';
+import { ArrowLeft, FileText, Copy, Download, Play, Pause, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { getPDFById } from '@/services/pdfStorage';
 import { getSupabasePDFById } from '@/services/pdfSupabaseService';
@@ -17,6 +17,9 @@ import { MarkdownMessage } from '@/components/ui/markdown-message';
 import ScrollablePDFViewer from '@/components/ui/scrollable-pdf-viewer';
 import { Button } from '@/components/ui/button';
 import LanguageSelector from '@/components/ui/language-selector';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 const TranslatePDF = () => {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +36,7 @@ const TranslatePDF = () => {
   const [targetLanguage, setTargetLanguage] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTempPdf, setIsTempPdf] = useState(false);
+  const [translationProgress, setTranslationProgress] = useState(0);
 
   // For translation range
   const [fromPage, setFromPage] = useState(1);
@@ -153,7 +157,6 @@ const TranslatePDF = () => {
     else setToPage(value);
   };
 
-
   // --- Manual translation of page range ---
   const handleTranslateRange = async () => {
     // Prevent if language or range are not set
@@ -172,9 +175,15 @@ const TranslatePDF = () => {
 
     setIsTranslating(true);
     setTranslatedText('');
+    setTranslationProgress(0);
 
+    const totalPages = toPage - fromPage + 1;
     let combined = '';
+    
     for (let page = fromPage; page <= (toPage ?? fromPage); page++) {
+      const currentProgress = ((page - fromPage) / totalPages) * 100;
+      setTranslationProgress(currentProgress);
+      
       const pageText = await extractPageText(page);
       if (!pageText.trim()) {
         combined += (language === 'ar' 
@@ -194,6 +203,7 @@ const TranslatePDF = () => {
 
     setTranslatedText(combined.trim());
     setIsTranslating(false);
+    setTranslationProgress(100);
     toast.success(language === 'ar' ? "تمت الترجمة!" : "Translation completed!");
   };
 
@@ -224,8 +234,14 @@ const TranslatePDF = () => {
     }
   };
 
+  const resetTranslation = () => {
+    setTranslatedText('');
+    setTranslationProgress(0);
+    setTargetLanguage('');
+  };
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-muted/10 to-background">
       <SEO 
         title={`${language === 'ar' ? 'ترجمة: ' : 'Translate: '} ${pdfTitle}`}
         description={language === 'ar' 
@@ -235,145 +251,286 @@ const TranslatePDF = () => {
       <Navbar />
       <main className="flex-1 pt-24 pb-10">
         <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          {/* Header Section */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <Link 
               to={id ? `/pdf/${id}` : '/pdfs'} 
-              className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors group"
             >
-              <ArrowLeft className={`h-4 w-4 ${direction === 'rtl' ? 'ml-2 rotate-180' : 'mr-2'}`} />
+              <ArrowLeft className={`h-4 w-4 ${direction === 'rtl' ? 'ml-2 rotate-180' : 'mr-2'} group-hover:-translate-x-1 transition-transform`} />
               {language === 'ar' ? 'العودة إلى عارض الملف' : 'Back to PDF Viewer'}
             </Link>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-              <FileText className="h-5 w-5 text-primary" />
-              <h1 className="text-lg sm:text-xl font-semibold">{language === 'ar' ? 'ترجمة الملف' : 'Translate PDF'}</h1>
+            
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                  {language === 'ar' ? 'ترجمة احترافية' : 'Professional Translation'}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {language === 'ar' ? 'ترجم مستنداتك بدقة عالية' : 'Translate your documents with high accuracy'}
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* PDF Viewer */}
-            <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-              <div className="p-4 border-b bg-muted/20">
-                <h2 className="font-semibold text-base sm:text-lg">
-                  {language === 'ar' ? 'استعراض الملف' : 'PDF Preview'}
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1 truncate">
-                  {pdfTitle}
-                </p>
-              </div>
-              
-              <div className="overflow-hidden bg-muted/10 h-[60vh] sm:h-[70vh]">
-                {!isLoaded ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
-                  </div>
-                ) : pdfUrl ? (
-                  <ScrollablePDFViewer
-                    pdfUrl={pdfUrl}
-                    onDocumentLoadSuccess={handleDocumentLoadSuccess}
-                    onPageChange={setCurrentPage}
-                    className="h-full"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-muted-foreground">
-                      {language === 'ar' ? 'لا يمكن تحميل الملف' : 'Cannot load PDF'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Translation Panel */}
-            <div className="space-y-6">
-              <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-                <div className="p-4 border-b bg-muted/20 flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
-                  <div className="flex-1 flex flex-col gap-1">
-                    <h2 className="font-semibold text-base sm:text-lg">{language === 'ar' ? 'إعدادات الترجمة' : 'Translation Settings'}</h2>
-                    <p className="text-sm text-muted-foreground">{language === 'ar'
-                      ? "اختر اللغة وحدد نطاق الصفحات ثم اضغط 'ترجمة'"
-                      : "Select language and page range, then press 'Translate'."
-                    }</p>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 items-center">
-                    <LanguageSelector
-                      value={targetLanguage}
-                      onValueChange={v => setTargetLanguage(v)}
-                      disabled={isTranslating}
-                    />
-                    <input
-                      type="number"
-                      min={1}
-                      max={numPages ?? 1}
-                      value={fromPage}
-                      onChange={e => handleFromPageChange(e.target.value)}
-                      className="w-20 mx-1 py-1 px-2 rounded border border-input text-sm focus-visible:ring-2"
-                      placeholder={language === "ar" ? "من صفحة" : "From page"}
-                      disabled={isTranslating || !numPages}
-                    />
-                    <span className="font-bold px-1">-</span>
-                    <input
-                      type="number"
-                      min={fromPage}
-                      max={numPages ?? 1}
-                      value={toPage ?? ''}
-                      onChange={e => handleToPageChange(e.target.value)}
-                      className="w-20 py-1 px-2 rounded border border-input text-sm focus-visible:ring-2"
-                      placeholder={language === "ar" ? "إلى صفحة" : "To page"}
-                      disabled={isTranslating || !numPages}
-                    />
-                    <Button
-                      onClick={handleTranslateRange}
-                      disabled={isTranslating || !targetLanguage || !numPages}
-                      className="text-xs ml-2"
-                      variant="default"
-                    >
-                      {isTranslating
-                        ? (language === 'ar' ? "جار الترجمة..." : "Translating...")
-                        : (language === 'ar' ? "ترجمة" : "Translate")}
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between py-2 px-4 border-b bg-muted/40">
-                  <span className="text-xs text-muted-foreground">{language === 'ar' 
-                    ? `النص المترجم للصفحات من ${fromPage} إلى ${toPage ?? '?'}`
-                    : `Translated text for pages ${fromPage} to ${toPage ?? '?'}`}</span>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCopyText}
-                      className="h-8 w-8 p-0"
-                      disabled={!translatedText}
-                      title={language === 'ar' ? 'نسخ النص' : 'Copy text'}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDownloadTranslation}
-                      className="h-8 w-8 p-0"
-                      disabled={!translatedText}
-                      title={language === 'ar' ? 'تحميل الترجمة' : 'Download translation'}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="overflow-auto h-[45vh] sm:h-[55vh] p-4">
-                  {translatedText ? (
-                    <div className="w-full">
-                      <MarkdownMessage content={translatedText} className="break-words" />
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            {/* PDF Viewer Card */}
+            <Card className="overflow-hidden shadow-xl border-0 bg-gradient-to-br from-card via-card to-muted/20">
+              <CardHeader className="border-b bg-gradient-to-r from-muted/50 to-muted/30 pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <FileText className="h-5 w-5 text-primary" />
                     </div>
+                    <div>
+                      <h3 className="font-semibold">
+                        {language === 'ar' ? 'استعراض المستند' : 'Document Preview'}
+                      </h3>
+                      <p className="text-sm text-muted-foreground font-normal truncate max-w-[200px]">
+                        {pdfTitle}
+                      </p>
+                    </div>
+                  </CardTitle>
+                  {numPages && (
+                    <Badge variant="secondary" className="bg-primary/10 text-primary">
+                      {numPages} {language === 'ar' ? 'صفحة' : 'pages'}
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              
+              <CardContent className="p-0">
+                <div className="bg-muted/20 h-[65vh] sm:h-[75vh] relative overflow-hidden">
+                  {!isLoaded ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-4">
+                      <div className="relative">
+                        <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                        <FileText className="h-6 w-6 text-primary absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                      </div>
+                      <p className="text-muted-foreground animate-pulse">
+                        {language === 'ar' ? 'جاري تحميل المستند...' : 'Loading document...'}
+                      </p>
+                    </div>
+                  ) : pdfUrl ? (
+                    <ScrollablePDFViewer
+                      pdfUrl={pdfUrl}
+                      onDocumentLoadSuccess={handleDocumentLoadSuccess}
+                      onPageChange={setCurrentPage}
+                      className="h-full"
+                    />
                   ) : (
-                    <div className="text-center text-sm text-muted-foreground mt-10">
-                      {language === 'ar' 
-                        ? "حدد اللغة ونطاق الصفحات ثم اضغط ترجمة." 
-                        : "Choose language and page range, then press Translate."}
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-muted-foreground">
+                        {language === 'ar' ? 'لا يمكن تحميل الملف' : 'Cannot load PDF'}
+                      </p>
                     </div>
                   )}
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+
+            {/* Translation Panel */}
+            <div className="space-y-6">
+              {/* Translation Controls Card */}
+              <Card className="overflow-hidden shadow-xl border-0 bg-gradient-to-br from-card via-card to-muted/20">
+                <CardHeader className="border-b bg-gradient-to-r from-emerald-500/5 to-blue-500/5 pb-4">
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-500/10 rounded-lg">
+                      <Play className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-emerald-700 dark:text-emerald-400">
+                        {language === 'ar' ? 'إعدادات الترجمة' : 'Translation Settings'}
+                      </h3>
+                      <p className="text-sm text-muted-foreground font-normal">
+                        {language === 'ar' ? 'اختر اللغة وحدد النطاق' : 'Select language and range'}
+                      </p>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent className="p-6 space-y-6">
+                  {/* Language Selection */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-foreground">
+                      {language === 'ar' ? 'اللغة المستهدفة' : 'Target Language'}
+                    </label>
+                    <LanguageSelector
+                      value={targetLanguage}
+                      onValueChange={setTargetLanguage}
+                      disabled={isTranslating}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  {/* Page Range Selection */}
+                  <div className="space-y-4">
+                    <label className="text-sm font-medium text-foreground">
+                      {language === 'ar' ? 'نطاق الصفحات' : 'Page Range'}
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <label className="text-xs text-muted-foreground mb-1 block">
+                          {language === 'ar' ? 'من' : 'From'}
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={numPages ?? 1}
+                          value={fromPage}
+                          onChange={e => handleFromPageChange(e.target.value)}
+                          className="w-full py-2 px-3 rounded-lg border border-input bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                          disabled={isTranslating || !numPages}
+                        />
+                      </div>
+                      <div className="flex items-center justify-center pt-5">
+                        <div className="w-4 h-px bg-border"></div>
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-xs text-muted-foreground mb-1 block">
+                          {language === 'ar' ? 'إلى' : 'To'}
+                        </label>
+                        <input
+                          type="number"
+                          min={fromPage}
+                          max={numPages ?? 1}
+                          value={toPage ?? ''}
+                          onChange={e => handleToPageChange(e.target.value)}
+                          className="w-full py-2 px-3 rounded-lg border border-input bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                          disabled={isTranslating || !numPages}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  {isTranslating && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {language === 'ar' ? 'تقدم الترجمة' : 'Translation Progress'}
+                        </span>
+                        <span className="text-primary font-medium">{Math.round(translationProgress)}%</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-emerald-500 to-blue-500 h-2.5 rounded-full transition-all duration-300 ease-out"
+                          style={{ width: `${translationProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleTranslateRange}
+                      disabled={isTranslating || !targetLanguage || !numPages}
+                      className="flex-1 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
+                      size="lg"
+                    >
+                      {isTranslating ? (
+                        <>
+                          <Pause className="mr-2 h-4 w-4 animate-pulse" />
+                          {language === 'ar' ? 'جار الترجمة...' : 'Translating...'}
+                        </>
+                      ) : (
+                        <>
+                          <Play className="mr-2 h-4 w-4" />
+                          {language === 'ar' ? 'ابدأ الترجمة' : 'Start Translation'}
+                        </>
+                      )}
+                    </Button>
+                    
+                    {translatedText && (
+                      <Button
+                        onClick={resetTranslation}
+                        variant="outline"
+                        size="lg"
+                        className="hover:bg-muted/50"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Translation Results Card */}
+              <Card className="overflow-hidden shadow-xl border-0 bg-gradient-to-br from-card via-card to-muted/20">
+                <CardHeader className="border-b bg-gradient-to-r from-blue-500/5 to-purple-500/5 pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-500/10 rounded-lg">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-blue-700 dark:text-blue-400">
+                          {language === 'ar' ? 'نتائج الترجمة' : 'Translation Results'}
+                        </h3>
+                        {translatedText && (
+                          <p className="text-sm text-muted-foreground font-normal">
+                            {language === 'ar' 
+                              ? `الصفحات ${fromPage}-${toPage} • ${targetLanguage}`
+                              : `Pages ${fromPage}-${toPage} • ${targetLanguage}`}
+                          </p>
+                        )}
+                      </div>
+                    </CardTitle>
+                    
+                    {translatedText && (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCopyText}
+                          className="h-9 w-9 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          title={language === 'ar' ? 'نسخ النص' : 'Copy text'}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadTranslation}
+                          className="h-9 w-9 p-0 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          title={language === 'ar' ? 'تحميل الترجمة' : 'Download translation'}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+
+                <CardContent className="p-0">
+                  <div className="h-[45vh] sm:h-[55vh] overflow-auto">
+                    {translatedText ? (
+                      <div className="p-6">
+                        <MarkdownMessage content={translatedText} className="break-words" />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+                        <div className="p-4 bg-muted/50 rounded-full mb-4">
+                          <FileText className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <h4 className="font-medium text-foreground mb-2">
+                          {language === 'ar' ? 'لا توجد ترجمة بعد' : 'No translation yet'}
+                        </h4>
+                        <p className="text-sm text-muted-foreground max-w-sm">
+                          {language === 'ar' 
+                            ? 'اختر لغة الترجمة ونطاق الصفحات، ثم اضغط على "ابدأ الترجمة" لرؤية النتائج هنا.'
+                            : 'Select target language and page range, then click "Start Translation" to see results here.'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
