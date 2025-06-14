@@ -1,4 +1,3 @@
-
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -50,8 +49,7 @@ const Index = () => {
       <main>
         <HeroSection />
 
-        {/* New Community & Translation Cards */}
-        <CommunityAndTranslationCards />
+        {/* Community & Translation Cards removed as per request */}
 
         {/* Info Cards Section */}
         <section className="py-6 bg-background">
