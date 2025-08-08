@@ -68,9 +68,9 @@ const FeaturesSection = () => {
           {features.map((feature, index) => (
             <div 
               key={index} 
-              className="bg-card rounded-2xl p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:translate-y-[-0.25rem] border border-border/40"
+              className="premium-card rounded-2xl p-6 hover-lift border border-border/40"
             >
-              <div className="mb-4 bg-primary p-3 rounded-lg w-fit">
+              <div className="mb-4 bg-primary p-3 rounded-lg w-fit glow-effect">
                 {feature.icon}
               </div>
               <h3 className="text-xl font-display font-semibold mb-2 text-foreground">

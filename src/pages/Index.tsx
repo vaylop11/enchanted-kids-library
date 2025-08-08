@@ -4,7 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import HeroSection from '@/components/HeroSection';
 import FeaturesSection from '@/components/FeaturesSection';
 import FAQSection from '@/components/FAQSection';
-import UploadZone from '@/components/UploadZone';
+import UnifiedPDFInterface from '@/components/UnifiedPDFInterface';
 import PDFGrid from '@/components/PDFGrid';
 import SEO from '@/components/SEO';
 import StatsCard from '@/components/StatsCard';
@@ -34,35 +34,27 @@ const Index = () => {
 
       <main>
         <HeroSection />
-
-        {/* Community & Translation Cards removed as per request */}
-
-        {/* Info Cards Section */}
-        <section className="py-6 bg-background">
-          <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-            
-          </div>
-        </section>
         
-        {/* Upload Section */}
-        <section className="py-16 bg-muted/30" id="upload-pdf">
-          <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl font-bold tracking-tight mb-4 text-primary">
-                {language === 'ar' ? 'تحميل ملف PDF الخاص بك' : 'Upload Your PDF to Gemi ChatPDF'}
+        <UnifiedPDFInterface />
+        
+        <section className="py-16 px-4 md:px-6">
+          <div className="container mx-auto max-w-7xl">
+            <div className="text-center mb-12">
+              <h2 className="heading-2 mb-4">
+                {language === 'ar' ? 'إحصائيات المنصة' : 'Platform Statistics'}
               </h2>
-              <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-                {language === 'ar' ? 'قم بتحميل مستند PDF وابدأ التحدث معه فورًا. يمكنك طرح الأسئلة واستخراج المعلومات بسهولة.' : 'Upload a PDF document and start chatting with it instantly using Gemi ChatPDF. Ask questions and extract information with ease.'}
+              <p className="paragraph max-w-2xl mx-auto">
+                {language === 'ar' 
+                  ? 'انضم إلى آلاف المستخدمين الذين يستفيدون من تقنياتنا المتقدمة'
+                  : 'Join thousands of users who benefit from our advanced technologies'
+                }
               </p>
             </div>
-            
-            <UploadZone />
+            <StatsCard className="max-w-2xl mx-auto" />
           </div>
         </section>
         
-        {/* All PDFs grid section */}
         <PDFGrid />
-        
         <FeaturesSection />
         <FAQSection />
       </main>
