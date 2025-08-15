@@ -94,7 +94,7 @@ const HeroSection = () => {
                     <div className="w-3 h-3 bg-green-400 rounded-full"></div>
                   </div>
                   <div className="flex-1 text-center">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">chat.gemi.ai/pdf</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">chatpdf.icu</span>
                   </div>
                 </div>
 
