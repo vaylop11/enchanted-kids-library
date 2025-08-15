@@ -2,157 +2,130 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Link } from "react-router-dom";
 
-import { FileText, Zap, Brain, Sparkles } from "lucide-react";
-
 const HeroSection = () => {
   const { language } = useLanguage();
-  
+
   return (
-    <section className="relative min-h-screen py-20 md:py-32 bg-gradient-to-br from-slate-950 via-purple-950/20 to-blue-950/20 overflow-hidden" aria-labelledby="hero-heading">
-      {/* Advanced animated background */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-        {/* Main gradient orbs */}
-        <div className="absolute -top-96 -left-96 w-[800px] h-[800px] rounded-full bg-gradient-to-br from-violet-500/30 via-purple-500/20 to-pink-500/30 blur-3xl animate-pulse opacity-70"></div>
-        <div className="absolute -bottom-96 -right-96 w-[900px] h-[900px] rounded-full bg-gradient-to-tl from-blue-500/25 via-cyan-500/20 to-teal-500/25 blur-3xl animate-pulse opacity-60" style={{ animationDelay: '3s' }}></div>
-        <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] rounded-full bg-gradient-to-r from-emerald-500/20 to-green-500/15 blur-2xl animate-pulse opacity-50" style={{ animationDelay: '1.5s' }}></div>
+    <section 
+      className={`relative py-20 md:py-32 bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-gray-950 dark:to-slate-900 overflow-hidden transition-colors duration-500`}
+      dir={language === "ar" ? "rtl" : "ltr"}
+    >
+      {/* خلفيات تزيينية متحركة */}
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        {/* كرة تدرج زرقاء */}
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-gradient-to-br from-blue-300/30 to-primary/30 rounded-full blur-3xl animate-pulse"></div>
         
-        {/* Floating particles */}
-        <div className="absolute top-1/4 right-1/4 w-2 h-2 bg-violet-400 rounded-full animate-ping opacity-75"></div>
-        <div className="absolute bottom-1/3 left-1/3 w-1 h-1 bg-cyan-400 rounded-full animate-ping opacity-60" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-2/3 right-1/3 w-3 h-3 bg-pink-400 rounded-full animate-ping opacity-40" style={{ animationDelay: '4s' }}></div>
+        {/* كرة بنفسجية فاتحة */}
+        <div className="absolute bottom-20 right-10 w-72 h-72 bg-gradient-to-tr from-violet-300/20 to-pink-300/20 rounded-full blur-2xl opacity-70 animate-blob"></div>
         
-        {/* Grid overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent" 
-             style={{ 
-               backgroundImage: `radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0)`,
-               backgroundSize: '50px 50px'
-             }}></div>
+        {/* كرة خضراء شفافة */}
+        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-gradient-to-bl from-emerald-200/20 to-transparent rounded-full blur-2xl animate-blob" style={{ animationDelay: '2s' }}></div>
       </div>
 
       <div className="container mx-auto px-6 md:px-8 max-w-7xl relative z-10">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-16 lg:gap-20">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-12 lg:gap-16">
           
-          {/* Enhanced Content Section */}
-          <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left">
-            
-            {/* Floating badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20 backdrop-blur-sm mb-8 group hover:from-violet-500/15 hover:to-purple-500/15 transition-all duration-300">
-              <Sparkles className="w-4 h-4 text-violet-400 animate-pulse" />
-              <span className="text-sm font-medium text-violet-300">
-                {language === "ar" ? "🚀 الآن مع الذكاء الاصطناعي المتطور" : "🚀 Now with Advanced AI"}
-              </span>
-            </div>
-
-            {/* Main heading with enhanced styling */}
-            <h1 id="hero-heading" className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[0.9] mb-8 font-display">
+          {/* النص */}
+          <div className="flex-1 text-center md:text-left space-y-7 max-w-xl md:max-w-2xl">
+            <h1 
+              id="hero-heading" 
+              className="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-800 via-slate-900 to-slate-700 dark:from-slate-100 dark:via-slate-200 dark:to-slate-300"
+            >
               {language === "ar" ? (
                 <>
-                  <span className="block text-white/90 mb-2">تفاعل مع</span>
-                  <span className="block bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-pulse">
-                    ملفات PDF
-                  </span>
-                  <span className="block text-white/80 text-4xl md:text-5xl lg:text-6xl mt-4">
-                    بذكاء خارق
+                  تفاعل مع ملفاتك <br />
+                  <span className="relative inline-block text-primary">
+                    PDF بذكاء
+                    <span className="absolute -bottom-2 left-0 w-full h-1.5 bg-primary/30 rounded-full animate-pulse"></span>
                   </span>
                 </>
               ) : (
                 <>
-                  <span className="block text-white/90 mb-2">Chat with</span>
-                  <span className="block bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-pulse">
-                    PDFs
-                  </span>
-                  <span className="block text-white/80 text-4xl md:text-5xl lg:text-6xl mt-4">
-                    Intelligently
+                  Chat with your <br />
+                  <span className="relative inline-block text-primary">
+                    PDFs Intelligently
+                    <span className="absolute -bottom-2 left-0 w-full h-1.5 bg-primary/30 rounded-full animate-pulse"></span>
                   </span>
                 </>
               )}
             </h1>
 
-            {/* Enhanced description */}
-            <p className="text-xl md:text-2xl text-white/70 max-w-2xl mb-12 leading-relaxed">
-              {language === "ar" 
-                ? "اكتشف قوة الذكاء الاصطناعي في تحليل وفهم مستنداتك. تحدث، اسأل، واحصل على إجابات فورية من ملفات PDF الخاصة بك."
-                : "Discover the power of AI in analyzing and understanding your documents. Chat, ask questions, and get instant answers from your PDFs."
-              }
+            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
+              {language === "ar"
+                ? "اسأل، استخرج، وافهم مستنداتك بدقة. Gemi يحول ملفات PDF إلى محادثة ذكية وسهلة."
+                : "Ask, extract, and understand your documents with precision. Gemi turns PDFs into smart, natural conversations."}
             </p>
 
-            {/* Feature highlights */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 w-full max-w-2xl">
-              {[
-                { icon: Brain, text: language === "ar" ? "ذكي" : "Smart", color: "violet" },
-                { icon: Zap, text: language === "ar" ? "سريع" : "Fast", color: "cyan" },
-                { icon: FileText, text: language === "ar" ? "دقيق" : "Accurate", color: "emerald" }
-              ].map((feature, index) => (
-                <div key={index} className="flex items-center justify-center sm:justify-start gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all duration-300 group">
-                  <div className={`p-2 rounded-lg bg-gradient-to-br from-${feature.color}-500/20 to-${feature.color}-600/20 group-hover:from-${feature.color}-500/30 group-hover:to-${feature.color}-600/30 transition-all duration-300`}>
-                    <feature.icon className={`w-5 h-5 text-${feature.color}-400`} />
-                  </div>
-                  <span className="font-medium text-white/90">{feature.text}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Enhanced CTA buttons */}
-            <div className="flex flex-col sm:flex-row gap-6 w-full sm:w-auto">
-              <Button asChild size="lg" className="relative px-10 py-4 text-lg font-semibold bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 border-0 rounded-2xl shadow-2xl group overflow-hidden">
-                <Link to="/pdfs">
-                  <div className="absolute inset-0 bg-gradient-to-r from-violet-400/20 to-purple-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <span className="relative z-10 flex items-center gap-2">
-                    {language === "ar" ? "ابدأ الآن" : "Get Started"}
-                    <Zap className="w-5 h-5 group-hover:animate-pulse" />
-                  </span>
+            <div className="flex flex-col sm:flex-row gap-4 mt-6 justify-center md:justify-start">
+              <Button 
+                asChild 
+                size="lg" 
+                className="px-8 bg-primary hover:bg-primary-dark text-primary-foreground rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-medium"
+              >
+                <Link to="/pdfs" aria-label={language === "ar" ? "ابدأ الآن" : "Get started now"}>
+                  {language === "ar" ? "ابدأ الآن" : "Get Started"}
                 </Link>
               </Button>
-              
-              <Button asChild variant="outline" size="lg" className="px-10 py-4 text-lg font-semibold border-2 border-white/20 text-white/90 hover:bg-white/10 hover:border-white/30 rounded-2xl backdrop-blur-sm transition-all duration-300 group">
-                <Link to="#features">
-                  <span className="flex items-center gap-2">
-                    {language === "ar" ? "تعلم المزيد" : "Learn More"}
-                    <FileText className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
-                  </span>
+
+              <Button 
+                asChild 
+                variant="outline" 
+                size="lg" 
+                className="px-8 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary rounded-xl transition-all duration-300 font-medium backdrop-blur-sm"
+              >
+                <Link to="#features" aria-label={language === "ar" ? "اكتشف الميزات" : "Discover features"}>
+                  {language === "ar" ? "اكتشف الميزات" : "Learn More"}
                 </Link>
               </Button>
             </div>
           </div>
 
-          {/* Enhanced Visual Section */}
-          <div className="flex-1 flex items-center justify-center lg:justify-end max-w-lg lg:max-w-xl">
-            <div className="relative">
-              {/* Main card */}
-              <div className="relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-3xl border border-white/20 p-8 shadow-2xl hover:shadow-violet-500/20 transition-all duration-500 group hover:scale-105">
+          {/* بطاقة العرض (بدون Lottie) */}
+          <div className="flex-1 flex justify-center md:justify-end">
+            <div className="relative max-w-xs md:max-w-md w-full">
+              {/* بطاقة العرض الأساسية */}
+              <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 md:p-8 backdrop-blur-sm transition-all duration-500 hover:shadow-3xl hover:scale-105">
                 
-                {/* Animated border */}
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-violet-500/50 via-purple-500/50 to-pink-500/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm -z-10"></div>
-                
-                {/* Content placeholder for animation */}
-                <div className="w-80 h-80 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-violet-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                      <FileText className="w-12 h-12 text-violet-400 animate-pulse" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-white/90 mb-3">
-                      {language === "ar" ? "مستعد للتفاعل" : "Ready to Chat"}
-                    </h3>
-                    <p className="text-white/60">
-                      {language === "ar" ? "ارفع ملف PDF وابدأ المحادثة" : "Upload a PDF and start chatting"}
-                    </p>
+                {/* شريط العنوان (مثل متصفح) */}
+                <div className="flex items-center gap-2 mb-5 px-1">
+                  <div className="flex space-x-2 space-x-reverse">
+                    <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                    <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                  </div>
+                  <div className="flex-1 text-center">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">chat.gemi.ai/pdf</span>
                   </div>
                 </div>
-                
-                {/* Floating elements */}
-                <div className="absolute -top-4 -right-4 w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-500 rounded-full animate-bounce opacity-80"></div>
-                <div className="absolute -bottom-4 -left-4 w-6 h-6 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-full animate-bounce opacity-60" style={{ animationDelay: '1s' }}></div>
+
+                {/* محتوى المحادثة التوضيحي */}
+                <div className="space-y-4">
+                  <div className="bg-primary/10 dark:bg-primary/20 text-primary rounded-2xl rounded-tr-md p-4 text-sm max-w-[85%] ml-auto">
+                    <p className="font-medium">ما ملخص هذا البحث العلمي؟</p>
+                  </div>
+                  <div className="bg-muted text-foreground rounded-2xl rounded-tl-md p-4 text-sm max-w-[90%]">
+                    <p>بالطبع! يتناول البحث تأثيرات الذكاء الاصطناعي على التعليم، مع تركيز على التخصيص والتفاعل...</p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-muted-foreground">{language === "ar" ? "يكتب..." : "Typing..."}</span>
+                  </div>
+                </div>
               </div>
-              
-              {/* Background glow */}
-              <div className="absolute inset-0 bg-gradient-to-r from-violet-500/30 to-purple-500/30 rounded-3xl blur-3xl -z-20 opacity-50 group-hover:opacity-70 transition-opacity duration-300"></div>
+
+              {/* زخرفة صغيرة */}
+              <div className="absolute -top-3 -right-3 w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl blur-xl opacity-30 animate-pulse"></div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
+      {/* موجة تزيينية في الأسفل */}
+      <div className="absolute bottom-0 left-0 w-full">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className="fill-current text-white dark:text-slate-900">
+          <path fillOpacity="0.1" d="M0,192L48,197.3C96,203,192,213,288,208C384,203,480,181,576,181.3C672,181,768,203,864,218.7C960,235,1056,245,1152,229.3C1248,213,1344,171,1392,149.3L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+        </svg>
+      </div>
     </section>
   );
 };
