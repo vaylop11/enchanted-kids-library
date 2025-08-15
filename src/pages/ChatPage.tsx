@@ -4,17 +4,26 @@ import Navbar from '@/components/Navbar';
 import SEO from '@/components/SEO';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, supabaseUntyped } from '@/integrations/supabase/client';
-import { User, ArrowLeft, Crown, Trash2, Eraser } from 'lucide-react';
+import { ArrowLeft, Eraser, MessageSquare, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { ChatMessageSkeleton } from '@/components/ui/skeleton';
 import { ChatInput } from '@/components/ui/chat-input';
-import { MarkdownMessage } from '@/components/ui/markdown-message';
+import { ChatMessage } from '@/components/chat/ChatMessage';
+import { ChatReplyBar } from '@/components/chat/ChatReplyBar';
+import { OnlineUsersList } from '@/components/chat/OnlineUsersList';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
+interface ReplyTo {
+  id: string;
+  content: string;
+  user_email: string;
+  user_id: string;
+}
 
 type Message = {
   id: string;
@@ -22,12 +31,14 @@ type Message = {
   user_id: string;
   user_email: string;
   created_at: string;
+  reply_to?: ReplyTo;
 };
 
 type OnlineUser = {
   id: string;
   email: string;
   online_at: string;
+  avatar_url?: string;
 };
 
 const ChatPage = () => {
@@ -35,9 +46,9 @@ const ChatPage = () => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
   const [onlineUsers, setOnlineUsers] = useState<Record<string, OnlineUser>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [replyTo, setReplyTo] = useState<ReplyTo | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -137,24 +148,36 @@ const ChatPage = () => {
   }, [user]);
 
   const sendMessage = async (message: string) => {
-    if (!user || !message) return;
+    if (!user || !message.trim()) return;
+    
+    const messageData = {
+      content: message.trim(),
+      user_id: user.id,
+      user_email: user.email || 'Anonymous',
+      ...(replyTo && {
+        reply_to: {
+          id: replyTo.id,
+          content: replyTo.content,
+          user_email: replyTo.user_email,
+          user_id: replyTo.user_id
+        }
+      })
+    };
     
     const optimisticMessage: Message = {
       id: `temp-${Date.now()}`,
-      content: message,
-      user_id: user.id,
-      user_email: user.email || 'Anonymous',
       created_at: new Date().toISOString(),
+      ...messageData,
     };
     
     setMessages((prev) => [...prev, optimisticMessage]);
+    setReplyTo(null); // Clear reply after sending
 
     try {
-      const { error, data } = await supabaseUntyped.from('messages').insert({
-        content: message,
-        user_id: user.id,
-        user_email: user.email || 'Anonymous',
-      }).select('*');
+      const { error, data } = await supabaseUntyped
+        .from('messages')
+        .insert(messageData)
+        .select('*');
 
       if (error) throw error;
       
@@ -167,10 +190,22 @@ const ChatPage = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error('Failed to send message');
-      
+      toast.error(language === 'ar' ? 'فشل في إرسال الرسالة' : 'Failed to send message');
       setMessages((prev) => prev.filter(msg => msg.id !== optimisticMessage.id));
     }
+  };
+
+  const handleReply = (message: Message) => {
+    setReplyTo({
+      id: message.id,
+      content: message.content,
+      user_email: message.user_email,
+      user_id: message.user_id
+    });
+  };
+
+  const cancelReply = () => {
+    setReplyTo(null);
   };
 
   const deleteMessage = async (messageId: string) => {
@@ -183,10 +218,10 @@ const ChatPage = () => {
         .match({ id: messageId });
         
       if (error) throw error;
-      toast.success('Message deleted');
+      toast.success(language === 'ar' ? 'تم حذف الرسالة' : 'Message deleted');
     } catch (error) {
       console.error('Error deleting message:', error);
-      toast.error('Failed to delete message');
+      toast.error(language === 'ar' ? 'فشل في حذف الرسالة' : 'Failed to delete message');
     }
   };
 
@@ -202,39 +237,13 @@ const ChatPage = () => {
       if (error) throw error;
       
       setMessages([]);
-      toast.success('All messages cleared');
+      toast.success(language === 'ar' ? 'تم مسح جميع الرسائل' : 'All messages cleared');
     } catch (error) {
       console.error('Error clearing messages:', error);
-      toast.error('Failed to clear all messages');
+      toast.error(language === 'ar' ? 'فشل في مسح الرسائل' : 'Failed to clear all messages');
     }
   };
 
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit'
-    });
-  };
-
-  const getInitials = (email: string) => {
-    return email.substring(0, 2).toUpperCase();
-  };
-
-  const maskEmail = (email: string) => {
-    if (!email || email === 'Anonymous') return 'Anonymous';
-    
-    const parts = email.split('@');
-    if (parts.length !== 2) return email;
-    
-    const name = parts[0];
-    if (name.length <= 2) return email;
-    
-    return `${name.substring(0, 2)}***`;
-  };
-
-  const isAdminEmail = (email: string) => {
-    return email === 'cherifhoucine83@gmail.com';
-  };
 
   if (loading) {
     return (
@@ -289,141 +298,109 @@ const ChatPage = () => {
         </div>
         
         <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)]">
-          <Card className="lg:w-64 w-full p-5 h-full lg:h-auto">
-            <h2 className="text-lg font-medium mb-4">{t('onlineUsers')}</h2>
-            <ScrollArea className="h-[200px] lg:h-[calc(100%-3rem)]">
-              <div className="space-y-3 pr-4">
-                {Object.values(onlineUsers).map((onlineUser) => (
-                  <div key={onlineUser.id} className="flex items-center gap-2">
-                    <div className="relative">
-                      <Avatar className={`h-8 w-8 ${isAdminEmail(onlineUser.email) ? 'bg-amber-100' : 'bg-primary/10'}`}>
-                        <AvatarFallback className={isAdminEmail(onlineUser.email) ? 'text-amber-600' : 'text-primary'}>
-                          {getInitials(onlineUser.email)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background"></div>
-                    </div>
-                    <div className="truncate flex-1 text-sm">
-                      {isAdminEmail(onlineUser.email) ? (
-                        <div className="flex items-center gap-1">
-                          <Crown className="h-3 w-3 text-amber-500" />
-                          <span className="font-medium text-amber-600">Admin</span>
-                        </div>
-                      ) : (
-                        <span>User {onlineUser.id.substring(0, 4)}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {Object.keys(onlineUsers).length === 0 && (
-                  <p className="text-sm text-muted-foreground">{t('noUsersOnline')}</p>
-                )}
-              </div>
-            </ScrollArea>
-          </Card>
+          <OnlineUsersList onlineUsers={onlineUsers} />
           
-          <Card className="flex-1 flex flex-col p-5 h-full">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium">{t('chatRoom')}</h2>
-              <div className="flex items-center gap-3">
-                <Badge variant="outline" className="text-xs">
-                  {Object.keys(onlineUsers).length} {t('online')}
-                </Badge>
-                
-                {isAdmin && (
-                  <Button 
-                    variant="destructive" 
-                    size="sm" 
-                    onClick={deleteAllMessages}
-                    title="Clear all messages"
-                    className="flex items-center gap-1"
-                  >
-                    <Eraser className="h-4 w-4" />
-                    {t('clearAll')}
-                  </Button>
-                )}
-              </div>
-            </div>
+          <Card className="flex-1 flex flex-col border-border/50 bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  {language === 'ar' ? 'غرفة المحادثة' : 'Chat Room'}
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="text-xs">
+                    {Object.keys(onlineUsers).length} {language === 'ar' ? 'متصل' : 'online'}
+                  </Badge>
+                  
+                  {isAdmin && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          className="flex items-center gap-1"
+                        >
+                          <Trash className="h-4 w-4" />
+                          {language === 'ar' ? 'مسح الكل' : 'Clear All'}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            {language === 'ar' ? 'مسح جميع الرسائل' : 'Clear All Messages'}
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {language === 'ar' 
+                              ? 'هل أنت متأكد من أنك تريد مسح جميع الرسائل؟ لا يمكن التراجع عن هذا الإجراء.'
+                              : 'Are you sure you want to clear all messages? This action cannot be undone.'
+                            }
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>
+                            {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                          </AlertDialogCancel>
+                          <AlertDialogAction onClick={deleteAllMessages} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            {language === 'ar' ? 'مسح' : 'Clear'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              </CardTitle>
+            </CardHeader>
             
-            <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4 mb-4">
-              <div className="space-y-4">
-                {isLoading ? (
-                  <div className="space-y-4">
-                    <ChatMessageSkeleton />
-                    <div className="flex justify-end">
+            <CardContent className="flex-1 flex flex-col p-0">
+              <ScrollArea ref={scrollAreaRef} className="flex-1 px-6">
+                <div className="space-y-6 py-4">
+                  {isLoading ? (
+                    <div className="space-y-6">
+                      <ChatMessageSkeleton />
+                      <div className="flex justify-end">
+                        <ChatMessageSkeleton />
+                      </div>
                       <ChatMessageSkeleton />
                     </div>
-                    <ChatMessageSkeleton />
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-muted-foreground">
-                    <p>{t('noMessages')}</p>
-                  </div>
-                ) : (
-                  messages.map((message) => (
-                    <div 
-                      key={message.id} 
-                      className={`flex gap-3 ${message.user_id === user.id ? 'justify-end' : 'justify-start'}`}
-                    >
-                      {message.user_id !== user.id && (
-                        <Avatar className={`h-8 w-8 ${isAdminEmail(message.user_email) ? 'bg-amber-100' : 'bg-primary/10'}`}>
-                          <AvatarFallback className={isAdminEmail(message.user_email) ? 'text-amber-600' : 'text-primary'}>
-                            {getInitials(message.user_email)}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      <div className={`max-w-[75%] ${message.user_id === user.id ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg p-3 group relative`}>
-                        {message.user_id !== user.id && (
-                          <div className="flex items-center gap-1 text-xs font-medium mb-1">
-                            {isAdminEmail(message.user_email) ? (
-                              <>
-                                <Crown className="h-3 w-3 text-amber-500" />
-                                <span className="font-medium text-amber-600">Admin</span>
-                              </>
-                            ) : (
-                              <span>User {message.user_id.substring(0, 4)}</span>
-                            )}
-                          </div>
-                        )}
-                        
-                        <MarkdownMessage content={message.content} />
-                        
-                        <p className="text-xs opacity-70 text-right mt-1">
-                          {formatTime(message.created_at)}
-                        </p>
-                        
-                        {isAdmin && message.user_id !== user.id && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute -right-2 -top-2 h-6 w-6 bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => deleteMessage(message.id)}
-                            title="Delete message"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                      {message.user_id === user.id && (
-                        <Avatar className="h-8 w-8 bg-primary/10">
-                          <AvatarFallback className="text-primary">
-                            {getInitials(message.user_email)}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
+                  ) : messages.length === 0 ? (
+                    <div className="h-[400px] flex flex-col items-center justify-center text-muted-foreground">
+                      <MessageSquare className="h-16 w-16 mb-4 opacity-50" />
+                      <p className="text-lg font-medium mb-2">
+                        {language === 'ar' ? 'لا توجد رسائل بعد' : 'No messages yet'}
+                      </p>
+                      <p className="text-sm">
+                        {language === 'ar' ? 'ابدأ المحادثة!' : 'Start the conversation!'}
+                      </p>
                     </div>
-                  ))
-                )}
-                <div ref={messagesEndRef} />
+                  ) : (
+                    messages.map((message) => (
+                      <ChatMessage
+                        key={message.id}
+                        message={message}
+                        isCurrentUser={message.user_id === user.id}
+                        isAdmin={isAdmin}
+                        userAvatar={user.avatar_url}
+                        onDelete={deleteMessage}
+                        onReply={handleReply}
+                      />
+                    ))
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+              
+              <div className="border-t border-border/50">
+                <ChatReplyBar replyTo={replyTo} onCancelReply={cancelReply} />
+                <div className="p-4">
+                  <ChatInput 
+                    onSubmit={sendMessage}
+                    placeholder={language === 'ar' ? 'اكتب رسالة...' : 'Type a message...'}
+                    dir={language === 'ar' ? 'rtl' : 'ltr'}
+                    autoFocus
+                  />
+                </div>
               </div>
-            </ScrollArea>
-            
-            <ChatInput 
-              onSubmit={sendMessage}
-              placeholder={t('typeMessage')}
-              dir={language === 'ar' ? 'rtl' : 'ltr'}
-              autoFocus
-            />
+            </CardContent>
           </Card>
         </div>
       </main>
