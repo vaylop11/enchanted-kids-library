@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 export interface User {
   id: string;
   email?: string;
+  avatar_url?: string;
+  full_name?: string;
 }
 
 export const getCurrentUser = async (): Promise<User | null> => {
@@ -17,7 +19,9 @@ export const getCurrentUser = async (): Promise<User | null> => {
     
     return {
       id: user.id,
-      email: user.email
+      email: user.email,
+      avatar_url: user.user_metadata?.avatar_url,
+      full_name: user.user_metadata?.full_name || user.user_metadata?.name
     };
   } catch (error) {
     console.error('Error getting current user:', error);
@@ -41,7 +45,9 @@ export const signUp = async (email: string, password: string): Promise<User | nu
       toast.success('Verification email sent. Please check your inbox.');
       return {
         id: data.user.id,
-        email: data.user.email
+        email: data.user.email,
+        avatar_url: data.user.user_metadata?.avatar_url,
+        full_name: data.user.user_metadata?.full_name || data.user.user_metadata?.name
       };
     }
     
@@ -69,7 +75,9 @@ export const signIn = async (email: string, password: string): Promise<User | nu
       // Don't show toast here - it will be handled by the Auth context
       return {
         id: data.user.id,
-        email: data.user.email
+        email: data.user.email,
+        avatar_url: data.user.user_metadata?.avatar_url,
+        full_name: data.user.user_metadata?.full_name || data.user.user_metadata?.name
       };
     }
     

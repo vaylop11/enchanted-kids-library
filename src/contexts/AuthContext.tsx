@@ -56,7 +56,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
         const newUser = {
           id: session.user.id,
-          email: session.user.email || undefined
+          email: session.user.email || undefined,
+          avatar_url: session.user.user_metadata?.avatar_url,
+          full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name
         };
         
         setUser(newUser);
