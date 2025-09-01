@@ -18,7 +18,6 @@ import SignIn from "./components/auth/SignIn";
 import SignUp from "./components/auth/SignUp";
 import AuthPage from "./pages/AuthPage";
 import AdminPage from "./pages/AdminPage";
-import ChatPage from "./pages/ChatPage";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -44,7 +43,6 @@ const App = () => {
       <LanguageProvider>
         <AuthProvider>
           <TooltipProvider>
-            <Toaster />
             <Sonner 
               position="top-right"
               richColors
@@ -77,11 +75,6 @@ const App = () => {
                 <Route path="/signin" element={<AuthPage><SignIn /></AuthPage>} />
                 <Route path="/signup" element={<AuthPage><SignUp /></AuthPage>} />
                 <Route path="/admin" element={<AdminPage />} />
-                <Route path="/chat" element={
-                  <ProtectedRoute>
-                    <ChatPage />
-                  </ProtectedRoute>
-                } />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
