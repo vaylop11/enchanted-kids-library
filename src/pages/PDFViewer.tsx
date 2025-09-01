@@ -604,12 +604,13 @@ const PDFViewer = () => {
       
       <main className="flex-1 pt-24 pb-10">
         <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-          <div className="flex justify-between items-center mb-6">
+          {/* Enhanced Header Section */}
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
             <Link 
               to={isTempPdf ? "/" : "/pdfs"} 
-              className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="group inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-all duration-200 hover:translate-x-1"
             >
-              <ArrowLeft className={`h-4 w-4 ${language === 'ar' ? 'ml-2 rotate-180' : 'mr-2'}`} />
+              <ArrowLeft className={`h-4 w-4 ${language === 'ar' ? 'ml-2 rotate-180' : 'mr-2'} transition-transform group-hover:scale-110`} />
               {language === 'ar' 
                 ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
                 : isTempPdf ? 'Back to Home' : 'Back to PDFs'}
@@ -618,84 +619,118 @@ const PDFViewer = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleShare}
-                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-muted transition-colors"
+                className="group inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/50 dark:to-cyan-950/50 hover:from-blue-100 hover:to-cyan-100 dark:hover:from-blue-900/70 dark:hover:to-cyan-900/70 border border-blue-200 dark:border-blue-800 transition-all duration-200 hover:shadow-md hover:scale-105"
                 aria-label={language === 'ar' ? 'مشاركة الملف' : 'Share file'}
               >
-                <Share className="h-5 w-5" />
+                <Share className="h-4 w-4 text-blue-600 dark:text-blue-400 group-hover:rotate-12 transition-transform" />
+                <span className="text-xs font-medium text-blue-700 dark:text-blue-300 hidden sm:inline">
+                  {language === 'ar' ? 'مشاركة' : 'Share'}
+                </span>
               </button>
               
               <Link
                 to={`/translate/${id}`}
-                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-muted transition-colors"
+                className="group inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50 hover:from-emerald-100 hover:to-teal-100 dark:hover:from-emerald-900/70 dark:hover:to-teal-900/70 border border-emerald-200 dark:border-emerald-800 transition-all duration-200 hover:shadow-md hover:scale-105"
                 aria-label={language === 'ar' ? 'ترجمة الملف' : 'Translate PDF'}
               >
-                <Languages className="h-5 w-5" />
+                <Languages className="h-4 w-4 text-emerald-600 dark:text-emerald-400 group-hover:rotate-12 transition-transform" />
+                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 hidden sm:inline">
+                  {language === 'ar' ? 'ترجمة' : 'Translate'}
+                </span>
               </Link>
               
               <button
                 onClick={handleDeletePDF}
-                className="inline-flex items-center gap-2 p-2 rounded-full hover:bg-destructive/10 text-destructive transition-colors"
+                className="group inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950/50 dark:to-pink-950/50 hover:from-red-100 hover:to-pink-100 dark:hover:from-red-900/70 dark:hover:to-pink-900/70 border border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md hover:scale-105"
                 aria-label={language === 'ar' ? 'حذف الملف' : 'Delete file'}
               >
-                <Trash2 className="h-5 w-5" />
+                <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400 group-hover:rotate-12 transition-transform" />
+                <span className="text-xs font-medium text-red-700 dark:text-red-300 hidden sm:inline">
+                  {language === 'ar' ? 'حذف' : 'Delete'}
+                </span>
               </button>
             </div>
           </div>
           
-          <div className="flex flex-col lg:flex-row gap-6">
-            <div className="lg:w-2/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-              <div className="flex justify-between items-center p-4 border-b">
-                <div>
-                  <h1 className="font-display text-xl font-medium truncate">
-                    {pdf.title}
-                  </h1>
-                  <div className="flex gap-2 mt-1">
-                    <Badge variant="secondary" className="text-xs">
-                      {pdf.fileSize}
+          {/* Enhanced Main Content Grid */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
+            {/* Enhanced PDF Viewer Panel */}
+            <div className="xl:col-span-2 bg-gradient-to-br from-card to-card/80 rounded-2xl border border-border/50 overflow-hidden shadow-lg backdrop-blur-sm">
+              {/* PDF Header with Enhanced Design */}
+              <div className="flex justify-between items-center p-6 border-b border-border/50 bg-gradient-to-r from-muted/30 to-muted/10">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <h1 className="font-display text-xl font-semibold truncate bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                      {pdf.title}
+                    </h1>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="text-xs bg-gradient-to-r from-secondary to-secondary/80">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                        {pdf.fileSize}
+                      </div>
                     </Badge>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs border-primary/30">
                       {pdf.pageCount || '?'} {language === 'ar' ? 'صفحات' : 'pages'}
                     </Badge>
                     {isTempPdf && (
-                      <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/30">
-                        {language === 'ar' ? 'مؤقت' : 'Temporary'}
+                      <Badge className="text-xs bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 dark:from-amber-900/30 dark:to-orange-900/30 dark:text-amber-400 border border-amber-300 dark:border-amber-700 animate-pulse">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></div>
+                          {language === 'ar' ? 'مؤقت' : 'Temporary'}
+                        </div>
                       </Badge>
                     )}
                   </div>
                 </div>
                 <button 
                   onClick={() => setShowPdfControls(!showPdfControls)}
-                  className="p-1 rounded-md hover:bg-muted transition-colors"
+                  className="p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 hover:scale-110"
                 >
-                  {showPdfControls ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                  {showPdfControls ? 
+                    <ChevronUp className="h-5 w-5 transition-transform" /> : 
+                    <ChevronDown className="h-5 w-5 transition-transform" />
+                  }
                 </button>
               </div>
               
-              <div className="flex-1 overflow-hidden bg-muted/10" style={{ height: 'calc(100vh - 300px)' }}>
+              {/* Enhanced PDF Content Area */}
+              <div className="flex-1 overflow-hidden bg-gradient-to-br from-muted/5 to-muted/10 relative">
                 {isLoadingPdf ? (
                   <div className="flex flex-col items-center justify-center h-full w-full">
-                    <div className="h-16 w-16 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin mb-4" />
-                    <p className="text-lg font-medium mb-2">
-                      {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {language === 'ar' ? 'يرجى الانتظار' : 'Please wait'}
-                    </p>
+                    <div className="relative">
+                      <div className="h-20 w-20 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                      <div className="absolute inset-0 h-20 w-20 rounded-full border-4 border-transparent border-r-primary/30 animate-spin animation-delay-150" />
+                    </div>
+                    <div className="mt-6 text-center animate-fade-in">
+                      <p className="text-lg font-semibold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                        {language === 'ar' ? 'جاري تحميل الملف...' : 'Loading PDF...'}
+                      </p>
+                      <p className="text-sm text-muted-foreground animate-pulse">
+                        {language === 'ar' ? 'يرجى الانتظار' : 'Please wait'}
+                      </p>
+                    </div>
                   </div>
                 ) : pdfError ? (
-                  <div className="flex flex-col items-center justify-center h-full w-full">
-                    <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" />
-                    <h2 className="text-xl font-medium mb-2 text-center">
+                  <div className="flex flex-col items-center justify-center h-full w-full animate-fade-in">
+                    <div className="p-4 rounded-full bg-amber-100 dark:bg-amber-900/20 mb-6">
+                      <AlertTriangle className="h-16 w-16 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <h2 className="text-xl font-semibold mb-2 text-center">
                       {language === 'ar' ? 'تعذر تحميل الملف' : 'Failed to load PDF'}
                     </h2>
-                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                    <p className="text-muted-foreground text-center max-w-md mb-8 leading-relaxed">
                       {pdfError}
                     </p>
-                    <div className="flex gap-3">
-                      <Button variant="outline" onClick={handleRetryLoading}>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Button variant="outline" onClick={handleRetryLoading} className="hover:scale-105 transition-transform">
                         {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
                       </Button>
-                      <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
+                      <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')} className="hover:scale-105 transition-transform">
                         {language === 'ar'
                           ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
                           : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
@@ -703,17 +738,19 @@ const PDFViewer = () => {
                     </div>
                   </div>
                 ) : !pdf.dataUrl ? (
-                  <div className="flex flex-col items-center justify-center h-full w-full">
-                    <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                    <h2 className="text-xl font-medium mb-2 text-center">
+                  <div className="flex flex-col items-center justify-center h-full w-full animate-fade-in">
+                    <div className="p-4 rounded-full bg-muted/20 mb-6">
+                      <FileText className="h-16 w-16 text-muted-foreground" />
+                    </div>
+                    <h2 className="text-xl font-semibold mb-2 text-center">
                       {language === 'ar' ? 'لا توجد بيانات PDF' : 'No PDF Data Available'}
                     </h2>
-                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                    <p className="text-muted-foreground text-center max-w-md mb-8 leading-relaxed">
                       {language === 'ar' 
                         ? 'لم يتم تخزين بيانات PDF بسبب قيود التخزين. حاول حذف بعض الملفات القديمة وتحميل هذا الملف مرة أخرى.'
                         : 'PDF data was not stored due to storage limitations. Try deleting some older PDFs and upload this file again.'}
                     </p>
-                    <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')}>
+                    <Button onClick={() => navigate(isTempPdf ? '/' : '/pdfs')} className="hover:scale-105 transition-transform">
                       {language === 'ar'
                         ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
                         : isTempPdf ? 'Back to Home' : 'Back to PDF List'}
@@ -731,20 +768,29 @@ const PDFViewer = () => {
               </div>
             </div>
             
-            <div className="lg:w-1/3 bg-card rounded-xl border border-border overflow-hidden shadow-sm flex flex-col">
-              <div className="flex justify-between items-center p-4 border-b">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-primary" />
-                  <h2 className="font-display text-lg font-medium">
-                    {language === 'ar' ? 'دردشة ذكية' : 'AI Chat'}
-                  </h2>
-                  {chatMessages.length > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      {chatMessages.length}
-                    </Badge>
-                  )}
+            {/* Enhanced AI Chat Panel */}
+            <div className="xl:col-span-1 bg-gradient-to-br from-card to-card/80 rounded-2xl border border-border/50 overflow-hidden shadow-lg backdrop-blur-sm flex flex-col">
+              {/* Enhanced Chat Header */}
+              <div className="flex justify-between items-center p-6 border-b border-border/50 bg-gradient-to-r from-muted/30 to-muted/10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-display text-lg font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                      {language === 'ar' ? 'دردشة ذكية' : 'AI Assistant'}
+                    </h2>
+                    {chatMessages.length > 0 && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="secondary" className="text-xs bg-gradient-to-r from-primary/10 to-primary/5">
+                          {chatMessages.length} {language === 'ar' ? 'رسالة' : 'messages'}
+                        </Badge>
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -752,7 +798,7 @@ const PDFViewer = () => {
                           variant="ghost" 
                           size="icon" 
                           onClick={handleResetChat}
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 hover:scale-110"
                           aria-label={language === 'ar' ? 'إعادة تعيين المحادثة' : 'Reset chat'}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -768,56 +814,96 @@ const PDFViewer = () => {
                     variant="ghost" 
                     size="icon" 
                     onClick={() => setShowChat(!showChat)}
-                    className="h-8 w-8"
+                    className="h-8 w-8 hover:bg-muted/50 transition-all duration-200 hover:scale-110"
                   >
-                    {showChat ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                    {showChat ? 
+                      <ChevronUp className="h-5 w-5 transition-transform" /> : 
+                      <ChevronDown className="h-5 w-5 transition-transform" />
+                    }
                   </Button>
                 </div>
               </div>
               
               {showChat && (
                 <>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: '60vh' }}>
+                  {/* Enhanced Chat Messages Area */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-background/50 to-muted/10" style={{ maxHeight: '60vh' }}>
                     {isLoadingMessages ? (
                       <div className="flex justify-center items-center h-full">
-                        <div className="h-10 w-10 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                        <div className="relative">
+                          <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+                          <div className="absolute inset-0 h-12 w-12 rounded-full border-4 border-transparent border-r-primary/30 animate-spin animation-delay-150" />
+                        </div>
                       </div>
                     ) : chatMessages.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                        <MessageSquare className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                        <p className="font-medium mb-2">
-                          {language === 'ar' ? 'ابدأ محادثة ذكية مع الملف' : 'Start an intelligent conversation with your PDF'}
-                        </p>
-                        <p className="text-sm text-muted-foreground mb-4">
+                      <div className="flex flex-col items-center justify-center h-full text-center p-6 animate-fade-in">
+                        <div className="p-4 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 mb-6">
+                          <MessageSquare className="h-12 w-12 text-primary/70" />
+                        </div>
+                        <h3 className="font-semibold text-lg mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                          {language === 'ar' ? 'ابدأ محادثة ذكية' : 'Start Smart Conversation'}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
                           {language === 'ar' 
                             ? 'اطرح أسئلة معقدة واحصل على إجابات دقيقة باستخدام ذكاء Gemini الاصطناعي'
                             : 'Ask complex questions and get accurate answers powered by Gemini AI'
                           }
                         </p>
-                        {isTempPdf && (
-                          <p className="text-xs text-amber-600 mt-2 p-2 bg-amber-50 rounded-lg">
-                            {language === 'ar'
-                              ? 'ملاحظة: هذا ملف مؤقت. ستفقد المحادثة عند إغلاق المتصفح.'
-                              : 'Note: This is a temporary file. Chat will be lost when you close the browser.'}
+                        
+                        {/* Quick Start Suggestions */}
+                        <div className="w-full space-y-2 mb-4">
+                          <p className="text-xs font-medium text-muted-foreground mb-3">
+                            {language === 'ar' ? 'اقتراحات سريعة:' : 'Quick suggestions:'}
                           </p>
+                          {[
+                            language === 'ar' ? 'لخص المحتوى' : 'Summarize content',
+                            language === 'ar' ? 'أهم النقاط' : 'Key points',
+                            language === 'ar' ? 'أسئلة وأجوبة' : 'Q&A about topic'
+                          ].map((suggestion, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleChatSubmit(suggestion)}
+                              className="w-full text-left p-2 text-xs rounded-lg bg-gradient-to-r from-muted/30 to-muted/20 hover:from-primary/10 hover:to-primary/5 border border-border/30 hover:border-primary/30 transition-all duration-200 hover:scale-[1.02]"
+                              disabled={isWaitingForResponse}
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        {isTempPdf && (
+                          <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border border-amber-200 dark:border-amber-800">
+                            <p className="text-xs text-amber-700 dark:text-amber-300">
+                              {language === 'ar'
+                                ? '⚠️ ملاحظة: هذا ملف مؤقت. ستفقد المحادثة عند إغلاق المتصفح.'
+                                : '⚠️ Note: This is a temporary file. Chat will be lost when you close the browser.'}
+                            </p>
+                          </div>
                         )}
                       </div>
                     ) : (
                       <>
-                        {chatMessages.map(message => (
-                          <ChatMessageBubble
-                            key={message.id}
-                            message={message}
-                            language={language}
-                            onCopy={handleCopyMessage}
-                            onRegenerate={handleRegenerateMessage}
-                            onFeedback={handleMessageFeedback}
-                          />
+                        {chatMessages.map((message, index) => (
+                          <div 
+                            key={message.id} 
+                            className={`animate-fade-in`}
+                            style={{ animationDelay: `${index * 0.1}s` }}
+                          >
+                            <ChatMessageBubble
+                              message={message}
+                              language={language}
+                              onCopy={handleCopyMessage}
+                              onRegenerate={handleRegenerateMessage}
+                              onFeedback={handleMessageFeedback}
+                            />
+                          </div>
                         ))}
 
                         {isAnalyzing && (
-                          <div className="mr-auto max-w-[80%]">
-                            <PDFAnalysisProgress analysis={analysisProgress} />
+                          <div className="mr-auto max-w-[80%] animate-fade-in">
+                            <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                              <PDFAnalysisProgress analysis={analysisProgress} />
+                            </div>
                           </div>
                         )}
                         <div ref={chatEndRef} />
@@ -825,17 +911,20 @@ const PDFViewer = () => {
                     )}
                   </div>
                   
-                  <EnhancedChatInput 
-                    onSubmit={handleChatSubmit}
-                    placeholder={language === 'ar' 
-                      ? "اطرح سؤالاً ذكياً حول محتوى الملف..."
-                      : "Ask an intelligent question about the PDF content..."
-                    }
-                    dir={language === 'ar' ? 'rtl' : 'ltr'}
-                    disabled={isWaitingForResponse}
-                    suggestions={chatSuggestions}
-                    isAnalyzing={isAnalyzing}
-                  />
+                  {/* Enhanced Chat Input */}
+                  <div className="p-4 border-t border-border/50 bg-gradient-to-r from-muted/20 to-muted/10">
+                    <EnhancedChatInput 
+                      onSubmit={handleChatSubmit}
+                      placeholder={language === 'ar' 
+                        ? "اطرح سؤالاً ذكياً حول محتوى الملف..."
+                        : "Ask an intelligent question about the PDF content..."
+                      }
+                      dir={language === 'ar' ? 'rtl' : 'ltr'}
+                      disabled={isWaitingForResponse}
+                      suggestions={chatSuggestions}
+                      isAnalyzing={isAnalyzing}
+                    />
+                  </div>
                 </>
               )}
             </div>
