@@ -605,57 +605,59 @@ const PDFViewer = () => {
       <main className="flex-1 pt-24 pb-10">
         <div className="container mx-auto px-4 md:px-6 max-w-7xl">
           {/* Enhanced Header Section */}
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
-            <Link 
-              to={isTempPdf ? "/" : "/pdfs"} 
-              className="group inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-all duration-200 hover:translate-x-1"
-            >
-              <ArrowLeft className={`h-4 w-4 ${language === 'ar' ? 'ml-2 rotate-180' : 'mr-2'} transition-transform group-hover:scale-110`} />
-              {language === 'ar' 
-                ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
-                : isTempPdf ? 'Back to Home' : 'Back to PDFs'}
-            </Link>
-            
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleShare}
-                className="group inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/50 dark:to-cyan-950/50 hover:from-blue-100 hover:to-cyan-100 dark:hover:from-blue-900/70 dark:hover:to-cyan-900/70 border border-blue-200 dark:border-blue-800 transition-all duration-200 hover:shadow-md hover:scale-105"
-                aria-label={language === 'ar' ? 'مشاركة الملف' : 'Share file'}
+          <div className="flex flex-col gap-4 mb-6 lg:mb-8">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 lg:gap-4">
+              <Link 
+                to={isTempPdf ? "/" : "/pdfs"} 
+                className="group inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-all duration-200 hover:translate-x-1"
               >
-                <Share className="h-4 w-4 text-blue-600 dark:text-blue-400 group-hover:rotate-12 transition-transform" />
-                <span className="text-xs font-medium text-blue-700 dark:text-blue-300 hidden sm:inline">
-                  {language === 'ar' ? 'مشاركة' : 'Share'}
-                </span>
-              </button>
-              
-              <Link
-                to={`/translate/${id}`}
-                className="group inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50 hover:from-emerald-100 hover:to-teal-100 dark:hover:from-emerald-900/70 dark:hover:to-teal-900/70 border border-emerald-200 dark:border-emerald-800 transition-all duration-200 hover:shadow-md hover:scale-105"
-                aria-label={language === 'ar' ? 'ترجمة الملف' : 'Translate PDF'}
-              >
-                <Languages className="h-4 w-4 text-emerald-600 dark:text-emerald-400 group-hover:rotate-12 transition-transform" />
-                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 hidden sm:inline">
-                  {language === 'ar' ? 'ترجمة' : 'Translate'}
-                </span>
+                <ArrowLeft className={`h-4 w-4 ${language === 'ar' ? 'ml-2 rotate-180' : 'mr-2'} transition-transform group-hover:scale-110`} />
+                {language === 'ar' 
+                  ? isTempPdf ? 'العودة إلى الصفحة الرئيسية' : 'العودة إلى قائمة الملفات' 
+                  : isTempPdf ? 'Back to Home' : 'Back to PDFs'}
               </Link>
               
-              <button
-                onClick={handleDeletePDF}
-                className="group inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950/50 dark:to-pink-950/50 hover:from-red-100 hover:to-pink-100 dark:hover:from-red-900/70 dark:hover:to-pink-900/70 border border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md hover:scale-105"
-                aria-label={language === 'ar' ? 'حذف الملف' : 'Delete file'}
-              >
-                <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400 group-hover:rotate-12 transition-transform" />
-                <span className="text-xs font-medium text-red-700 dark:text-red-300 hidden sm:inline">
-                  {language === 'ar' ? 'حذف' : 'Delete'}
-                </span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleShare}
+                  className="group inline-flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1.5 lg:py-2 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/50 dark:to-cyan-950/50 hover:from-blue-100 hover:to-cyan-100 dark:hover:from-blue-900/70 dark:hover:to-cyan-900/70 border border-blue-200 dark:border-blue-800 transition-all duration-200 hover:shadow-md hover:scale-105"
+                  aria-label={language === 'ar' ? 'مشاركة الملف' : 'Share file'}
+                >
+                  <Share className="h-3 w-3 lg:h-4 lg:w-4 text-blue-600 dark:text-blue-400 group-hover:rotate-12 transition-transform" />
+                  <span className="text-xs font-medium text-blue-700 dark:text-blue-300 hidden sm:inline">
+                    {language === 'ar' ? 'مشاركة' : 'Share'}
+                  </span>
+                </button>
+                
+                <Link
+                  to={`/translate/${id}`}
+                  className="group inline-flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1.5 lg:py-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50 hover:from-emerald-100 hover:to-teal-100 dark:hover:from-emerald-900/70 dark:hover:to-teal-900/70 border border-emerald-200 dark:border-emerald-800 transition-all duration-200 hover:shadow-md hover:scale-105"
+                  aria-label={language === 'ar' ? 'ترجمة الملف' : 'Translate PDF'}
+                >
+                  <Languages className="h-3 w-3 lg:h-4 lg:w-4 text-emerald-600 dark:text-emerald-400 group-hover:rotate-12 transition-transform" />
+                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 hidden sm:inline">
+                    {language === 'ar' ? 'ترجمة' : 'Translate'}
+                  </span>
+                </Link>
+                
+                <button
+                  onClick={handleDeletePDF}
+                  className="group inline-flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1.5 lg:py-2 rounded-lg bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950/50 dark:to-pink-950/50 hover:from-red-100 hover:to-pink-100 dark:hover:from-red-900/70 dark:hover:to-pink-900/70 border border-red-200 dark:border-red-800 transition-all duration-200 hover:shadow-md hover:scale-105"
+                  aria-label={language === 'ar' ? 'حذف الملف' : 'Delete file'}
+                >
+                  <Trash2 className="h-3 w-3 lg:h-4 lg:w-4 text-red-600 dark:text-red-400 group-hover:rotate-12 transition-transform" />
+                  <span className="text-xs font-medium text-red-700 dark:text-red-300 hidden sm:inline">
+                    {language === 'ar' ? 'حذف' : 'Delete'}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
           
           {/* Enhanced Main Content Grid */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
+          <div className="flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 min-h-[calc(100vh-200px)]">
             {/* Enhanced PDF Viewer Panel */}
-            <div className="xl:col-span-2 bg-gradient-to-br from-card to-card/80 rounded-2xl border border-border/50 overflow-hidden shadow-lg backdrop-blur-sm">
+            <div className="lg:col-span-8 xl:col-span-8 bg-gradient-to-br from-card to-card/80 rounded-2xl border border-border/50 overflow-hidden shadow-lg backdrop-blur-sm h-[50vh] lg:h-[calc(100vh-200px)]">
               {/* PDF Header with Enhanced Design */}
               <div className="flex justify-between items-center p-6 border-b border-border/50 bg-gradient-to-r from-muted/30 to-muted/10">
                 <div className="flex-1 min-w-0">
@@ -769,7 +771,7 @@ const PDFViewer = () => {
             </div>
             
             {/* Enhanced AI Chat Panel */}
-            <div className="xl:col-span-1 bg-gradient-to-br from-card to-card/80 rounded-2xl border border-border/50 overflow-hidden shadow-lg backdrop-blur-sm flex flex-col">
+            <div className="lg:col-span-4 xl:col-span-4 bg-gradient-to-br from-card to-card/80 rounded-2xl border border-border/50 overflow-hidden shadow-lg backdrop-blur-sm flex flex-col h-[40vh] lg:h-[calc(100vh-200px)]">
               {/* Enhanced Chat Header */}
               <div className="flex justify-between items-center p-6 border-b border-border/50 bg-gradient-to-r from-muted/30 to-muted/10">
                 <div className="flex items-center gap-3">
@@ -827,7 +829,7 @@ const PDFViewer = () => {
               {showChat && (
                 <>
                   {/* Enhanced Chat Messages Area */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-background/50 to-muted/10" style={{ maxHeight: '60vh' }}>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-background/50 to-muted/10 min-h-[200px] max-h-[50vh] lg:max-h-none">
                     {isLoadingMessages ? (
                       <div className="flex justify-center items-center h-full">
                         <div className="relative">
@@ -911,19 +913,20 @@ const PDFViewer = () => {
                     )}
                   </div>
                   
-                  {/* Enhanced Chat Input */}
-                  <div className="p-4 border-t border-border/50 bg-gradient-to-r from-muted/20 to-muted/10">
-                    <EnhancedChatInput 
-                      onSubmit={handleChatSubmit}
-                      placeholder={language === 'ar' 
-                        ? "اطرح سؤالاً ذكياً حول محتوى الملف..."
-                        : "Ask an intelligent question about the PDF content..."
-                      }
-                      dir={language === 'ar' ? 'rtl' : 'ltr'}
-                      disabled={isWaitingForResponse}
-                      suggestions={chatSuggestions}
-                      isAnalyzing={isAnalyzing}
-                    />
+                   {/* Enhanced Chat Input */}
+                   <div className="p-3 lg:p-4 border-t border-border/50 bg-gradient-to-r from-muted/20 to-muted/10">
+                     <EnhancedChatInput 
+                       onSubmit={handleChatSubmit}
+                       placeholder={language === 'ar' 
+                         ? "اطرح سؤالاً ذكياً حول محتوى الملف..."
+                         : "Ask an intelligent question about the PDF content..."
+                       }
+                       dir={language === 'ar' ? 'rtl' : 'ltr'}
+                       disabled={isWaitingForResponse}
+                       suggestions={chatSuggestions}
+                       isAnalyzing={isAnalyzing}
+                       className="border-0 bg-transparent shadow-none"
+                     />
                   </div>
                 </>
               )}

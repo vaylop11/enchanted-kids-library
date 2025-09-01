@@ -112,7 +112,7 @@ export function EnhancedChatInput({
         </div>
       )}
       
-      <form onSubmit={handleSubmit} className="flex gap-3 p-4">
+      <form onSubmit={handleSubmit} className="flex gap-2 lg:gap-3 p-3 lg:p-4">
         <div className="flex-1 relative">
           <Textarea
             ref={textareaRef}
@@ -120,7 +120,7 @@ export function EnhancedChatInput({
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
             placeholder={isAnalyzing ? "Processing your question..." : placeholder}
-            className="resize-none min-h-[80px] max-h-[200px] overflow-y-auto pr-12"
+            className="resize-none min-h-[60px] lg:min-h-[80px] max-h-[120px] lg:max-h-[200px] overflow-y-auto pr-10 lg:pr-12 text-sm lg:text-base"
             dir={dir}
             disabled={disabled || isAnalyzing}
             rows={1}
@@ -132,11 +132,11 @@ export function EnhancedChatInput({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-5 w-5 lg:h-6 lg:w-6"
               disabled={true}
               title="Attach file (coming soon)"
             >
-              <Paperclip className="h-3 w-3" />
+              <Paperclip className="h-2.5 w-2.5 lg:h-3 lg:w-3" />
             </Button>
           </div>
         </div>
@@ -147,26 +147,26 @@ export function EnhancedChatInput({
               type="button"
               size="icon"
               variant="destructive"
-              className="h-10 w-10 rounded-full flex-shrink-0"
+              className="h-8 w-8 lg:h-10 lg:w-10 rounded-full flex-shrink-0"
               onClick={stopAnalysis}
               title="Stop analysis"
             >
-              <Square className="h-4 w-4" />
+              <Square className="h-3 w-3 lg:h-4 lg:w-4" />
             </Button>
           ) : (
             <Button
               type="submit"
               size="icon"
-              className="h-10 w-10 rounded-full flex-shrink-0"
+              className="h-8 w-8 lg:h-10 lg:w-10 rounded-full flex-shrink-0"
               disabled={!message.trim() || disabled}
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-3 w-3 lg:h-4 lg:w-4" />
             </Button>
           )}
         </div>
       </form>
       
-      <div className="text-xs text-muted-foreground px-4 pb-3 text-center">
+      <div className="text-xs text-muted-foreground px-3 lg:px-4 pb-2 lg:pb-3 text-center">
         Press Enter to send, Shift+Enter for a new line
         {suggestions.length > 0 && " • Type '?' to see suggestions"}
       </div>
