@@ -73,10 +73,13 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
   const isMobile = useIsMobile();
   const [quickActionMode, setQuickActionMode] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   // Quick action buttons for common tasks
@@ -124,13 +127,13 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
   return (
     <TooltipProvider>
       <div className={cn(
-        "flex flex-col h-full bg-gradient-to-br from-background via-background/95 to-muted/30",
+        "flex flex-col h-full max-h-screen bg-gradient-to-br from-background via-background/95 to-muted/30",
         "border border-border/50 rounded-lg overflow-hidden",
         className
       )}>
         {/* Chat Header - Mobile Optimized */}
         <div className={cn(
-          "flex items-center justify-between bg-card/80 backdrop-blur-sm border-b border-border/50",
+          "flex-shrink-0 flex items-center justify-between bg-card/80 backdrop-blur-sm border-b border-border/50",
           isMobile ? "p-3" : "p-4"
         )}>
           <div className="flex items-center gap-3">
@@ -181,7 +184,7 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
         {/* Quick Actions - Mobile Optimized */}
         {messages.length === 0 && (
           <div className={cn(
-            "border-b border-border/50 bg-muted/20",
+            "flex-shrink-0 border-b border-border/50 bg-muted/20",
             isMobile ? "p-3" : "p-4"
           )}>
             <p className={cn("text-muted-foreground mb-3", isMobile ? "text-xs" : "text-sm")}>
@@ -214,207 +217,216 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
           </div>
         )}
 
-        {/* Messages Area - Mobile Optimized */}
-        <ScrollArea className={cn("flex-1", isMobile ? "p-3" : "p-4")}>
-          <div className={cn("space-y-3", isMobile && "space-y-2")}>
-            {messages.length === 0 ? (
-              <div className={cn(
-                "flex flex-col items-center justify-center h-full text-center",
-                isMobile ? "py-8" : "py-12"
-              )}>
-                <div className="relative mb-4">
+        {/* Messages Area - Fixed Scrolling */}
+        <div className="flex-1 min-h-0 relative">
+          <ScrollArea 
+            ref={scrollAreaRef}
+            className="h-full w-full"
+          >
+            <div className={cn("h-full", isMobile ? "p-3" : "p-4")}>
+              <div className={cn("space-y-3 min-h-full", isMobile && "space-y-2")}>
+                {messages.length === 0 ? (
                   <div className={cn(
-                    "bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center",
-                    isMobile ? "p-3" : "p-4"
+                    "flex flex-col items-center justify-center h-full text-center min-h-[300px]",
+                    isMobile ? "py-8" : "py-12"
                   )}>
-                    <MessageSquare className={cn("text-primary", isMobile ? "h-6 w-6" : "h-8 w-8")} />
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 p-1 bg-background rounded-full border border-border">
-                    <Sparkles className="h-3 w-3 text-primary" />
-                  </div>
-                </div>
-                <h3 className={cn("font-semibold mb-2", isMobile ? "text-base" : "text-lg")}>
-                  ابدأ محادثة مع مستندك
-                </h3>
-                <p className={cn(
-                  "text-muted-foreground max-w-md leading-relaxed",
-                  isMobile ? "text-xs px-4" : "text-sm"
-                )}>
-                  اطرح أي سؤال حول المستند، أو استخدم الإجراءات السريعة أعلاه للبدء
-                </p>
-              </div>
-            ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex animate-fade-in",
-                    message.isUser ? "justify-end" : "justify-start",
-                    isMobile ? "gap-2" : "gap-3"
-                  )}
-                >
-                  {!message.isUser && (
-                    <div className="flex-shrink-0">
+                    <div className="relative mb-4">
                       <div className={cn(
-                        "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center",
-                        isMobile ? "p-1.5" : "p-2"
+                        "bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center",
+                        isMobile ? "p-3" : "p-4"
                       )}>
-                        <Bot className={cn("text-primary", isMobile ? "h-3 w-3" : "h-4 w-4")} />
+                        <MessageSquare className={cn("text-primary", isMobile ? "h-6 w-6" : "h-8 w-8")} />
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 p-1 bg-background rounded-full border border-border">
+                        <Sparkles className="h-3 w-3 text-primary" />
                       </div>
                     </div>
-                  )}
-                  
-                  <div className={cn(
-                    "space-y-2",
-                    message.isUser ? "items-end" : "items-start",
-                    isMobile ? "max-w-[85%]" : "max-w-[80%]"
-                  )}>
-                    <div className={cn(
-                      "rounded-2xl shadow-sm border transition-all duration-200 hover:shadow-md",
-                      message.isUser 
-                        ? "bg-primary text-primary-foreground ml-auto" 
-                        : "bg-card/80 backdrop-blur-sm",
-                      isMobile ? "p-3" : "p-4"
+                    <h3 className={cn("font-semibold mb-2", isMobile ? "text-base" : "text-lg")}>
+                      ابدأ محادثة مع مستندك
+                    </h3>
+                    <p className={cn(
+                      "text-muted-foreground max-w-md leading-relaxed",
+                      isMobile ? "text-xs px-4" : "text-sm"
                     )}>
-                      <div className={cn(
-                        "whitespace-pre-wrap leading-relaxed",
-                        isMobile ? "text-sm" : ""
-                      )}>
-                        {message.content}
-                      </div>
-                      
-                      {!message.isUser && (
+                      اطرح أي سؤال حول المستند، أو استخدم الإجراءات السريعة أعلاه للبدء
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={cn(
+                          "flex animate-fade-in",
+                          message.isUser ? "justify-end" : "justify-start",
+                          isMobile ? "gap-2" : "gap-3"
+                        )}
+                      >
+                        {!message.isUser && (
+                          <div className="flex-shrink-0">
+                            <div className={cn(
+                              "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center",
+                              isMobile ? "p-1.5" : "p-2"
+                            )}>
+                              <Bot className={cn("text-primary", isMobile ? "h-3 w-3" : "h-4 w-4")} />
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className={cn(
-                          "flex items-center justify-between border-t border-border/30",
-                          isMobile ? "mt-2 pt-2" : "mt-3 pt-3",
-                          isMobile ? "flex-col gap-2" : "flex-row"
+                          "space-y-2",
+                          message.isUser ? "items-end" : "items-start",
+                          isMobile ? "max-w-[85%]" : "max-w-[80%]"
                         )}>
                           <div className={cn(
-                            "flex items-center gap-1",
-                            isMobile && "w-full justify-center"
+                            "rounded-2xl shadow-sm border transition-all duration-200 hover:shadow-md",
+                            message.isUser 
+                              ? "bg-primary text-primary-foreground ml-auto" 
+                              : "bg-card/80 backdrop-blur-sm",
+                            isMobile ? "p-3" : "p-4"
                           )}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onCopyMessage(message.content)}
-                              className={cn("text-xs", isMobile ? "h-5 px-1.5" : "h-6 px-2")}
-                            >
-                              <Copy className="h-3 w-3 mr-1" />
-                              نسخ
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onRegenerateMessage(message.id)}
-                              className={cn("text-xs", isMobile ? "h-5 px-1.5" : "h-6 px-2")}
-                            >
-                              <RefreshCw className="h-3 w-3 mr-1" />
-                              إعادة توليد
-                            </Button>
+                            <div className={cn(
+                              "whitespace-pre-wrap leading-relaxed",
+                              isMobile ? "text-sm" : ""
+                            )}>
+                              {message.content}
+                            </div>
+                            
+                            {!message.isUser && (
+                              <div className={cn(
+                                "flex items-center justify-between border-t border-border/30",
+                                isMobile ? "mt-2 pt-2" : "mt-3 pt-3",
+                                isMobile ? "flex-col gap-2" : "flex-row"
+                              )}>
+                                <div className={cn(
+                                  "flex items-center gap-1",
+                                  isMobile && "w-full justify-center"
+                                )}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => onCopyMessage(message.content)}
+                                    className={cn("text-xs", isMobile ? "h-5 px-1.5" : "h-6 px-2")}
+                                  >
+                                    <Copy className="h-3 w-3 mr-1" />
+                                    نسخ
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => onRegenerateMessage(message.id)}
+                                    className={cn("text-xs", isMobile ? "h-5 px-1.5" : "h-6 px-2")}
+                                  >
+                                    <RefreshCw className="h-3 w-3 mr-1" />
+                                    إعادة توليد
+                                  </Button>
+                                </div>
+                                
+                                <div className={cn(
+                                  "flex items-center gap-1",
+                                  isMobile && "w-full justify-center"
+                                )}>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onMessageFeedback(message.id, 'positive')}
+                                    className={cn(
+                                      "h-6 w-6",
+                                      message.feedback === 'positive' && "text-green-600"
+                                    )}
+                                  >
+                                    <ThumbsUp className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onMessageFeedback(message.id, 'negative')}
+                                    className={cn(
+                                      "h-6 w-6",
+                                      message.feedback === 'negative' && "text-red-600"
+                                    )}
+                                  >
+                                    <ThumbsDown className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                           
-                          <div className={cn(
-                            "flex items-center gap-1",
-                            isMobile && "w-full justify-center"
-                          )}>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => onMessageFeedback(message.id, 'positive')}
-                              className={cn(
-                                "h-6 w-6",
-                                message.feedback === 'positive' && "text-green-600"
+                          {/* Message metadata */}
+                          {message.metadata && (
+                            <div className="flex gap-2">
+                              {message.metadata.pageReference && (
+                                <Badge variant="secondary" className="text-xs">
+                                  صفحة {message.metadata.pageReference}
+                                </Badge>
                               )}
-                            >
-                              <ThumbsUp className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => onMessageFeedback(message.id, 'negative')}
-                              className={cn(
-                                "h-6 w-6",
-                                message.feedback === 'negative' && "text-red-600"
+                              {message.metadata.translationTarget && (
+                                <Badge variant="outline" className="text-xs">
+                                  ترجمة إلى {message.metadata.translationTarget}
+                                </Badge>
                               )}
-                            >
-                              <ThumbsDown className="h-3 w-3" />
-                            </Button>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {message.isUser && (
+                          <div className="flex-shrink-0">
+                            <div className={cn(
+                              "bg-gradient-to-br from-muted to-muted/50 rounded-lg flex items-center justify-center",
+                              isMobile ? "p-1.5" : "p-2"
+                            )}>
+                              <User className={cn("text-muted-foreground", isMobile ? "h-3 w-3" : "h-4 w-4")} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {/* Analysis indicator */}
+                    {isAnalyzing && (
+                      <div className={cn(
+                        "flex animate-fade-in",
+                        isMobile ? "gap-2" : "gap-3"
+                      )}>
+                        <div className={cn(
+                          "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center",
+                          isMobile ? "p-1.5" : "p-2"
+                        )}>
+                          <Bot className={cn("text-primary", isMobile ? "h-3 w-3" : "h-4 w-4")} />
+                        </div>
+                        <div className={cn(
+                          "bg-card/80 backdrop-blur-sm rounded-2xl shadow-sm border",
+                          isMobile ? "p-3" : "p-4"
+                        )}>
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-1">
+                              {[...Array(3)].map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                                  style={{ animationDelay: `${i * 0.2}s` }}
+                                />
+                              ))}
+                            </div>
+                            <span className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
+                              يحلل المحتوى...
+                            </span>
                           </div>
                         </div>
-                      )}
-                    </div>
-                    
-                    {/* Message metadata */}
-                    {message.metadata && (
-                      <div className="flex gap-2">
-                        {message.metadata.pageReference && (
-                          <Badge variant="secondary" className="text-xs">
-                            صفحة {message.metadata.pageReference}
-                          </Badge>
-                        )}
-                        {message.metadata.translationTarget && (
-                          <Badge variant="outline" className="text-xs">
-                            ترجمة إلى {message.metadata.translationTarget}
-                          </Badge>
-                        )}
                       </div>
                     )}
-                  </div>
-                  
-                  {message.isUser && (
-                    <div className="flex-shrink-0">
-                      <div className={cn(
-                        "bg-gradient-to-br from-muted to-muted/50 rounded-lg flex items-center justify-center",
-                        isMobile ? "p-1.5" : "p-2"
-                      )}>
-                        <User className={cn("text-muted-foreground", isMobile ? "h-3 w-3" : "h-4 w-4")} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-            
-            {/* Analysis indicator */}
-            {isAnalyzing && (
-              <div className={cn(
-                "flex animate-fade-in",
-                isMobile ? "gap-2" : "gap-3"
-              )}>
-                <div className={cn(
-                  "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center",
-                  isMobile ? "p-1.5" : "p-2"
-                )}>
-                  <Bot className={cn("text-primary", isMobile ? "h-3 w-3" : "h-4 w-4")} />
-                </div>
-                <div className={cn(
-                  "bg-card/80 backdrop-blur-sm rounded-2xl shadow-sm border",
-                  isMobile ? "p-3" : "p-4"
-                )}>
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1">
-                      {[...Array(3)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                          style={{ animationDelay: `${i * 0.2}s` }}
-                        />
-                      ))}
-                    </div>
-                    <span className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
-                      يحلل المحتوى...
-                    </span>
-                  </div>
-                </div>
+                  </>
+                )}
+                
+                <div ref={chatEndRef} />
               </div>
-            )}
-            
-            <div ref={chatEndRef} />
-          </div>
-        </ScrollArea>
+            </div>
+          </ScrollArea>
+        </div>
 
         {/* Enhanced Input */}
-        <div className="border-t border-border/50">
+        <div className="flex-shrink-0 border-t border-border/50">
           <EnhancedChatInput
             onSubmit={onSendMessage}
             placeholder="اكتب سؤالك حول المستند..."
