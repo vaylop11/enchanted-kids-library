@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,9 @@ import {
   Maximize2,
   Minimize2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Move,
+  Hand
 } from 'lucide-react';
 import {
   Tooltip,
@@ -45,13 +48,15 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
   isFullscreen = false,
   onFullscreenToggle
 }) => {
+  const isMobile = useIsMobile();
   const [numPages, setNumPages] = useState<number | null>(null);
-  const [scale, setScale] = useState(1.2);
+  const [scale, setScale] = useState(isMobile ? 0.8 : 1.2);
   const [rotation, setRotation] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [pageInput, setPageInput] = useState('1');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isPanning, setIsPanning] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<{ [key: number]: HTMLDivElement }>({});
 
@@ -97,10 +102,24 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
     };
   }, [numPages, onPageChange]);
 
-  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.2, 3.0));
-  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.2, 0.5));
+  const handleZoomIn = () => setScale(prev => Math.min(prev + (isMobile ? 0.1 : 0.2), 3.0));
+  const handleZoomOut = () => setScale(prev => Math.max(prev - (isMobile ? 0.1 : 0.2), 0.3));
   const handleRotateLeft = () => setRotation(prev => (prev - 90 + 360) % 360);
   const handleRotateRight = () => setRotation(prev => (prev + 90) % 360);
+
+  // Touch gesture handlers for mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && isMobile) {
+      // Pinch to zoom logic can be added here
+      e.preventDefault();
+    }
+  }, [isMobile]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && isMobile) {
+      e.preventDefault();
+    }
+  }, [isMobile]);
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= (numPages || 1)) {
@@ -138,47 +157,134 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
         "border border-border/50 rounded-lg overflow-hidden",
         className
       )}>
-        {/* Enhanced Toolbar */}
-        <div className="flex items-center justify-between p-3 bg-card/80 backdrop-blur-sm border-b border-border/50">
-          {/* Left Section - Page Navigation */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handlePrevPage}
-              disabled={currentPage <= 1}
-              className="h-8 w-8"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            
-            <div className="flex items-center gap-1 text-sm">
-              <Input
-                type="number"
-                value={pageInput}
-                onChange={(e) => handlePageInputChange(e.target.value)}
-                className="w-16 h-8 text-center text-xs"
-                min="1"
-                max={numPages || 1}
-              />
-              <span className="text-muted-foreground">من {numPages || '?'}</span>
-            </div>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleNextPage}
-              disabled={currentPage >= (numPages || 1)}
-              className="h-8 w-8"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          {/* Center Section - Zoom Controls */}
-          <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
+        {/* Enhanced Toolbar - Mobile Optimized */}
+        <div className={cn(
+          "flex items-center justify-between bg-card/80 backdrop-blur-sm border-b border-border/50",
+          isMobile ? "p-2" : "p-3"
+        )}>
+          {isMobile ? (
+            /* Mobile Toolbar - Simplified */
+            <>
+              {/* Left: Page Navigation */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handlePrevPage}
+                  disabled={currentPage <= 1}
+                  className="h-9 w-9"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <div className="flex items-center gap-1 text-sm">
+                  <Input
+                    type="number"
+                    value={pageInput}
+                    onChange={(e) => handlePageInputChange(e.target.value)}
+                    className="w-12 h-8 text-center text-xs p-1"
+                    min="1"
+                    max={numPages || 1}
+                  />
+                  <span className="text-muted-foreground text-xs">/{numPages || '?'}</span>
+                </div>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleNextPage}
+                  disabled={currentPage >= (numPages || 1)}
+                  className="h-9 w-9"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* Center: Zoom */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleZoomOut}
+                  className="h-8 w-8"
+                >
+                  <ZoomOut className="h-3 w-3" />
+                </Button>
+                
+                <span className="text-xs min-w-[35px] text-center font-medium">
+                  {Math.round(scale * 100)}%
+                </span>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleZoomIn}
+                  className="h-8 w-8"
+                >
+                  <ZoomIn className="h-3 w-3" />
+                </Button>
+              </div>
+              
+              {/* Right: Rotate */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleRotateLeft}
+                  className="h-8 w-8"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleRotateRight}
+                  className="h-8 w-8"
+                >
+                  <RotateCw className="h-3 w-3" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            /* Desktop Toolbar - Full Featured */
+            <>
+              {/* Left Section - Page Navigation */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handlePrevPage}
+                  disabled={currentPage <= 1}
+                  className="h-8 w-8"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <div className="flex items-center gap-1 text-sm">
+                  <Input
+                    type="number"
+                    value={pageInput}
+                    onChange={(e) => handlePageInputChange(e.target.value)}
+                    className="w-16 h-8 text-center text-xs"
+                    min="1"
+                    max={numPages || 1}
+                  />
+                  <span className="text-muted-foreground">من {numPages || '?'}</span>
+                </div>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleNextPage}
+                  disabled={currentPage >= (numPages || 1)}
+                  className="h-8 w-8"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* Center Section - Zoom Controls */}
+              <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -187,16 +293,11 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
                 >
                   <ZoomOut className="h-4 w-4" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>تصغير</TooltipContent>
-            </Tooltip>
-            
-            <span className="text-sm min-w-[50px] text-center font-medium">
-              {Math.round(scale * 100)}%
-            </span>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
+                
+                <span className="text-sm min-w-[50px] text-center font-medium">
+                  {Math.round(scale * 100)}%
+                </span>
+                
                 <Button
                   variant="ghost"
                   size="icon"
@@ -205,14 +306,9 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
                 >
                   <ZoomIn className="h-4 w-4" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>تكبير</TooltipContent>
-            </Tooltip>
-            
-            <div className="h-4 w-px bg-border mx-1" />
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
+                
+                <div className="h-4 w-px bg-border mx-1" />
+                
                 <Button
                   variant="ghost"
                   size="icon"
@@ -221,12 +317,7 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
                 >
                   <RotateCcw className="h-4 w-4" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>تدوير يساراً</TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
+                
                 <Button
                   variant="ghost"
                   size="icon"
@@ -235,16 +326,11 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
                 >
                   <RotateCw className="h-4 w-4" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>تدوير يميناً</TooltipContent>
-            </Tooltip>
-          </div>
-          
-          {/* Right Section - Actions */}
-          <div className="flex items-center gap-2">
-            {onFullscreenToggle && (
-              <Tooltip>
-                <TooltipTrigger asChild>
+              </div>
+              
+              {/* Right Section - Actions */}
+              <div className="flex items-center gap-2">
+                {onFullscreenToggle && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -253,18 +339,22 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
                   >
                     {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>{isFullscreen ? 'تصغير' : 'ملء الشاشة'}</TooltipContent>
-              </Tooltip>
-            )}
-          </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* PDF Content */}
+        {/* PDF Content - Touch Optimized */}
         <ScrollArea className="flex-1">
           <div
             ref={containerRef}
-            className="p-4 space-y-4 flex flex-col items-center min-h-full"
+            className={cn(
+              "flex flex-col items-center min-h-full space-y-2",
+              isMobile ? "p-2" : "p-4 space-y-4"
+            )}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
           >
             <Document
               file={pdfUrl}
@@ -305,17 +395,24 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
                     }}
                     data-page-number={pageNumber}
                     className={cn(
-                      "relative mb-4 p-2 bg-white rounded-xl shadow-lg border transition-all duration-300",
-                      "hover:shadow-xl hover:scale-[1.02]",
+                      "relative bg-white rounded-xl shadow-lg border transition-all duration-300",
+                      isMobile 
+                        ? "mb-2 p-1 hover:shadow-lg" 
+                        : "mb-4 p-2 hover:shadow-xl hover:scale-[1.02]",
                       currentPage === pageNumber && "ring-2 ring-primary/50 shadow-primary/20"
                     )}
                     style={{ 
-                      minHeight: 300,
-                      scrollMarginTop: '80px'
+                      minHeight: isMobile ? 200 : 300,
+                      scrollMarginTop: isMobile ? '60px' : '80px'
                     }}
                   >
                     {/* Page Number Badge */}
-                    <div className="absolute -top-2 right-4 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-medium z-10">
+                    <div className={cn(
+                      "absolute bg-primary text-primary-foreground rounded-full font-medium z-10",
+                      isMobile 
+                        ? "-top-1 right-2 text-xs px-1.5 py-0.5" 
+                        : "-top-2 right-4 text-xs px-2 py-1"
+                    )}>
                       {pageNumber}
                     </div>
                     

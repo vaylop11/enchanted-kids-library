@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -69,6 +70,7 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
   className,
   pdfTitle
 }) => {
+  const isMobile = useIsMobile();
   const [quickActionMode, setQuickActionMode] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   
@@ -126,21 +128,32 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
         "border border-border/50 rounded-lg overflow-hidden",
         className
       )}>
-        {/* Chat Header */}
-        <div className="flex items-center justify-between p-4 bg-card/80 backdrop-blur-sm border-b border-border/50">
+        {/* Chat Header - Mobile Optimized */}
+        <div className={cn(
+          "flex items-center justify-between bg-card/80 backdrop-blur-sm border-b border-border/50",
+          isMobile ? "p-3" : "p-4"
+        )}>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg">
-                <Bot className="h-5 w-5 text-primary" />
+              <div className={cn(
+                "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center",
+                isMobile ? "p-1.5" : "p-2"
+              )}>
+                <Bot className={cn("text-primary", isMobile ? "h-4 w-4" : "h-5 w-5")} />
               </div>
               {isAnalyzing && (
                 <div className="absolute -top-1 -right-1 h-3 w-3 bg-green-500 rounded-full animate-pulse" />
               )}
             </div>
             <div>
-              <h3 className="font-semibold text-sm">مساعد PDF الذكي</h3>
-              <p className="text-xs text-muted-foreground">
-                {pdfTitle ? `يحلل: ${pdfTitle.substring(0, 30)}...` : 'جاهز للمساعدة'}
+              <h3 className={cn("font-semibold", isMobile ? "text-xs" : "text-sm")}>مساعد PDF الذكي</h3>
+              <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-xs")}>
+                {pdfTitle 
+                  ? (isMobile 
+                      ? `${pdfTitle.substring(0, 20)}...` 
+                      : `يحلل: ${pdfTitle.substring(0, 30)}...`)
+                  : 'جاهز للمساعدة'
+                }
               </p>
             </div>
           </div>
@@ -152,7 +165,10 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                   variant="ghost"
                   size="icon"
                   onClick={onResetChat}
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  className={cn(
+                    "text-muted-foreground hover:text-destructive",
+                    isMobile ? "h-8 w-8" : "h-8 w-8"
+                  )}
                 >
                   <RotateCcw className="h-4 w-4" />
                 </Button>
@@ -162,46 +178,68 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
           </div>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Mobile Optimized */}
         {messages.length === 0 && (
-          <div className="p-4 border-b border-border/50 bg-muted/20">
-            <p className="text-sm text-muted-foreground mb-3">إجراءات سريعة:</p>
-            <div className="grid grid-cols-2 gap-2">
+          <div className={cn(
+            "border-b border-border/50 bg-muted/20",
+            isMobile ? "p-3" : "p-4"
+          )}>
+            <p className={cn("text-muted-foreground mb-3", isMobile ? "text-xs" : "text-sm")}>
+              إجراءات سريعة:
+            </p>
+            <div className={cn(
+              "grid gap-2",
+              isMobile ? "grid-cols-1" : "grid-cols-2"
+            )}>
               {quickActions.map((action) => (
                 <Button
                   key={action.id}
                   variant="outline"
-                  size="sm"
+                  size={isMobile ? "sm" : "sm"}
                   onClick={action.action}
                   className={cn(
-                    "justify-start gap-2 h-auto p-3 text-xs font-medium",
+                    "justify-start gap-2 font-medium",
                     "border-dashed hover:border-solid transition-all duration-200",
-                    action.color
+                    action.color,
+                    isMobile 
+                      ? "h-10 p-3 text-xs" 
+                      : "h-auto p-3 text-xs"
                   )}
                 >
-                  <action.icon className="h-3 w-3" />
-                  {action.label}
+                  <action.icon className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{action.label}</span>
                 </Button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Messages Area */}
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4">
+        {/* Messages Area - Mobile Optimized */}
+        <ScrollArea className={cn("flex-1", isMobile ? "p-3" : "p-4")}>
+          <div className={cn("space-y-3", isMobile && "space-y-2")}>
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+              <div className={cn(
+                "flex flex-col items-center justify-center h-full text-center",
+                isMobile ? "py-8" : "py-12"
+              )}>
                 <div className="relative mb-4">
-                  <div className="p-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full">
-                    <MessageSquare className="h-8 w-8 text-primary" />
+                  <div className={cn(
+                    "bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center",
+                    isMobile ? "p-3" : "p-4"
+                  )}>
+                    <MessageSquare className={cn("text-primary", isMobile ? "h-6 w-6" : "h-8 w-8")} />
                   </div>
                   <div className="absolute -bottom-1 -right-1 p-1 bg-background rounded-full border border-border">
                     <Sparkles className="h-3 w-3 text-primary" />
                   </div>
                 </div>
-                <h3 className="font-semibold text-lg mb-2">ابدأ محادثة مع مستندك</h3>
-                <p className="text-muted-foreground text-sm max-w-md leading-relaxed">
+                <h3 className={cn("font-semibold mb-2", isMobile ? "text-base" : "text-lg")}>
+                  ابدأ محادثة مع مستندك
+                </h3>
+                <p className={cn(
+                  "text-muted-foreground max-w-md leading-relaxed",
+                  isMobile ? "text-xs px-4" : "text-sm"
+                )}>
                   اطرح أي سؤال حول المستند، أو استخدم الإجراءات السريعة أعلاه للبدء
                 </p>
               </div>
@@ -210,40 +248,56 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                 <div
                   key={message.id}
                   className={cn(
-                    "flex gap-3 animate-fade-in",
-                    message.isUser ? "justify-end" : "justify-start"
+                    "flex animate-fade-in",
+                    message.isUser ? "justify-end" : "justify-start",
+                    isMobile ? "gap-2" : "gap-3"
                   )}
                 >
                   {!message.isUser && (
                     <div className="flex-shrink-0">
-                      <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg">
-                        <Bot className="h-4 w-4 text-primary" />
+                      <div className={cn(
+                        "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center",
+                        isMobile ? "p-1.5" : "p-2"
+                      )}>
+                        <Bot className={cn("text-primary", isMobile ? "h-3 w-3" : "h-4 w-4")} />
                       </div>
                     </div>
                   )}
                   
                   <div className={cn(
-                    "max-w-[80%] space-y-2",
-                    message.isUser ? "items-end" : "items-start"
+                    "space-y-2",
+                    message.isUser ? "items-end" : "items-start",
+                    isMobile ? "max-w-[85%]" : "max-w-[80%]"
                   )}>
                     <div className={cn(
-                      "rounded-2xl p-4 shadow-sm border transition-all duration-200 hover:shadow-md",
+                      "rounded-2xl shadow-sm border transition-all duration-200 hover:shadow-md",
                       message.isUser 
                         ? "bg-primary text-primary-foreground ml-auto" 
-                        : "bg-card/80 backdrop-blur-sm"
+                        : "bg-card/80 backdrop-blur-sm",
+                      isMobile ? "p-3" : "p-4"
                     )}>
-                      <div className="whitespace-pre-wrap leading-relaxed">
+                      <div className={cn(
+                        "whitespace-pre-wrap leading-relaxed",
+                        isMobile ? "text-sm" : ""
+                      )}>
                         {message.content}
                       </div>
                       
                       {!message.isUser && (
-                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30">
-                          <div className="flex items-center gap-2">
+                        <div className={cn(
+                          "flex items-center justify-between border-t border-border/30",
+                          isMobile ? "mt-2 pt-2" : "mt-3 pt-3",
+                          isMobile ? "flex-col gap-2" : "flex-row"
+                        )}>
+                          <div className={cn(
+                            "flex items-center gap-1",
+                            isMobile && "w-full justify-center"
+                          )}>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => onCopyMessage(message.content)}
-                              className="h-6 px-2 text-xs"
+                              className={cn("text-xs", isMobile ? "h-5 px-1.5" : "h-6 px-2")}
                             >
                               <Copy className="h-3 w-3 mr-1" />
                               نسخ
@@ -252,14 +306,17 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                               variant="ghost"
                               size="sm"
                               onClick={() => onRegenerateMessage(message.id)}
-                              className="h-6 px-2 text-xs"
+                              className={cn("text-xs", isMobile ? "h-5 px-1.5" : "h-6 px-2")}
                             >
                               <RefreshCw className="h-3 w-3 mr-1" />
                               إعادة توليد
                             </Button>
                           </div>
                           
-                          <div className="flex items-center gap-1">
+                          <div className={cn(
+                            "flex items-center gap-1",
+                            isMobile && "w-full justify-center"
+                          )}>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -306,8 +363,11 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                   
                   {message.isUser && (
                     <div className="flex-shrink-0">
-                      <div className="p-2 bg-gradient-to-br from-muted to-muted/50 rounded-lg">
-                        <User className="h-4 w-4 text-muted-foreground" />
+                      <div className={cn(
+                        "bg-gradient-to-br from-muted to-muted/50 rounded-lg flex items-center justify-center",
+                        isMobile ? "p-1.5" : "p-2"
+                      )}>
+                        <User className={cn("text-muted-foreground", isMobile ? "h-3 w-3" : "h-4 w-4")} />
                       </div>
                     </div>
                   )}
@@ -317,11 +377,20 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
             
             {/* Analysis indicator */}
             {isAnalyzing && (
-              <div className="flex gap-3 animate-fade-in">
-                <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg">
-                  <Bot className="h-4 w-4 text-primary" />
+              <div className={cn(
+                "flex animate-fade-in",
+                isMobile ? "gap-2" : "gap-3"
+              )}>
+                <div className={cn(
+                  "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center",
+                  isMobile ? "p-1.5" : "p-2"
+                )}>
+                  <Bot className={cn("text-primary", isMobile ? "h-3 w-3" : "h-4 w-4")} />
                 </div>
-                <div className="bg-card/80 backdrop-blur-sm rounded-2xl p-4 shadow-sm border">
+                <div className={cn(
+                  "bg-card/80 backdrop-blur-sm rounded-2xl shadow-sm border",
+                  isMobile ? "p-3" : "p-4"
+                )}>
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                       {[...Array(3)].map((_, i) => (
@@ -332,7 +401,9 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                         />
                       ))}
                     </div>
-                    <span className="text-sm text-muted-foreground">يحلل المحتوى...</span>
+                    <span className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
+                      يحلل المحتوى...
+                    </span>
                   </div>
                 </div>
               </div>
