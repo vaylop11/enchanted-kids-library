@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { 
   ZoomIn, 
   ZoomOut, 
@@ -16,8 +17,14 @@ import {
   Minimize2,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Move,
-  Hand
+  Hand,
+  FileText,
+  Loader2,
+  AlertCircle,
+  RefreshCcw
 } from 'lucide-react';
 import {
   Tooltip,
@@ -25,6 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Slider } from '@/components/ui/slider';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -50,47 +58,87 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const [numPages, setNumPages] = useState<number | null>(null);
-  const [scale, setScale] = useState(isMobile ? 0.8 : 1.2);
+  const [scale, setScale] = useState(isMobile ? 0.7 : 1.0);
   const [rotation, setRotation] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [pageInput, setPageInput] = useState('1');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isPanning, setIsPanning] = useState(false);
+  const [loadedPages, setLoadedPages] = useState<Set<number>>(new Set());
+  const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set());
+  const [error, setError] = useState<string | null>(null);
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<{ [key: number]: HTMLDivElement }>({});
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
-  const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+  // Memoized scale options for better performance
+  const scaleOptions = useMemo(() => [
+    { label: '25%', value: 0.25 },
+    { label: '50%', value: 0.5 },
+    { label: '75%', value: 0.75 },
+    { label: '100%', value: 1.0 },
+    { label: '125%', value: 1.25 },
+    { label: '150%', value: 1.5 },
+    { label: '200%', value: 2.0 },
+  ], []);
+
+  // Optimized document load handler
+  const handleDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setIsLoading(false);
+    setError(null);
+    setLoadingProgress(100);
     onDocumentLoadSuccess?.({ numPages });
-  };
+  }, [onDocumentLoadSuccess]);
 
-  const handleDocumentLoadError = (error: Error) => {
+  const handleDocumentLoadError = useCallback((error: Error) => {
     setIsLoading(false);
+    setError(error.message);
     onDocumentLoadError?.(error);
-  };
+  }, [onDocumentLoadError]);
 
-  // Intersection Observer to track which page is currently visible
+  // Optimized page load handler
+  const handlePageLoadSuccess = useCallback((pageNumber: number) => {
+    setLoadedPages(prev => new Set([...prev, pageNumber]));
+  }, []);
+
+  // Enhanced intersection observer for better performance
   useEffect(() => {
+    if (!numPages) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
+        const visiblePageNumbers = new Set<number>();
+        
         entries.forEach((entry) => {
+          const pageNumber = parseInt(entry.target.getAttribute('data-page-number') || '1');
+          
           if (entry.isIntersecting) {
-            const pageNumber = parseInt(entry.target.getAttribute('data-page-number') || '1');
-            setCurrentPage(pageNumber);
-            setPageInput(pageNumber.toString());
-            onPageChange?.(pageNumber);
+            visiblePageNumbers.add(pageNumber);
           }
         });
+
+        setVisiblePages(visiblePageNumbers);
+
+        // Update current page to the first visible page
+        if (visiblePageNumbers.size > 0) {
+          const firstVisible = Math.min(...Array.from(visiblePageNumbers));
+          setCurrentPage(firstVisible);
+          setPageInput(firstVisible.toString());
+          onPageChange?.(firstVisible);
+        }
       },
       {
         root: containerRef.current,
-        rootMargin: '-10% 0px -10% 0px',
-        threshold: 0.5
+        rootMargin: '-20% 0px -20% 0px',
+        threshold: [0.1, 0.5, 0.9]
       }
     );
 
+    observerRef.current = observer;
+
+    // Observe all page elements
     Object.values(pageRefs.current).forEach((pageElement) => {
       if (pageElement) {
         observer.observe(pageElement);
@@ -99,94 +147,166 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
 
     return () => {
       observer.disconnect();
+      observerRef.current = null;
     };
   }, [numPages, onPageChange]);
 
-  const handleZoomIn = () => setScale(prev => Math.min(prev + (isMobile ? 0.1 : 0.2), 3.0));
-  const handleZoomOut = () => setScale(prev => Math.max(prev - (isMobile ? 0.1 : 0.2), 0.3));
-  const handleRotateLeft = () => setRotation(prev => (prev - 90 + 360) % 360);
-  const handleRotateRight = () => setRotation(prev => (prev + 90) % 360);
-
-  // Touch gesture handlers for mobile
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 2 && isMobile) {
-      // Pinch to zoom logic can be added here
-      e.preventDefault();
-    }
+  // Optimized zoom handlers
+  const handleZoomIn = useCallback(() => {
+    setScale(prev => Math.min(prev + (isMobile ? 0.1 : 0.25), 3.0));
   }, [isMobile]);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 2 && isMobile) {
-      e.preventDefault();
-    }
+  const handleZoomOut = useCallback(() => {
+    setScale(prev => Math.max(prev - (isMobile ? 0.1 : 0.25), 0.25));
   }, [isMobile]);
 
-  const goToPage = (page: number) => {
+  const handleScaleChange = useCallback((value: number[]) => {
+    setScale(value[0]);
+  }, []);
+
+  const handleRotateLeft = useCallback(() => {
+    setRotation(prev => (prev - 90 + 360) % 360);
+  }, []);
+
+  const handleRotateRight = useCallback(() => {
+    setRotation(prev => (prev + 90) % 360);
+  }, []);
+
+  // Enhanced page navigation
+  const goToPage = useCallback((page: number) => {
     if (page >= 1 && page <= (numPages || 1)) {
       const pageElement = pageRefs.current[page];
       if (pageElement) {
-        pageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        pageElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
       }
     }
-  };
+  }, [numPages]);
 
-  const handlePageInputChange = (value: string) => {
+  const handlePageInputChange = useCallback((value: string) => {
     setPageInput(value);
     const pageNum = parseInt(value);
     if (pageNum && pageNum >= 1 && pageNum <= (numPages || 1)) {
       goToPage(pageNum);
     }
-  };
+  }, [goToPage, numPages]);
 
-  const handlePrevPage = () => {
+  const handlePrevPage = useCallback(() => {
     if (currentPage > 1) {
       goToPage(currentPage - 1);
     }
-  };
+  }, [currentPage, goToPage]);
 
-  const handleNextPage = () => {
+  const handleNextPage = useCallback(() => {
     if (currentPage < (numPages || 1)) {
       goToPage(currentPage + 1);
     }
-  };
+  }, [currentPage, numPages, goToPage]);
+
+  // Enhanced loading component
+  const LoadingComponent = () => (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 w-full space-y-4">
+      <div className="relative">
+        <div className="h-16 w-16 rounded-full border-4 border-primary/20 animate-spin border-t-primary" />
+        <FileText className="absolute inset-0 m-auto h-6 w-6 text-primary animate-pulse" />
+      </div>
+      <div className="text-center space-y-2">
+        <p className="text-lg font-semibold text-foreground">
+          جاري تحميل المستند
+        </p>
+        <p className="text-sm text-muted-foreground">
+          يرجى الانتظار قليلاً...
+        </p>
+      </div>
+      <div className="w-64 bg-muted rounded-full h-2 overflow-hidden">
+        <div 
+          className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-300 ease-out"
+          style={{ width: `${loadingProgress}%` }}
+        />
+      </div>
+    </div>
+  );
+
+  // Enhanced error component
+  const ErrorComponent = () => (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 space-y-4">
+      <div className="relative">
+        <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+        </div>
+      </div>
+      <div className="text-center space-y-2 max-w-md">
+        <h3 className="text-lg font-semibold text-foreground">فشل في تحميل المستند</h3>
+        <p className="text-sm text-muted-foreground">
+          {error || 'حدث خطأ أثناء تحميل ملف PDF. يرجى التحقق من الرابط والمحاولة مرة أخرى.'}
+        </p>
+      </div>
+      <Button 
+        onClick={() => window.location.reload()} 
+        variant="outline"
+        className="mt-4"
+      >
+        <RefreshCcw className="h-4 w-4 mr-2" />
+        إعادة المحاولة
+      </Button>
+    </div>
+  );
+
+  // Should render page check for performance
+  const shouldRenderPage = useCallback((pageNumber: number) => {
+    const visiblePageNumbers = Array.from(visiblePages);
+    if (visiblePageNumbers.length === 0) return pageNumber <= 3; // Render first 3 pages initially
+    
+    const minVisible = Math.min(...visiblePageNumbers);
+    const maxVisible = Math.max(...visiblePageNumbers);
+    
+    // Render visible pages + 2 pages before and after for smooth scrolling
+    return pageNumber >= (minVisible - 2) && pageNumber <= (maxVisible + 2);
+  }, [visiblePages]);
 
   return (
     <TooltipProvider>
       <div className={cn(
-        "flex flex-col h-full bg-gradient-to-br from-background to-muted/30",
-        "border border-border/50 rounded-lg overflow-hidden",
+        "flex flex-col h-full bg-gradient-to-br from-background/95 via-background to-muted/20",
+        "border border-border/50 rounded-xl overflow-hidden shadow-lg",
         className
       )}>
-        {/* Enhanced Toolbar - Mobile Optimized */}
+        {/* Enhanced Toolbar */}
         <div className={cn(
-          "flex items-center justify-between bg-card/80 backdrop-blur-sm border-b border-border/50",
-          isMobile ? "p-2" : "p-3"
+          "flex-shrink-0 flex items-center justify-between bg-card/80 backdrop-blur-md border-b border-border/50",
+          "shadow-sm transition-all duration-300",
+          isMobile ? "p-2 gap-2" : "p-3 gap-4"
         )}>
           {isMobile ? (
-            /* Mobile Toolbar - Simplified */
+            /* Mobile Toolbar */
             <>
-              {/* Left: Page Navigation */}
+              {/* Page Navigation */}
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handlePrevPage}
                   disabled={currentPage <= 1}
-                  className="h-9 w-9"
+                  className="h-8 w-8 rounded-lg hover:bg-primary/10"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 
-                <div className="flex items-center gap-1 text-sm">
+                <div className="flex items-center gap-1">
                   <Input
                     type="number"
                     value={pageInput}
                     onChange={(e) => handlePageInputChange(e.target.value)}
-                    className="w-12 h-8 text-center text-xs p-1"
+                    className="w-12 h-7 text-center text-xs border-border/30 rounded-lg"
                     min="1"
                     max={numPages || 1}
                   />
-                  <span className="text-muted-foreground text-xs">/{numPages || '?'}</span>
+                  <span className="text-xs text-muted-foreground font-medium">
+                    /{numPages || '?'}
+                  </span>
                 </div>
                 
                 <Button
@@ -194,44 +314,46 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
                   size="icon"
                   onClick={handleNextPage}
                   disabled={currentPage >= (numPages || 1)}
-                  className="h-9 w-9"
+                  className="h-8 w-8 rounded-lg hover:bg-primary/10"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
-              
-              {/* Center: Zoom */}
+
+              {/* Zoom Controls */}
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleZoomOut}
-                  className="h-8 w-8"
+                  disabled={scale <= 0.25}
+                  className="h-7 w-7 rounded-lg hover:bg-primary/10"
                 >
                   <ZoomOut className="h-3 w-3" />
                 </Button>
                 
-                <span className="text-xs min-w-[35px] text-center font-medium">
+                <Badge variant="secondary" className="text-xs px-2 py-1 min-w-[45px]">
                   {Math.round(scale * 100)}%
-                </span>
+                </Badge>
                 
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleZoomIn}
-                  className="h-8 w-8"
+                  disabled={scale >= 3.0}
+                  className="h-7 w-7 rounded-lg hover:bg-primary/10"
                 >
                   <ZoomIn className="h-3 w-3" />
                 </Button>
               </div>
-              
-              {/* Right: Rotate */}
-              <div className="flex items-center gap-1">
+
+              {/* Rotation */}
+              <div className="flex items-center gap-0.5">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleRotateLeft}
-                  className="h-8 w-8"
+                  className="h-7 w-7 rounded-lg hover:bg-primary/10"
                 >
                   <RotateCcw className="h-3 w-3" />
                 </Button>
@@ -239,37 +361,39 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
                   variant="ghost"
                   size="icon"
                   onClick={handleRotateRight}
-                  className="h-8 w-8"
+                  className="h-7 w-7 rounded-lg hover:bg-primary/10"
                 >
                   <RotateCw className="h-3 w-3" />
                 </Button>
               </div>
             </>
           ) : (
-            /* Desktop Toolbar - Full Featured */
+            /* Desktop Toolbar */
             <>
-              {/* Left Section - Page Navigation */}
+              {/* Left: Page Navigation */}
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handlePrevPage}
                   disabled={currentPage <= 1}
-                  className="h-8 w-8"
+                  className="h-9 w-9 rounded-lg hover:bg-primary/10 transition-colors"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 
-                <div className="flex items-center gap-1 text-sm">
+                <div className="flex items-center gap-2 bg-muted/30 rounded-lg px-3 py-1.5">
                   <Input
                     type="number"
                     value={pageInput}
                     onChange={(e) => handlePageInputChange(e.target.value)}
-                    className="w-16 h-8 text-center text-xs"
+                    className="w-16 h-7 text-center text-sm border-0 bg-background/50"
                     min="1"
                     max={numPages || 1}
                   />
-                  <span className="text-muted-foreground">من {numPages || '?'}</span>
+                  <span className="text-sm text-muted-foreground font-medium">
+                    من {numPages || '?'}
+                  </span>
                 </div>
                 
                 <Button
@@ -277,178 +401,218 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
                   size="icon"
                   onClick={handleNextPage}
                   disabled={currentPage >= (numPages || 1)}
-                  className="h-8 w-8"
+                  className="h-9 w-9 rounded-lg hover:bg-primary/10 transition-colors"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
-              
-              {/* Center Section - Zoom Controls */}
-              <div className="flex items-center gap-2">
+
+              {/* Center: Zoom Controls */}
+              <div className="flex items-center gap-3">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleZoomOut}
-                  className="h-8 w-8"
+                  disabled={scale <= 0.25}
+                  className="h-9 w-9 rounded-lg hover:bg-primary/10"
                 >
                   <ZoomOut className="h-4 w-4" />
                 </Button>
                 
-                <span className="text-sm min-w-[50px] text-center font-medium">
-                  {Math.round(scale * 100)}%
-                </span>
+                <div className="flex items-center gap-3 bg-muted/30 rounded-lg px-4 py-2">
+                  <Slider
+                    value={[scale]}
+                    onValueChange={handleScaleChange}
+                    max={3.0}
+                    min={0.25}
+                    step={0.25}
+                    className="w-32"
+                  />
+                  <Badge variant="secondary" className="text-sm px-3 py-1 min-w-[60px]">
+                    {Math.round(scale * 100)}%
+                  </Badge>
+                </div>
                 
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleZoomIn}
-                  className="h-8 w-8"
+                  disabled={scale >= 3.0}
+                  className="h-9 w-9 rounded-lg hover:bg-primary/10"
                 >
                   <ZoomIn className="h-4 w-4" />
                 </Button>
-                
-                <div className="h-4 w-px bg-border mx-1" />
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleRotateLeft}
-                  className="h-8 w-8"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleRotateRight}
-                  className="h-8 w-8"
-                >
-                  <RotateCw className="h-4 w-4" />
-                </Button>
               </div>
-              
-              {/* Right Section - Actions */}
+
+              {/* Right: Actions */}
               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleRotateLeft}
+                        className="h-8 w-8 rounded-md hover:bg-primary/10"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>تدوير يساراً</TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleRotateRight}
+                        className="h-8 w-8 rounded-md hover:bg-primary/10"
+                      >
+                        <RotateCw className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>تدوير يميناً</TooltipContent>
+                  </Tooltip>
+                </div>
+
                 {onFullscreenToggle && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onFullscreenToggle}
-                    className="h-8 w-8"
-                  >
-                    {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onFullscreenToggle}
+                        className="h-9 w-9 rounded-lg hover:bg-primary/10"
+                      >
+                        {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {isFullscreen ? 'تصغير الشاشة' : 'ملء الشاشة'}
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             </>
           )}
         </div>
 
-        {/* PDF Content - Touch Optimized */}
-        <ScrollArea className="flex-1">
-          <div
-            ref={containerRef}
-            className={cn(
-              "flex flex-col items-center min-h-full space-y-2",
-              isMobile ? "p-2" : "p-4 space-y-4"
-            )}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-          >
-            <Document
-              file={pdfUrl}
-              onLoadSuccess={handleDocumentLoadSuccess}
-              onLoadError={handleDocumentLoadError}
-              loading={
-                <div className="flex flex-col items-center justify-center min-h-[400px] py-10 w-full">
-                  <div className="relative">
-                    <div className="h-12 w-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-                    <div className="absolute inset-0 h-12 w-12 rounded-full bg-gradient-to-r from-primary/10 to-primary/30 animate-pulse" />
-                  </div>
-                  <p className="mt-4 text-sm text-muted-foreground font-medium">
-                    جاري تحميل المستند...
-                  </p>
-                  <div className="mt-2 w-32 h-1 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-primary to-primary-glow w-1/3 animate-pulse rounded-full" />
-                  </div>
-                </div>
-              }
-              error={
-                <div className="flex flex-col items-center justify-center min-h-[300px] p-8">
-                  <div className="text-destructive mb-4">
-                    <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-foreground font-medium mb-1">فشل في تحميل المستند</p>
-                  <p className="text-muted-foreground text-sm">تحقق من اتصالك بالإنترنت وحاول مرة أخرى</p>
-                </div>
-              }
+        {/* PDF Content Area */}
+        <div className="flex-1 relative overflow-hidden">
+          <ScrollArea className="h-full w-full">
+            <div
+              ref={containerRef}
+              className={cn(
+                "flex flex-col items-center min-h-full",
+                isMobile ? "p-2 space-y-2" : "p-4 space-y-4"
+              )}
             >
-              {numPages &&
-                Array.from({ length: numPages }, (_, i) => i + 1).map((pageNumber) => (
-                  <div
-                    key={pageNumber}
-                    ref={(el) => {
-                      if (el) pageRefs.current[pageNumber] = el;
-                    }}
-                    data-page-number={pageNumber}
-                    className={cn(
-                      "relative bg-white rounded-xl shadow-lg border transition-all duration-300",
-                      isMobile 
-                        ? "mb-2 p-1 hover:shadow-lg" 
-                        : "mb-4 p-2 hover:shadow-xl hover:scale-[1.02]",
-                      currentPage === pageNumber && "ring-2 ring-primary/50 shadow-primary/20"
-                    )}
-                    style={{ 
-                      minHeight: isMobile ? 200 : 300,
-                      scrollMarginTop: isMobile ? '60px' : '80px'
-                    }}
-                  >
-                    {/* Page Number Badge */}
-                    <div className={cn(
-                      "absolute bg-primary text-primary-foreground rounded-full font-medium z-10",
-                      isMobile 
-                        ? "-top-1 right-2 text-xs px-1.5 py-0.5" 
-                        : "-top-2 right-4 text-xs px-2 py-1"
-                    )}>
-                      {pageNumber}
-                    </div>
-                    
-                    <Page
-                      pageNumber={pageNumber}
-                      scale={scale}
-                      rotate={rotation}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
-                      className="max-w-full transition-all duration-300 ease-in-out"
-                      loading={
-                        <div className="flex items-center justify-center h-96 w-full">
-                          <div className="relative">
-                            <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-                            <div className="absolute inset-0 h-8 w-8 rounded-full bg-primary/10 animate-pulse" />
-                          </div>
-                        </div>
-                      }
-                      error={
-                        <div className="flex flex-col items-center justify-center h-64 w-full bg-muted/20 rounded-lg">
-                          <div className="text-muted-foreground mb-2">
-                            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            خطأ في تحميل الصفحة {pageNumber}
+              <Document
+                file={pdfUrl}
+                onLoadSuccess={handleDocumentLoadSuccess}
+                onLoadError={handleDocumentLoadError}
+                onLoadProgress={({ loaded, total }) => {
+                  setLoadingProgress(Math.round((loaded / total) * 100));
+                }}
+                loading={<LoadingComponent />}
+                error={<ErrorComponent />}
+                options={{
+                  cMapUrl: `//unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+                  cMapPacked: true,
+                }}
+              >
+                {numPages &&
+                  Array.from({ length: numPages }, (_, i) => i + 1).map((pageNumber) => (
+                    <div
+                      key={pageNumber}
+                      ref={(el) => {
+                        if (el) pageRefs.current[pageNumber] = el;
+                      }}
+                      data-page-number={pageNumber}
+                      className={cn(
+                        "relative bg-white rounded-xl border transition-all duration-300",
+                        "hover:shadow-lg hover:border-primary/20",
+                        isMobile ? "shadow-md" : "shadow-lg hover:shadow-xl",
+                        visiblePages.has(pageNumber) && "ring-2 ring-primary/30 shadow-primary/10",
+                        isMobile ? "p-2" : "p-3"
+                      )}
+                      style={{ 
+                        scrollMarginTop: isMobile ? '70px' : '90px'
+                      }}
+                    >
+                      {/* Page Number Badge */}
+                      <Badge 
+                        variant={visiblePages.has(pageNumber) ? "default" : "secondary"}
+                        className={cn(
+                          "absolute z-10 font-semibold shadow-lg",
+                          isMobile 
+                            ? "-top-2 right-3 text-xs px-2 py-1" 
+                            : "-top-3 right-4 text-sm px-3 py-1"
+                        )}
+                      >
+                        {pageNumber}
+                      </Badge>
+                      
+                      {shouldRenderPage(pageNumber) ? (
+                        <Page
+                          key={`${pageNumber}-${scale}-${rotation}`}
+                          pageNumber={pageNumber}
+                          scale={scale}
+                          rotate={rotation}
+                          renderTextLayer={false}
+                          renderAnnotationLayer={true}
+                          onLoadSuccess={() => handlePageLoadSuccess(pageNumber)}
+                          className="max-w-full transition-all duration-300 ease-out"
+                          loading={
+                            <div className="flex items-center justify-center bg-muted/20 rounded-lg" 
+                                 style={{ height: isMobile ? '300px' : '400px' }}>
+                              <div className="flex flex-col items-center space-y-2">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                <p className="text-sm text-muted-foreground">
+                                  جاري تحميل الصفحة {pageNumber}
+                                </p>
+                              </div>
+                            </div>
+                          }
+                          error={
+                            <div className="flex flex-col items-center justify-center bg-destructive/5 rounded-lg border-2 border-dashed border-destructive/20"
+                                 style={{ height: isMobile ? '250px' : '350px' }}>
+                              <AlertCircle className="h-8 w-8 text-destructive mb-2" />
+                              <p className="text-sm text-destructive font-medium">
+                                خطأ في تحميل الصفحة {pageNumber}
+                              </p>
+                            </div>
+                          }
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center bg-muted/10 rounded-lg"
+                             style={{ height: isMobile ? '250px' : '350px' }}>
+                          <p className="text-muted-foreground text-sm">
+                            الصفحة {pageNumber}
                           </p>
                         </div>
-                      }
-                    />
-                  </div>
-                ))}
-            </Document>
+                      )}
+                    </div>
+                  ))}
+              </Document>
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Status Bar */}
+        {numPages && (
+          <div className={cn(
+            "flex-shrink-0 bg-muted/20 border-t border-border/30 text-center",
+            isMobile ? "py-1.5 px-3" : "py-2 px-4"
+          )}>
+            <p className="text-xs text-muted-foreground">
+              {loadedPages.size} من {numPages} صفحة محملة • 
+              الصفحة الحالية: {currentPage} • 
+              التكبير: {Math.round(scale * 100)}%
+            </p>
           </div>
-        </ScrollArea>
+        )}
       </div>
     </TooltipProvider>
   );
