@@ -94,7 +94,7 @@ const PDFViewer = () => {
         // Convert SupabasePDF to UploadedPDF format
         const uploadedPdf: UploadedPDF = {
           ...supabasePdf,
-          dataUrl: supabasePdf.file_url || supabasePdf.dataUrl || ''
+          dataUrl: supabasePdf.fileUrl || ''
         };
         setPdf(uploadedPdf);
         setIsLoadingPdf(false);
@@ -227,7 +227,7 @@ const PDFViewer = () => {
     } else if (pdf?.id) {
       // Save to localStorage for unauthenticated users
       try {
-        addChatMessageToPDF(pdf.id, newMessage.content, newMessage.isUser);
+        addChatMessageToPDF(pdf.id, { content: newMessage.content, isUser: newMessage.isUser, timestamp: new Date() });
       } catch (error) {
         console.error('Error saving message to localStorage:', error);
         toast.error('Failed to save message');
@@ -248,7 +248,7 @@ const PDFViewer = () => {
     }
 
     try {
-      const extractedText = await extractTextFromPDF(pdf.dataUrl);
+      const extractedText = await extractTextFromPDF(pdf.dataUrl, pdf.id);
       setPdfTextContent(extractedText);
       return extractedText;
     } catch (error) {
@@ -545,8 +545,7 @@ const PDFViewer = () => {
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-card border border-border rounded-lg p-6 shadow-lg max-w-md w-full mx-4">
             <PDFAnalysisProgress
-              isAnalyzing={isAnalyzing}
-              analysisProgress={analysisProgress}
+              analysis={analysisProgress}
             />
           </div>
         </div>
