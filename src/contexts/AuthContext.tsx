@@ -1,8 +1,8 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, getCurrentUser } from '@/services/authService';
-import { toast } from 'sonner';
+import { useToast } from '@/contexts/ToastContext'; // ← النظام الجديد
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AuthContextType {
   user: User | null;
@@ -24,6 +24,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [hasShownWelcomeToast, setHasShownWelcomeToast] = useState(false); // ← منع الإشعارات المتكررة
+  
+  const { success } = useToast(); // ← النظام الجديد
+  const { language } = useLanguage();
 
   const checkUser = async () => {
     setLoading(true);
@@ -48,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     checkUser();
-
+    
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.id);
@@ -70,24 +74,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsAdmin(false);
         }
         
-        // Only show toast for first sign-in event
-        if (event === 'SIGNED_IN') {
-          toast.success('Signed in successfully');
+        // منع إظهار الإشعار إلا في حالة تسجيل الدخول الفعلي (وليس token refresh)
+        if (event === 'SIGNED_IN' && !hasShownWelcomeToast) {
+          success(
+            language === 'ar' ? 'تم تسجيل الدخول بنجاح' : 'Signed in successfully',
+            language === 'ar' ? 'مرحباً بك' : 'Welcome'
+          );
+          setHasShownWelcomeToast(true);
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAdmin(false);
-        toast.success('Signed out successfully');
+        setHasShownWelcomeToast(false); // ← إعادة تعيين للمرة القادمة
+        
+        success(
+          language === 'ar' ? 'تم تسجيل الخروج بنجاح' : 'Signed out successfully',
+          language === 'ar' ? 'وداعاً' : 'Goodbye'
+        );
       } else if (event === 'TOKEN_REFRESHED') {
-        // Handle token refresh if needed
-        console.log('Auth token refreshed');
+        // Handle token refresh WITHOUT showing toast
+        console.log('Auth token refreshed - no toast needed');
       }
     });
 
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, []);
+  }, [success, language, hasShownWelcomeToast]);
 
   return (
     <AuthContext.Provider value={{ user, loading, checkUser, isAdmin }}>
