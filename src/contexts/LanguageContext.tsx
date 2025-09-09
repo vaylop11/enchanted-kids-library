@@ -183,11 +183,28 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [language, setLanguage] = useState<Language>('en');
   const [direction, setDirection] = useState<Direction>('ltr');
 
+  // Load language from localStorage on mount
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('preferred-language') as Language;
+    if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'ar')) {
+      setLanguage(savedLanguage);
+    } else {
+      // Detect browser language as fallback
+      const browserLanguage = navigator.language.toLowerCase();
+      if (browserLanguage.startsWith('ar')) {
+        setLanguage('ar');
+      }
+    }
+  }, []);
+
   useEffect(() => {
     // Apply direction to html element
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = language;
     setDirection(language === 'ar' ? 'rtl' : 'ltr');
+    
+    // Save language preference to localStorage
+    localStorage.setItem('preferred-language', language);
   }, [language]);
 
   // Translation function
