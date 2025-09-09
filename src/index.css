@@ -1,6 +1,5 @@
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech:wght@100;200;300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -17,10 +16,11 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
 
-    --primary: 262 83% 58%;
+    /* Main color changed to slate-900 */
+    --primary: 222 47% 11%;       /* slate-900 */
     --primary-foreground: 210 40% 98%;
-    --primary-glow: 262 83% 68%;
-    --primary-dark: 262 83% 48%;
+    --primary-glow: 222 47% 21%;  /* lighter glow */
+    --primary-dark: 222 47% 7%;   /* darker shade */
 
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
@@ -77,17 +77,14 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  /* Set appropriate font family based on language */
   html[lang="ar"] body {
     font-family: 'Tajawal', 'Inter', sans-serif;
   }
 
-  /* Mirror UI elements for RTL */
   [dir="rtl"] .mirror-rtl {
     transform: scaleX(-1);
   }
 
-  /* RTL text alignment */
   [dir="rtl"] .text-left {
     text-align: right;
   }
@@ -96,7 +93,6 @@
     text-align: left;
   }
 
-  /* Adjust padding and margins for RTL */
   [dir="rtl"] .pl-4 {
     padding-left: 0;
     padding-right: 1rem;
@@ -107,7 +103,6 @@
     padding-left: 1rem;
   }
 
-  /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -125,7 +120,6 @@
     @apply bg-muted-foreground/30;
   }
   
-  /* Page transitions */
   .page-transition-enter {
     @apply opacity-0;
   }
@@ -142,7 +136,6 @@
     @apply opacity-0 transition-opacity duration-300 ease-in-out;
   }
   
-  /* Hover effects for interactive elements */
   .hover-lift {
     @apply transition-all duration-300 ease-out;
   }
@@ -151,7 +144,6 @@
     @apply -translate-y-1 shadow-lg;
   }
   
-  /* Typography classes */
   .heading-1 {
     @apply font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-foreground;
   }
@@ -172,12 +164,10 @@
     @apply text-sm text-muted-foreground;
   }
 
-  /* Focus styles for better accessibility */
   :focus-visible {
     @apply outline-none ring-2 ring-ring;
   }
 
-  /* Enhanced button loading state */
   .btn-loading {
     @apply relative overflow-hidden;
   }
@@ -187,7 +177,6 @@
     @apply absolute inset-0 bg-current opacity-20;
   }
 
-  /* Add progress animation for waiting state */
   @keyframes progress {
     0% {
       transform: translateX(-100%);
@@ -197,7 +186,6 @@
     }
   }
 
-  /* Add slide animation for progress bars */
   @keyframes slide-in {
     0% {
       transform: translateX(-100%);
@@ -207,7 +195,6 @@
     }
   }
 
-  /* Add bounce animation for dots */
   @keyframes bounce {
     0%, 100% {
       transform: translateY(0);
@@ -227,7 +214,6 @@
     50% { box-shadow: 0 0 40px hsl(var(--primary) / 0.6); }
   }
 
-  /* Premium utility classes */
   .glass-effect {
     background: var(--glass-background);
     backdrop-filter: var(--glass-backdrop);
@@ -235,54 +221,4 @@
   }
 
   .gradient-text {
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .hover-lift {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .hover-lift:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-elegant);
-  }
-
-  .premium-card {
-    background: var(--gradient-card);
-    border: 1px solid hsl(var(--border));
-    box-shadow: var(--shadow-card);
-    transition: all 0.3s ease;
-  }
-
-  .premium-card:hover {
-    box-shadow: var(--shadow-elegant);
-    transform: translateY(-2px);
-  }
-
-  .glow-effect {
-    animation: pulse-glow 3s ease-in-out infinite;
-  }
-
-  .float-animation {
-    animation: float 6s ease-in-out infinite;
-  }
-
-  /* Make analysis progress indicator look like a chat bubble */
-  .analysis-progress-bubble {
-    @apply rounded-lg p-3 bg-muted/90 border border-muted-foreground/10;
-    max-width: 90%;
-  }
-  
-  /* Page number input styles */
-  .page-number-input {
-    @apply w-16 text-center rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
-  }
-  
-  /* Rotation control button styles */
-  .rotation-control {
-    @apply rounded-full p-2 hover:bg-muted transition-colors;
-  }
-}
+    background: var(--gradient-prim
