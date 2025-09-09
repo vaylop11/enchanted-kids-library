@@ -6,44 +6,58 @@ const HeroSection = () => {
   const { language } = useLanguage();
 
   return (
-    <section 
-      className="relative py-20 md:py-32 bg-white overflow-hidden transition-colors duration-500"
+    <section
+      className="relative py-20 md:py-28 bg-white overflow-hidden"
       dir={language === "ar" ? "rtl" : "ltr"}
     >
-      <div className="container mx-auto px-6 md:px-8 max-w-6xl relative z-10">
+      <div className="container mx-auto px-6 md:px-8 max-w-6xl">
         <div className="flex flex-col items-center text-center space-y-8">
-          
-          {/* العنوان الرئيسي */}
-          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight text-slate-900">
+
+          {/* Headline */}
+          <h1
+            id="hero-heading"
+            className="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight text-slate-900"
+          >
             {language === "ar" ? (
               <>
-                منصة أذكى، مدعومة بالذكاء الاصطناعي <br />
-                <span className="block">وموزعة بالكامل</span>
+                <span className="block">الأذكى، مدعومة بالذكاء الاصطناعي</span>
+                <span className="block">لدردشة ملفات PDF — Gemi ChatPDF</span>
               </>
             ) : (
               <>
-                The Smarter, AI-Powered <br />
-                <span className="block">Decentralized Marketplace</span>
+                <span className="block">The Smarter, AI-Powered</span>
+                <span className="block">PDF Chat — Gemi ChatPDF</span>
               </>
             )}
           </h1>
 
-          {/* الوصف */}
+          {/* Subheadline */}
           <p className="text-lg md:text-xl text-slate-600 max-w-2xl">
             {language === "ar"
-              ? "استفد من قوة الذكاء الاصطناعي الموزع مع AICM."
-              : "Harness the power of decentralized AI marketplace with AICM."}
+              ? "ارفع أي ملف PDF وتحدث معه بذكاء: اسأل، لخص، استخرج المعلومة، واحصل على استشهادات خلال ثوانٍ — مجانًا مع Gemi ChatPDF."
+              : "Upload any PDF and chat with it intelligently: ask questions, get summaries, extract facts, and cite sources in seconds — free with Gemi ChatPDF."}
           </p>
 
-          {/* الأزرار */}
-          <div className="flex flex-col sm:flex-row gap-4 mt-6 justify-center">
-            <Button 
-              asChild 
-              size="lg" 
-              className="px-8 bg-primary hover:bg-primary-dark text-primary-foreground rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-medium"
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row gap-4 mt-2 justify-center">
+            <Button
+              asChild
+              size="lg"
+              className="px-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-lg transition-all duration-300 font-medium"
             >
               <Link to="/pdfs">
-                {language === "ar" ? "ابدأ الآن" : "Get Started"}
+                {language === "ar" ? "ارفع PDF وابدأ الآن" : "Upload a PDF & Start"}
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="px-8 border-primary/50 text-primary hover:bg-primary/10 rounded-xl transition-all duration-300 font-medium"
+            >
+              <Link to="#features">
+                {language === "ar" ? "اكتشف الميزات" : "Discover Features"}
               </Link>
             </Button>
           </div>
