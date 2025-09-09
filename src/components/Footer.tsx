@@ -25,9 +25,6 @@ const Footer = () => {
                 alt={language === 'ar' ? 'شعار تشات PDF' : 'ChatPDF Logo'} 
                 className="h-8 w-auto object-contain"
               />
-              <span className="font-display text-lg font-medium">
-                {language === 'ar' ? 'تشات PDF' : 'ChatPDF'}
-              </span>
             </Link>
             <p className="mt-2 text-sm text-muted-foreground max-w-md">
               {language === 'ar'
