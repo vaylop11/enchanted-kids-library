@@ -242,7 +242,6 @@ const SignUp = () => {
       )} dir={isRTL ? 'rtl' : 'ltr'}>
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
-            <UserPlus className="h-6 w-6 text-primary" />
             {language === 'ar' ? 'إنشاء حساب جديد' : 'Create Account'}
           </CardTitle>
           <CardDescription>
