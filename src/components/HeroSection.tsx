@@ -43,21 +43,10 @@ const HeroSection = () => {
             <Button
               asChild
               size="lg"
-              className="px-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-lg transition-all duration-300 font-medium"
+              className="mt-8 px-8 bg-slate-900 text-primary-foreground rounded-full transition-all duration-300 font-bold"
             >
               <Link to="/pdfs">
-                {language === "ar" ? "ارفع PDF وابدأ الآن" : "Upload a PDF & Start"}
-              </Link>
-            </Button>
-
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="px-8 border-primary/50 text-primary hover:bg-primary/10 rounded-xl transition-all duration-300 font-medium"
-            >
-              <Link to="#features">
-                {language === "ar" ? "اكتشف الميزات" : "Discover Features"}
+                {language === "ar" ? "ابدأ الأن" : "Start Now"}
               </Link>
             </Button>
           </div>
