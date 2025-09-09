@@ -4,25 +4,16 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
-  MessageSquare, 
-  Sparkles, 
-  RefreshCw, 
-  Copy, 
-  ThumbsUp, 
-  ThumbsDown,
-  Languages,
-  FileText,
-  Search,
   RotateCcw,
   Bot,
   User,
   Plus,
   CheckCircle2,
   XCircle,
-  Loader2
+  Loader2,
+  ArrowDown
 } from 'lucide-react';
 import { EnhancedChatInput } from '@/components/ui/enhanced-chat-input';
 import {
@@ -278,14 +269,14 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
           {!autoScroll && (
             <div className="absolute bottom-4 right-4">
               <Button
-                size="sm"
+                size="icon"
                 onClick={() => {
                   setAutoScroll(true);
                   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className="rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white"
               >
-                ↓
+                <ArrowDown className="w-5 h-5" />
               </Button>
             </div>
           )}
