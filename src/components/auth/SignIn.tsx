@@ -142,7 +142,7 @@ const SignIn = () => {
   const isRTL = language === 'ar';
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-white">
       <Card className={cn(
         "w-full max-w-md mx-auto shadow-lg",
         isRTL && "text-right"
