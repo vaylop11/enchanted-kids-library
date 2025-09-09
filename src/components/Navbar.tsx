@@ -50,22 +50,20 @@ const Navbar = () => {
       )}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex h-16 sm:h-18 items-center justify-between">
-            {/* Logo */}
-            <Link 
-              to="/" 
-              className="flex items-center gap-2 sm:gap-3 transition-all duration-300 hover:scale-105 group flex-shrink-0" 
-              aria-label="ChatPDF Home"
-            >
-              <div className="relative">
-                <div className="p-1.5 sm:p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 group-hover:from-primary/30 group-hover:to-primary/20 transition-all duration-300">
-                  <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-primary transition-all duration-300 group-hover:text-primary group-hover:scale-110" />
-                </div>
-                <Sparkles className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary opacity-0 group-hover:opacity-100 transition-all duration-300 animate-pulse" />
-              </div>
-              <span className="font-display text-lg sm:text-xl font-bold tracking-tight bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-                {language === 'ar' ? 'تشات PDF' : 'ChatPDF'}
-              </span>
-            </Link>
+
+{/* Logo */}
+<Link 
+  to="/" 
+  className="flex items-center gap-2 sm:gap-3 transition-all duration-300 hover:scale-105 group flex-shrink-0" 
+  aria-label="ChatPDF Home"
+>
+  <img 
+    src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/LOGO3D.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85YWQzN2RiZS1kZTE3LTRhNWMtOGNkYi1hOGZlOTE2NjAzYjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWcvTE9HTzNELnBuZyIsImlhdCI6MTc1NzQ0NTE1MiwiZXhwIjo0ODc5NTA5MTUyfQ.y_RRqkyKsJZbEQlyjQlKX-ozATUyEvVVu2vEZl4FSPY" 
+    alt="Logo" 
+    className="h-10 sm:h-12 w-auto object-contain"
+  />
+</Link>
+
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center space-x-6 xl:space-x-8">
@@ -150,23 +148,20 @@ const Navbar = () => {
                 <DrawerContent className="h-[85vh] sm:h-[90vh] rounded-t-3xl bg-background/95 backdrop-blur-lg border-t border-border/20">
                   <div className="px-4 sm:px-6 py-6 sm:py-8 h-full overflow-y-auto">
                     <div className="flex flex-col items-center space-y-6 sm:space-y-8 text-center">
-                      {/* Mobile Logo */}
-                      <Link 
-                        to="/" 
-                        className="flex flex-col items-center transition-all duration-300 hover:scale-105 group" 
-                        onClick={() => setIsDrawerOpen(false)} 
-                        aria-label="ChatPDF Home"
-                      >
-                        <div className="relative mb-3 sm:mb-4">
-                          <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 group-hover:from-primary/30 group-hover:to-primary/20 transition-all duration-300">
-                            <BookOpen className="h-8 w-8 sm:h-10 sm:w-10 text-primary group-hover:text-primary transition-all duration-300 group-hover:scale-110" />
-                          </div>
-                          <Sparkles className="absolute -top-1 -right-1 h-3 w-3 sm:h-4 sm:w-4 text-primary opacity-0 group-hover:opacity-100 transition-all duration-300 animate-pulse" />
-                        </div>
-                        <span className="font-display text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-                          {language === 'ar' ? 'تشات PDF' : 'ChatPDF'}
-                        </span>
-                      </Link>
+{/* Mobile Logo */}
+<Link 
+  to="/" 
+  className="flex flex-col items-center transition-all duration-300 hover:scale-105 group" 
+  onClick={() => setIsDrawerOpen(false)} 
+  aria-label="ChatPDF Home"
+>
+  <img 
+    src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/LOGO3D.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85YWQzN2RiZS1kZTE3LTRhNWMtOGNkYi1hOGZlOTE2NjAzYjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWcvTE9HTzNELnBuZyIsImlhdCI6MTc1NzQ0NTE1MiwiZXhwIjo0ODc5NTA5MTUyfQ.y_RRqkyKsJZbEQlyjQlKX-ozATUyEvVVu2vEZl4FSPY" 
+    alt="Logo" 
+    className="h-14 sm:h-16 w-auto object-contain mb-3 sm:mb-4"
+  />
+</Link>
+
                       
                       {/* Mobile Navigation Links */}
                       <nav className="flex flex-col items-center space-y-3 sm:space-y-4 w-full max-w-sm">
