@@ -73,7 +73,7 @@ const Navbar = () => {
                     <Link to="/">
                       <NavigationMenuLink className={cn(
                         navigationMenuTriggerStyle(), 
-                        "px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 hover:scale-105",
+                        "px-4 py-2 text-sm font-medium rounded-md transition-all duration-300",
                         "hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20",
                         location.pathname === '/' 
                           ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-primary/20" 
@@ -87,7 +87,7 @@ const Navbar = () => {
                     <Link to="/pdfs">
                       <NavigationMenuLink className={cn(
                         navigationMenuTriggerStyle(), 
-                        "px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 hover:scale-105",
+                        "px-4 py-2 text-sm font-medium rounded-md transition-all duration-300",
                         "hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20",
                         location.pathname === '/pdfs' 
                           ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-primary/20" 
