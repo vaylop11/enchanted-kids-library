@@ -310,35 +310,48 @@ const UploadZone = () => {
               />
             </div>
             
-            {isUploading ? (
-              <div className="w-full max-w-xs">
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-purple-800 transition-all duration-300 ease-out"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {uploadProgress}% {language === 'ar' ? 'تم التحميل' : 'Uploaded'}
-                </p>
-              </div>
-            ) : (
+{isUploading ? (
+  <div className="w-full max-w-xs">
+    <div className="h-2 bg-muted rounded-full overflow-hidden">
+      <div 
+        className="h-full bg-purple-800 transition-all duration-300 ease-out"
+        style={{ width: `${uploadProgress}%` }}
+      />
+    </div>
+
+    {uploadProgress < 95 ? (
+      <p className="text-xs text-muted-foreground mt-2">
+        {uploadProgress}% {language === 'ar' ? 'تم التحميل' : 'Uploaded'}
+      </p>
+    ) : (
+      <div className="flex items-center justify-center gap-2 mt-2 text-xs text-muted-foreground">
+        <div className="w-3 h-3 border-2 border-purple-800 border-t-transparent rounded-full animate-spin" />
+        <span>{language === 'ar' ? 'جاري إنهاء الرفع...' : 'Finalizing upload...'}</span>
+      </div>
+    )}
+  </div>
+) : (
               <div className="flex flex-col items-center gap-2">
                 <p className="text-sm text-purple-800 font-medium">
                   {language === 'ar' ? 'الحد الأقصى 10 ميجابايت' : 'Max 10MB'}
                 </p>
-                <Button 
-                  variant="outline" 
-                  className="border-purple-800 text-purple-800 hover:bg-purple-50"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerFileInput();
-                  }}
-                  disabled={isUploading || hasReachedMaxPDFs}
-                >
-                  <File className="mr-2 h-4 w-4" />
-                  {language === 'ar' ? 'اختر ملف' : 'Select File'}
-                </Button>
+<Button 
+  variant="outline" 
+  className="border-purple-800 text-purple-800 hover:bg-purple-50"
+  onClick={(e) => {
+    e.stopPropagation();
+    triggerFileInput();
+  }}
+  disabled={isUploading || hasReachedMaxPDFs}
+>
+  <img 
+    src="https://res.cloudinary.com/dbjcwigtg/image/upload/v1756670316/filte-icon_ujap8i.webp"   // ضع هنا رابط الصورة الشفافة (PNG/SVG بدون خلفية)
+    alt="Upload Icon" 
+    className="mr-2 h-5 w-5"
+  />
+  {language === 'ar' ? 'اختر ملف' : 'Select File'}
+</Button>
+
                 
                 {user ? (
                   <p className="text-xs text-muted-foreground mt-2">
