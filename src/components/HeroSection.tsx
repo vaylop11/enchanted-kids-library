@@ -43,7 +43,7 @@ const HeroSection = () => {
             <Button
               asChild
               size="lg"
-              className="mt-8 px-8 bg-slate-900 text-primary-foreground rounded-full transition-all duration-300 font-bold"
+              className="mt-12 px-8 bg-slate-900 text-primary-foreground rounded-full transition-all duration-300 font-bold"
             >
               <Link to="/pdfs">
                 {language === "ar" ? "ابدأ الأن" : "Start Now"}
