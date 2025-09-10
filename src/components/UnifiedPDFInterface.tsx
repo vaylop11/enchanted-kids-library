@@ -200,13 +200,13 @@ const UnifiedPDFInterface = () => {
   ];
 
   return (
-    <section className="py-20 px-4 md:px-6 bg-gradient-to-b from-background via-muted/30 to-background text-blue-900">
+    <section className="py-20 px-4 md:px-6 bg-gradient-to-b from-background via-muted/30 to-background text-slate-900">
       <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900">
             {language === 'ar' ? 'ابدأ التفاعل مع ملفاتك' : 'Start Interacting with Your Files'}
           </h2>
-          <p className="text-lg text-blue-900 max-w-2xl mx-auto">
+          <p className="text-lg text-slate-900 max-w-2xl mx-auto">
             {language === 'ar' 
               ? 'ارفع ملف PDF وابدأ المحادثة أو الترجمة أو التحليل فوراً - كل شيء في مكان واحد'
               : 'Upload a PDF file and start chatting, translating, or analyzing instantly - all in one place'
