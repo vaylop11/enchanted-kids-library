@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import { File, AlertTriangle, MessageSquare, Upload, Sparkles, Languages } from 'lucide-react';
+import { AlertTriangle, MessageSquare, Upload, Sparkles, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -180,19 +180,19 @@ const UnifiedPDFInterface = () => {
 
   const quickActions = [
     {
-      icon: <MessageSquare className="h-5 w-5" />,
+      icon: <MessageSquare className="h-5 w-5 text-blue-900" />,
       title: language === 'ar' ? 'ابدأ المحادثة' : 'Start Chatting',
       description: language === 'ar' ? 'ارفع الملف وابدأ بطرح الأسئلة فوراً' : 'Upload file and start asking questions instantly',
       action: () => triggerFileInput()
     },
     {
-      icon: <Languages className="h-5 w-5" />,
+      icon: <Languages className="h-5 w-5 text-blue-900" />,
       title: language === 'ar' ? 'ترجمة فورية' : 'Instant Translation',
       description: language === 'ar' ? 'ترجم ملفات PDF إلى أي لغة' : 'Translate PDF files to any language',
       action: () => navigate('/translate')
     },
     {
-      icon: <Sparkles className="h-5 w-5" />,
+      icon: <Sparkles className="h-5 w-5 text-blue-900" />,
       title: language === 'ar' ? 'تحليل ذكي' : 'Smart Analysis',
       description: language === 'ar' ? 'احصل على ملخص وتحليل للمستند' : 'Get summary and analysis of the document',
       action: () => triggerFileInput()
@@ -200,13 +200,13 @@ const UnifiedPDFInterface = () => {
   ];
 
   return (
-    <section className="py-20 px-4 md:px-6 bg-gradient-to-b from-background via-muted/30 to-background">
+    <section className="py-20 px-4 md:px-6 bg-gradient-to-b from-background via-muted/30 to-background text-blue-900">
       <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text">
             {language === 'ar' ? 'ابدأ التفاعل مع ملفاتك' : 'Start Interacting with Your Files'}
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg text-blue-900 max-w-2xl mx-auto">
             {language === 'ar' 
               ? 'ارفع ملف PDF وابدأ المحادثة أو الترجمة أو التحليل فوراً - كل شيء في مكان واحد'
               : 'Upload a PDF file and start chatting, translating, or analyzing instantly - all in one place'
@@ -226,7 +226,7 @@ const UnifiedPDFInterface = () => {
                   <h3 className="text-lg font-medium mb-2 text-red-700">
                     {language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Upload Error'}
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-4">{uploadError}</p>
+                  <p className="text-sm text-blue-900 mb-4">{uploadError}</p>
                   <Button onClick={() => setUploadError(null)} variant="outline">
                     {language === 'ar' ? 'حاول مرة أخرى' : 'Try Again'}
                   </Button>
@@ -265,7 +265,7 @@ const UnifiedPDFInterface = () => {
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
-                      <p className="text-sm text-muted-foreground mt-2">
+                      <p className="text-sm text-blue-900 mt-2">
                         {uploadProgress}% {language === 'ar' ? 'تم التحميل' : 'Uploaded'}
                       </p>
                     </div>
@@ -273,23 +273,31 @@ const UnifiedPDFInterface = () => {
                 ) : (
                   <div className="space-y-4">
                     <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto glow-effect">
-                      <File className="h-8 w-8 text-primary" />
+                      <img 
+                        src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/Generated%20Image%20April%2006,%202025%20-%2012_51AM%20(1).png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvR2VuZXJhdGVkIEltYWdlIEFwcmlsIDA2LCAyMDI1IC0gMTJfNTFBTSAoMSkucG5nIiwiaWF0IjoxNzQzODk5NDAyLCJleHAiOjE3NzU0MzU0MDJ9.E_gIvYsWG6SPy7xc-wdvo4lXLEWkB4G_AreBPy-xyWY" 
+                        alt="Upload Icon"
+                        className="h-8 w-8"
+                      />
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold mb-2">
                         {language === 'ar' ? 'ارفع ملف PDF الخاص بك' : 'Upload Your PDF File'}
                       </h3>
-                      <p className="text-muted-foreground mb-4">
+                      <p className="text-blue-900 mb-4">
                         {language === 'ar' 
                           ? 'اسحب وأفلت الملف هنا أو انقر للتحديد'
                           : 'Drag and drop your file here or click to select'
                         }
                       </p>
                       <Button className="bg-primary hover:bg-primary-dark">
-                        <File className="mr-2 h-4 w-4" />
+                        <img 
+                          src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/Generated%20Image%20April%2006,%202025%20-%2012_51AM%20(1).png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvR2VuZXJhdGVkIEltYWdlIEFwcmlsIDA2LCAyMDI1IC0gMTJfNTFBTSAoMSkucG5nIiwiaWF0IjoxNzQzODk5NDAyLCJleHAiOjE3NzU0MzU0MDJ9.E_gIvYsWG6SPy7xc-wdvo4lXLEWkB4G_AreBPy-xyWY" 
+                          alt="Upload Icon"
+                          className="mr-2 h-4 w-4"
+                        />
                         {language === 'ar' ? 'اختر ملف' : 'Choose File'}
                       </Button>
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className="text-xs text-blue-900 mt-2">
                         {language === 'ar' ? 'الحد الأقصى 10 ميجابايت' : 'Max 10MB'}
                       </p>
                     </div>
@@ -311,12 +319,12 @@ const UnifiedPDFInterface = () => {
                 onClick={action.action}
               >
                 <div className="flex items-start gap-4">
-                  <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                  <div className="p-2 bg-primary/10 rounded-lg text-blue-900">
                     {action.icon}
                   </div>
                   <div className="flex-1">
                     <h4 className="font-medium mb-1">{action.title}</h4>
-                    <p className="text-sm text-muted-foreground">{action.description}</p>
+                    <p className="text-sm text-blue-900">{action.description}</p>
                   </div>
                 </div>
               </Card>
@@ -327,28 +335,28 @@ const UnifiedPDFInterface = () => {
         {/* Info Cards */}
         <div className="grid md:grid-cols-3 gap-6 mt-12">
           <Card className="p-6 text-center glass-effect border-0">
-            <div className="text-2xl font-bold text-primary mb-2">
+            <div className="text-2xl font-bold text-blue-900 mb-2">
               {language === 'ar' ? '< 30 ثانية' : '< 30 seconds'}
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-blue-900">
               {language === 'ar' ? 'متوسط وقت المعالجة' : 'Average processing time'}
             </p>
           </Card>
           
           <Card className="p-6 text-center glass-effect border-0">
-            <div className="text-2xl font-bold text-primary mb-2">
+            <div className="text-2xl font-bold text-blue-900 mb-2">
               {language === 'ar' ? '30+ لغة' : '30+ Languages'}
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-blue-900">
               {language === 'ar' ? 'دعم متعدد اللغات' : 'Multilingual support'}
             </p>
           </Card>
           
           <Card className="p-6 text-center glass-effect border-0">
-            <div className="text-2xl font-bold text-primary mb-2">
+            <div className="text-2xl font-bold text-blue-900 mb-2">
               {language === 'ar' ? '100% آمن' : '100% Secure'}
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-blue-900">
               {language === 'ar' ? 'تشفير من طرف إلى طرف' : 'End-to-end encryption'}
             </p>
           </Card>
