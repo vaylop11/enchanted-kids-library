@@ -219,8 +219,8 @@ const UnifiedPDFInterface = () => {
           <Card className="premium-card p-8 hover-lift">
             {uploadError ? (
               <div className="text-center space-y-4">
-                <div className="h-16 w-16 rounded-full bg-red-50 flex items-center justify-center mx-auto">
-                  <AlertTriangle className="h-8 w-8 text-red-500" />
+                <div className="h-16 w-16 rounded-full bg-slate-50 flex items-center justify-center mx-auto">
+                  <AlertTriangle className="h-8 w-8 text-slate-500" />
                 </div>
                 <div>
                   <h3 className="text-lg font-medium mb-2 text-red-700">
@@ -272,11 +272,11 @@ const UnifiedPDFInterface = () => {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    <div className="h-16 w-16  bg-transparent flex items-center justify-center mx-auto">
+                    <div className="h-26 w-26  bg-transparent flex items-center justify-center mx-auto">
                       <img 
                         src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/Generated%20Image%20April%2006,%202025%20-%2012_51AM%20(1).png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvR2VuZXJhdGVkIEltYWdlIEFwcmlsIDA2LCAyMDI1IC0gMTJfNTFBTSAoMSkucG5nIiwiaWF0IjoxNzQzODk5NDAyLCJleHAiOjE3NzU0MzU0MDJ9.E_gIvYsWG6SPy7xc-wdvo4lXLEWkB4G_AreBPy-xyWY" 
                         alt="Upload Icon"
-                        className="h-22 w-22"
+                        className="h-26 w-26"
                       />
                     </div>
                     <div>
