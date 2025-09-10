@@ -253,51 +253,70 @@ const UnifiedPDFInterface = () => {
                   disabled={isUploading}
                 />
                 
-                {isUploading ? (
-                  <div className="space-y-4">
-                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                      <Upload className="h-8 w-8 text-primary animate-bounce" />
-                    </div>
-                    <div>
-                      <div className="w-full max-w-xs mx-auto h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all duration-300 ease-out"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
-                      <p className="text-sm text-slate-900 mt-2">
-                        {uploadProgress}% {language === 'ar' ? 'تم التحميل' : 'Uploaded'}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div className="h-26 w-26  bg-transparent flex items-center justify-center mx-auto">
-                      <img 
-                        src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/Generated%20Image%20April%2006,%202025%20-%2012_51AM%20(1).png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvR2VuZXJhdGVkIEltYWdlIEFwcmlsIDA2LCAyMDI1IC0gMTJfNTFBTSAoMSkucG5nIiwiaWF0IjoxNzQzODk5NDAyLCJleHAiOjE3NzU0MzU0MDJ9.E_gIvYsWG6SPy7xc-wdvo4lXLEWkB4G_AreBPy-xyWY" 
-                        alt="Upload Icon"
-                        className="h-26 w-26"
-                      />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold mb-2">
-                        {language === 'ar' ? 'ارفع ملف PDF الخاص بك' : 'Upload Your PDF File'}
-                      </h3>
-                      <p className="text-slate-900 mb-4">
-                        {language === 'ar' 
-                          ? 'اسحب وأفلت الملف هنا أو انقر للتحديد'
-                          : 'Drag and drop your file here or click to select'
-                        }
-                      </p>
-                      <Button className="bg-slate-900 hover:bg-slate-800">
-                        {language === 'ar' ? 'اختر ملف' : 'Choose File'}
-                      </Button>
-                      <p className="text-xs text-slate-900 mt-2">
-                        {language === 'ar' ? 'الحد الأقصى 10 ميجابايت' : 'Max 10MB'}
-                      </p>
-                    </div>
-                  </div>
-                )}
+{isUploading ? (
+  <div className="space-y-4">
+    <div className="relative flex items-center justify-center mx-auto h-24 w-24">
+      {/* Progress Circle */}
+      <svg className="h-24 w-24 transform -rotate-90">
+        <circle
+          cx="48"
+          cy="48"
+          r="44"
+          stroke="currentColor"
+          strokeWidth="6"
+          className="text-muted"
+          fill="transparent"
+        />
+        <circle
+          cx="48"
+          cy="48"
+          r="44"
+          stroke="currentColor"
+          strokeWidth="6"
+          className="text-primary"
+          fill="transparent"
+          strokeDasharray={2 * Math.PI * 44}
+          strokeDashoffset={2 * Math.PI * 44 - (uploadProgress / 100) * 2 * Math.PI * 44}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className="absolute text-sm font-semibold text-slate-900">
+        {uploadProgress}%
+      </span>
+    </div>
+    <p className="text-sm text-center text-slate-900 mt-2">
+      {language === 'ar' ? 'جاري التحميل...' : 'Uploading...'}
+    </p>
+  </div>
+) : (
+  <div className="space-y-6">
+    <div className="h-26 w-26 bg-transparent flex items-center justify-center mx-auto">
+      <img 
+        src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/Generated%20Image%20April%2006,%202025%20-%2012_51AM%20(1).png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJpbWcvR2VuZXJhdGVkIEltYWdlIEFwcmlsIDA2LCAyMDI1IC0gMTJfNTFBTSAoMSkucG5nIiwiaWF0IjoxNzQzODk5NDAyLCJleHAiOjE3NzU0MzU0MDJ9.E_gIvYsWG6SPy7xc-wdvo4lXLEWkB4G_AreBPy-xyWY" 
+        alt="Upload Icon"
+        className="h-26 w-26"
+      />
+    </div>
+    <div>
+      <h3 className="text-xl font-semibold mb-2">
+        {language === 'ar' ? 'ارفع ملف PDF الخاص بك' : 'Upload Your PDF File'}
+      </h3>
+      <p className="text-slate-900 mb-4">
+        {language === 'ar' 
+          ? 'اسحب وأفلت الملف هنا أو انقر للتحديد'
+          : 'Drag and drop your file here or click to select'
+        }
+      </p>
+      <Button className="bg-slate-900 hover:bg-slate-800">
+        {language === 'ar' ? 'اختر ملف' : 'Choose File'}
+      </Button>
+      <p className="text-xs text-slate-900 mt-2">
+        {language === 'ar' ? 'الحد الأقصى 10 ميجابايت' : 'Max 10MB'}
+      </p>
+    </div>
+  </div>
+)}
+
               </div>
             )}
           </Card>
