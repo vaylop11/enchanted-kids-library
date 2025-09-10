@@ -7,38 +7,31 @@ const HeroSection = () => {
 
   return (
     <section
-      className="relative pt-0 pb-20 md:pb-28 bg-white overflow-hidden min-h-screen"
+      className="relative py-20 md:py-28 bg-white overflow-hidden"
       dir={language === "ar" ? "rtl" : "ltr"}
     >
-      {/* Background Video - Extended to cover header */}
+      {/* Background Video */}
       <video
         autoPlay
         loop
         muted
         playsInline
-        className="fixed inset-0 w-full h-full object-cover z-0"
-        style={{ top: 0 }}
+        className="absolute inset-0 w-full h-full object-cover z-0"
       >
         <source src="https://res.cloudinary.com/dbjcwigtg/video/upload/v1757516724/hero-video_qz89bf.mp4" type="video/mp4" />
       </video>
 
-      {/* Dark overlay for better text readability on header */}
-      <div className="fixed top-0 left-0 right-0 h-20 bg-gradient-to-b from-slate-900/40 via-slate-900/20 to-transparent z-[1]" />
-
-      {/* Content overlay for main section */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/10 to-white z-[1]" />
-      
-      {/* Bottom gradient overlay */}
+      {/* Gradient overlay from bottom */}
       <div
-        className="absolute bottom-0 w-full h-1/2 z-[2]"
+        className="absolute bottom-0 w-full h-1/4 z-[1]"
         style={{
           background:
-            "linear-gradient(rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.3) 20%, rgba(255, 255, 255, 0.7) 50%, rgba(255, 255, 255, 0.9) 80%, rgb(255, 255, 255) 100%)",
+            "linear-gradient(rgba(255, 255, 255, 0) 7%, rgba(255, 255, 255, 0.7) 41%, rgba(255, 255, 255, 0.85) 64%, rgba(255, 255, 255, 0.95) 76%, rgb(255, 255, 255) 100%)",
         }}
       ></div>
 
       {/* Content */}
-      <div className="container mx-auto px-6 md:px-8 max-w-6xl relative z-10 pt-24 md:pt-32">
+      <div className="container mx-auto px-6 md:px-8 max-w-6xl relative z-10">
         <div className="flex flex-col items-center text-center space-y-8">
           {/* Headline */}
           <h1

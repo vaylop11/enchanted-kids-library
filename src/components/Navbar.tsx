@@ -43,10 +43,10 @@ const Navbar = () => {
       {/* Navbar */}
       <header className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out',
-        'border-b border-white/10',
+        'border-b border-border/10',
         isScrolled 
-          ? 'bg-white/95 backdrop-blur-lg shadow-lg border-slate-200/20' 
-          : 'bg-white/10 backdrop-blur-md'
+          ? 'bg-background/95 backdrop-blur-lg shadow-lg border-border/20' 
+          : 'bg-background/80 backdrop-blur-sm'
       )}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex h-16 sm:h-18 items-center justify-between">
@@ -71,13 +71,13 @@ const Navbar = () => {
                 <NavigationMenuList className={`${direction === 'rtl' ? 'space-x-reverse' : ''} space-x-1`}>
                   <NavigationMenuItem>
                     <Link to="/">
-                       <NavigationMenuLink className={cn(
+                      <NavigationMenuLink className={cn(
                         navigationMenuTriggerStyle(), 
                         "px-4 py-2 text-sm font-medium rounded-md transition-all duration-300",
-                        "hover:bg-white/20 hover:text-slate-900 border border-transparent hover:border-white/30",
+                        "hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20",
                         location.pathname === '/' 
-                          ? "bg-slate-900 text-white shadow-lg shadow-slate-900/25 border-slate-800/20" 
-                          : "text-slate-900"
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-primary/20" 
+                          : ""
                       )}>
                         {t('home')}
                       </NavigationMenuLink>
@@ -85,13 +85,13 @@ const Navbar = () => {
                   </NavigationMenuItem>
                   <NavigationMenuItem>
                     <Link to="/pdfs">
-                       <NavigationMenuLink className={cn(
+                      <NavigationMenuLink className={cn(
                         navigationMenuTriggerStyle(), 
                         "px-4 py-2 text-sm font-medium rounded-md transition-all duration-300",
-                        "hover:bg-white/20 hover:text-slate-900 border border-transparent hover:border-white/30",
+                        "hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20",
                         location.pathname === '/pdfs' 
-                          ? "bg-slate-900 text-white shadow-lg shadow-slate-900/25 border-slate-800/20" 
-                          : "text-slate-900"
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-primary/20" 
+                          : ""
                       )}>
                         {t('pdfs')}
                       </NavigationMenuLink>
@@ -108,7 +108,7 @@ const Navbar = () => {
                   <Button 
                     variant="outline" 
                     onClick={() => navigate('/signin')} 
-                    className="rounded-full px-4 xl:px-6 py-2 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg border-slate-900/20 hover:border-slate-900/40 hover:bg-slate-900/5 hover:text-slate-900 text-slate-900 bg-white/80"
+                    className="rounded-full px-4 xl:px-6 py-2 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary/20 hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
                   >
                     {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
                   </Button>
