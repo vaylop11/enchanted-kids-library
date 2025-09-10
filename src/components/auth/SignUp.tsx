@@ -148,26 +148,16 @@ const SignUp = () => {
       const result = await signUp(formData.email, formData.password);
       
       if (result) {
-        // Show verification step if email confirmation is required
-        if (result.needsEmailVerification) {
-          setStep('verification');
-          // استخدام Toast المخصص
-          addToast(
-            'success',
-            language === 'ar' 
-              ? 'تم إنشاء الحساب! يرجى التحقق من بريدك الإلكتروني'
-              : 'Account created! Please check your email for verification',
-            language === 'ar' ? 'تم بنجاح' : 'Success'
-          );
-        } else {
-          // استخدام Toast المخصص
-          addToast(
-            'success',
-            language === 'ar' ? 'تم إنشاء الحساب بنجاح!' : 'Account created successfully!',
-            language === 'ar' ? 'مبروك' : 'Congratulations'
-          );
-          navigate('/pdfs');
-        }
+        // Always show verification step as Supabase requires email confirmation
+        setStep('verification');
+        // استخدام Toast المخصص
+        addToast(
+          'success',
+          language === 'ar' 
+            ? 'تم إنشاء الحساب! يرجى التحقق من بريدك الإلكتروني'
+            : 'Account created! Please check your email for verification',
+          language === 'ar' ? 'تم بنجاح' : 'Success'
+        );
       }
     } catch (error: any) {
       console.error('Sign up error:', error);

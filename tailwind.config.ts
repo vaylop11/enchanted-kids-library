@@ -106,6 +106,10 @@ export default {
           "0%": { transform: "translateX(0)" },
           "100%": { transform: "translateX(100%)" },
         },
+        "shimmer": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -116,6 +120,7 @@ export default {
         "scale-out": "scale-out 0.3s ease-out",
         "slide-in": "slide-in 0.3s ease-out",
         "slide-out": "slide-out 0.3s ease-out",
+        "shimmer": "shimmer 2s infinite",
         enter: "fade-in 0.5s ease-out, scale-in 0.3s ease-out",
         exit: "fade-out 0.5s ease-out, scale-out 0.3s ease-out",
       },

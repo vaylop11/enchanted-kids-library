@@ -13,24 +13,31 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  ArrowDown
+  ArrowDown,
+  Copy,
+  RefreshCw,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
 import { EnhancedChatInput } from '@/components/ui/enhanced-chat-input';
+import { ChatMessageSkeleton } from '@/components/ui/skeleton';
+import { MarkdownMessage } from '@/components/ui/markdown-message';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from '@/hooks/use-toast';
 
-// Skeleton Loader
-const MessageSkeleton = () => (
-  <div className="flex gap-3 animate-pulse">
-    <div className="w-8 h-8 bg-gradient-to-br from-blue-200 to-purple-200 rounded-full" />
-    <div className="flex flex-col gap-2 max-w-[70%]">
-      <div className="h-4 bg-gray-200 rounded w-3/4" />
-      <div className="h-4 bg-gray-200 rounded w-1/2" />
-      <div className="h-4 bg-gray-200 rounded w-full" />
+// Enhanced Skeleton Loader with RTL Support
+const MessageSkeleton = ({ language }: { language: 'ar' | 'en' }) => (
+  <div className={cn("flex gap-3 animate-pulse", language === 'ar' ? 'flex-row-reverse' : '')}>
+    <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full dark:from-blue-800/30 dark:to-purple-800/30" />
+    <div className="flex flex-col gap-2 max-w-[80%] min-w-[200px]">
+      <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-lg dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-[shimmer_2s_infinite]" style={{ width: '75%' }} />
+      <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-lg dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-[shimmer_2s_infinite]" style={{ width: '50%' }} />
+      <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-lg dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-[shimmer_2s_infinite]" style={{ width: '90%' }} />
     </div>
   </div>
 );
@@ -83,10 +90,12 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const { language } = useLanguage();
+  const { toast } = useToast();
   const [showQuickActions, setShowQuickActions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
 
   // Detect direction for mixed content
   const detectTextDirection = useCallback((text: string) => {
@@ -94,22 +103,52 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
     return arabicRegex.test(text) ? 'rtl' : 'ltr';
   }, []);
 
-  // Scroll to bottom when messages change
+  // Enhanced scroll to bottom with debouncing
   useEffect(() => {
-    if (autoScroll && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "end"
-      });
+    if (autoScroll && messagesEndRef.current && !isUserScrolling) {
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "end"
+        });
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [messages, autoScroll]);
+  }, [messages, autoScroll, isUserScrolling]);
 
-  // Detect if user scrolled up manually
+  // Enhanced scroll detection with user scroll tracking
   const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 80;
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+    
+    setIsUserScrolling(true);
     setAutoScroll(isAtBottom);
+    
+    // Reset user scrolling flag after scroll ends
+    const timer = setTimeout(() => setIsUserScrolling(false), 150);
+    return () => clearTimeout(timer);
   }, []);
+
+  // Copy message handler
+  const handleCopyMessage = useCallback((content: string) => {
+    navigator.clipboard.writeText(content);
+    toast({
+      title: language === 'ar' ? 'تم النسخ' : 'Copied',
+      description: language === 'ar' ? 'تم نسخ الرسالة' : 'Message copied to clipboard',
+    });
+    onCopyMessage?.(content);
+  }, [language, toast, onCopyMessage]);
+
+  // Feedback handler
+  const handleFeedback = useCallback((messageId: string, feedback: 'positive' | 'negative') => {
+    onMessageFeedback?.(messageId, feedback);
+    toast({
+      title: language === 'ar' ? 'شكرا لك' : 'Thank you',
+      description: language === 'ar' 
+        ? 'تم تسجيل تقييمك' 
+        : 'Your feedback has been recorded',
+    });
+  }, [language, toast, onMessageFeedback]);
 
   // Status indicator
   const StatusIndicator = ({ message }: { message: SmartChatMessage }) => {
@@ -231,52 +270,165 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
 
                 return (
                   <div key={message.id} className="group">
-                    <div className={cn("flex gap-3", message.isUser ? "justify-end" : "justify-start")}>
-                      {!message.isUser && (
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
-                          <Bot className="w-4 h-4 text-white" />
-                        </div>
-                      )}
-                      <div className={cn("max-w-[80%] space-y-2", message.isUser ? "items-end" : "items-start")}>
+                    <div className={cn(
+                      "flex gap-3 mb-4", 
+                      message.isUser 
+                        ? (language === 'ar' ? "flex-row" : "flex-row-reverse") 
+                        : (language === 'ar' ? "flex-row-reverse" : "flex-row")
+                    )}>
+                      {/* Avatar */}
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 transition-transform hover:scale-105",
+                        message.isUser 
+                          ? "bg-gradient-to-br from-emerald-500 to-teal-600" 
+                          : "bg-gradient-to-br from-blue-500 to-purple-600"
+                      )}>
+                        {message.isUser ? (
+                          <User className="w-5 h-5 text-white" />
+                        ) : (
+                          <Bot className="w-5 h-5 text-white" />
+                        )}
+                      </div>
+
+                      {/* Message Content */}
+                      <div className={cn(
+                        "max-w-[75%] space-y-2 flex flex-col", 
+                        message.isUser 
+                          ? (language === 'ar' ? "items-start" : "items-end")
+                          : (language === 'ar' ? "items-end" : "items-start")
+                      )}>
                         <div className={cn(
-                          "rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm",
+                          "rounded-2xl px-4 py-3 shadow-lg border backdrop-blur-sm transition-all duration-200 hover:shadow-xl",
                           message.isUser 
-                            ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                            : "bg-white border border-gray-200 text-gray-900 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                            ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-emerald-200/20" 
+                            : "bg-white/80 border-gray-200/50 text-gray-900 dark:bg-gray-800/80 dark:border-gray-700/50 dark:text-gray-100"
                         )} dir={messageDir}>
-                          <div className="whitespace-pre-wrap">{message.content}</div>
+                          {message.isUser ? (
+                            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                              {message.content}
+                            </div>
+                          ) : (
+                            <MarkdownMessage 
+                              content={message.content} 
+                              className="text-sm leading-relaxed"
+                            />
+                          )}
                           <StatusIndicator message={message} />
                         </div>
+
+                        {/* Action Buttons for Bot Messages */}
+                        {!message.isUser && !isAnalyzing && (
+                          <div className={cn(
+                            "flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+                            language === 'ar' ? "flex-row-reverse" : "flex-row"
+                          )}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleCopyMessage(message.content)}
+                                  className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {language === 'ar' ? 'نسخ' : 'Copy'}
+                              </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onRegenerateMessage?.(message.id)}
+                                  className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {language === 'ar' ? 'إعادة توليد' : 'Regenerate'}
+                              </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleFeedback(message.id, 'positive')}
+                                  className={cn(
+                                    "h-7 w-7 p-0 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 rounded-lg",
+                                    message.feedback === 'positive' && "bg-green-50 text-green-600 dark:bg-green-900/20"
+                                  )}
+                                >
+                                  <ThumbsUp className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {language === 'ar' ? 'إعجاب' : 'Like'}
+                              </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleFeedback(message.id, 'negative')}
+                                  className={cn(
+                                    "h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 rounded-lg",
+                                    message.feedback === 'negative' && "bg-red-50 text-red-600 dark:bg-red-900/20"
+                                  )}
+                                >
+                                  <ThumbsDown className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {language === 'ar' ? 'عدم إعجاب' : 'Dislike'}
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        )}
                       </div>
-                      {message.isUser && (
-                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 dark:bg-gray-700">
-                          <User className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
               })}
 
-              {/* Skeleton for Bot output */}
-              {isAnalyzing && <MessageSkeleton />}
+              {/* Enhanced Skeleton for Bot output */}
+              {isAnalyzing && (
+                <div className="mb-4">
+                  <MessageSkeleton language={language} />
+                </div>
+              )}
 
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
 
-          {/* Scroll to bottom button */}
+          {/* Enhanced scroll animation with smooth behavior */}
           {!autoScroll && (
-            <div className="absolute bottom-4 right-4">
+            <div className="absolute bottom-4 right-4 z-10">
               <Button
                 size="icon"
                 onClick={() => {
                   setAutoScroll(true);
-                  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                  setIsUserScrolling(false);
+                  messagesEndRef.current?.scrollIntoView({ 
+                    behavior: "smooth", 
+                    block: "end" 
+                  });
                 }}
-                className="rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white"
+                className={cn(
+                  "rounded-full shadow-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 transition-all duration-300 hover:scale-110 hover:shadow-2xl",
+                  "animate-bounce"
+                )}
               >
-                <ArrowDown className="w-5 h-5" />
+                <ArrowDown className="w-4 h-4" />
               </Button>
             </div>
           )}
