@@ -10,9 +10,29 @@ const HeroSection = () => {
       className="relative py-20 md:py-28 bg-white overflow-hidden"
       dir={language === "ar" ? "rtl" : "ltr"}
     >
-      <div className="container mx-auto px-6 md:px-8 max-w-6xl">
-        <div className="flex flex-col items-center text-center space-y-8">
+      {/* Background Video */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover z-0"
+      >
+        <source src="https://res.cloudinary.com/dbjcwigtg/video/upload/v1757516724/hero-video_qz89bf.mp4" type="video/mp4" />
+      </video>
 
+      {/* Gradient overlay from bottom */}
+      <div
+        className="absolute bottom-0 w-full h-1/4 z-[1]"
+        style={{
+          background:
+            "linear-gradient(rgba(255, 255, 255, 0) 7%, rgba(255, 255, 255, 0.7) 41%, rgba(255, 255, 255, 0.85) 64%, rgba(255, 255, 255, 0.95) 76%, rgb(255, 255, 255) 100%)",
+        }}
+      ></div>
+
+      {/* Content */}
+      <div className="container mx-auto px-6 md:px-8 max-w-6xl relative z-10">
+        <div className="flex flex-col items-center text-center space-y-8">
           {/* Headline */}
           <h1
             id="hero-heading"
