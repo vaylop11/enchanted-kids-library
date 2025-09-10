@@ -51,7 +51,7 @@ const FeaturesSection = () => {
   ];
   
   return (
-    <section id="features" className="py-20 px-4 md:px-6 bg-muted/30">
+    <section id="features" className="py-20 px-4 md:px-6 bg-white">
       <div className="container mx-auto max-w-7xl">
         <div className="text-center mb-16">
           <h2 className="heading-2 mb-4">
@@ -70,7 +70,7 @@ const FeaturesSection = () => {
               key={index} 
               className="premium-card rounded-2xl p-6 hover-lift border border-border/40"
             >
-              <div className="mb-4 bg-primary p-3 rounded-lg w-fit glow-effect">
+              <div className="mb-4 bg-slate-900 p-3 rounded-lg w-fit">
                 {feature.icon}
               </div>
               <h3 className="text-xl font-display font-semibold mb-2 text-foreground">
