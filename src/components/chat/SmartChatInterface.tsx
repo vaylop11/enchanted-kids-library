@@ -30,14 +30,30 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from '@/hooks/use-toast';
 
-// Enhanced Skeleton Loader with RTL Support
+// Enhanced Skeleton Loader with Typing Animation
 const MessageSkeleton = ({ language }: { language: 'ar' | 'en' }) => (
-  <div className={cn("flex gap-3 animate-pulse", language === 'ar' ? 'flex-row-reverse' : '')}>
-    <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full dark:from-blue-800/30 dark:to-purple-800/30" />
-    <div className="flex flex-col gap-2 max-w-[80%] min-w-[200px]">
-      <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-lg dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-[shimmer_2s_infinite]" style={{ width: '75%' }} />
-      <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-lg dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-[shimmer_2s_infinite]" style={{ width: '50%' }} />
-      <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-lg dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-[shimmer_2s_infinite]" style={{ width: '90%' }} />
+  <div className={cn("flex gap-3", language === 'ar' ? 'flex-row-reverse' : '')}>
+    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg animate-pulse">
+      <Bot className="w-5 h-5 text-white" />
+    </div>
+    <div className="max-w-[75%] space-y-2">
+      <div className="bg-white/80 border border-gray-200/50 dark:bg-gray-800/80 dark:border-gray-700/50 rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex gap-1">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+          </div>
+          <span className="text-xs text-muted-foreground">
+            {language === 'ar' ? 'يكتب...' : 'Typing...'}
+          </span>
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 bg-gradient-to-r from-gray-200 via-white to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 rounded animate-shimmer bg-[length:200%_100%]" style={{ width: '85%' }} />
+          <div className="h-4 bg-gradient-to-r from-gray-200 via-white to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 rounded animate-shimmer bg-[length:200%_100%] [animation-delay:0.5s]" style={{ width: '60%' }} />
+          <div className="h-4 bg-gradient-to-r from-gray-200 via-white to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 rounded animate-shimmer bg-[length:200%_100%] [animation-delay:1s]" style={{ width: '90%' }} />
+        </div>
+      </div>
     </div>
   </div>
 );
@@ -103,16 +119,28 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
     return arabicRegex.test(text) ? 'rtl' : 'ltr';
   }, []);
 
-  // Enhanced scroll to bottom with debouncing
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (autoScroll && messagesEndRef.current && !isUserScrolling) {
+    if (messagesEndRef.current) {
       const timer = setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({
           behavior: "smooth",
-          block: "end"
+          block: "end",
+          inline: "nearest"
         });
-      }, 100);
+      }, 50);
       return () => clearTimeout(timer);
+    }
+  }, [messages.length]);
+
+  // Maintain auto-scroll behavior
+  useEffect(() => {
+    if (autoScroll && messagesEndRef.current && !isUserScrolling) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+        inline: "nearest"
+      });
     }
   }, [messages, autoScroll, isUserScrolling]);
 

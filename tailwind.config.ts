@@ -107,8 +107,20 @@ export default {
           "100%": { transform: "translateX(100%)" },
         },
         "shimmer": {
-          "0%": { transform: "translateX(-100%)" },
-          "100%": { transform: "translateX(100%)" },
+          "0%": {
+            "background-position": "-200% 0"
+          },
+          "100%": {
+            "background-position": "200% 0"
+          }
+        },
+        "bounce-typing": {
+          "0%, 60%, 100%": {
+            transform: "translateY(0)"
+          },
+          "30%": {
+            transform: "translateY(-10px)"
+          }
         },
       },
       animation: {
@@ -120,7 +132,8 @@ export default {
         "scale-out": "scale-out 0.3s ease-out",
         "slide-in": "slide-in 0.3s ease-out",
         "slide-out": "slide-out 0.3s ease-out",
-        "shimmer": "shimmer 2s infinite",
+        "shimmer": "shimmer 2s ease-in-out infinite",
+        "bounce-typing": "bounce-typing 1.4s ease-in-out infinite",
         enter: "fade-in 0.5s ease-out, scale-in 0.3s ease-out",
         exit: "fade-out 0.5s ease-out, scale-out 0.3s ease-out",
       },
