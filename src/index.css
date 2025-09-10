@@ -9,13 +9,13 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --foreground: 215 25% 27%; /* slate-900 equivalent */
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 215 25% 27%; /* slate-900 equivalent */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover-foreground: 215 25% 27%; /* slate-900 equivalent */
 
     --primary: 262 83% 58%;
     --primary-foreground: 210 40% 98%;
