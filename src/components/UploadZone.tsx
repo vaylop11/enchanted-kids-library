@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { uploadPDFToSupabase, getUserPDFs } from '@/services/pdfSupabaseService';
+import { uploadPDFToSupabase } from '@/services/pdfSupabaseService';
+import { usePDFLimits } from '@/hooks/usePDFLimits';
+import PDFUpgradeCard from './PDFUpgradeCard';
 
 const UploadZone = () => {
   const { language } = useLanguage();
@@ -16,21 +18,18 @@ const UploadZone = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [userPDFCount, setUserPDFCount] = useState(0);
+  const { 
+    current_pdf_count, 
+    max_pdfs, 
+    max_file_size_mb, 
+    isUnlimited, 
+    canUploadPDF, 
+    refreshLimits,
+    isLoading: limitsLoading 
+  } = usePDFLimits();
   
   useEffect(() => {
-    if (user) {
-      const checkUserPDFs = async () => {
-        try {
-          const pdfs = await getUserPDFs(user.id);
-          setUserPDFCount(pdfs.length);
-        } catch (error) {
-          console.error('Error checking user PDFs:', error);
-        }
-      };
-      
-      checkUserPDFs();
-    }
+    // No longer needed - limits are handled by usePDFLimits hook
   }, [user]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,10 +42,21 @@ const UploadZone = () => {
   const handleFileUpload = async (file: File) => {
     setUploadError(null);
     
-    if (user && userPDFCount >= 4) {
-      const errorMsg = language === 'ar' 
-        ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
-        : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.';
+    // Check upload limits using the hook
+    const uploadCheck = canUploadPDF(file.size);
+    if (!uploadCheck.canUpload) {
+      let errorMsg = '';
+      
+      if (uploadCheck.reason === 'file_size') {
+        errorMsg = language === 'ar' 
+          ? `حجم الملف كبير جدًا (الحد الأقصى ${uploadCheck.maxSize} ميجابايت)`
+          : `File size too large (max ${uploadCheck.maxSize}MB)`;
+      } else if (uploadCheck.reason === 'pdf_limit') {
+        errorMsg = language === 'ar' 
+          ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${uploadCheck.maxPdfs}). يرجى ترقية حسابك أو حذف بعض الملفات.`
+          : `You have reached the maximum number of PDFs (${uploadCheck.maxPdfs}). Please upgrade your account or delete some files.`;
+      }
+      
       toast.error(errorMsg);
       setUploadError(errorMsg);
       return;
@@ -55,12 +65,6 @@ const UploadZone = () => {
     if (file.type !== 'application/pdf') {
       toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       setUploadError(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
-      setUploadError(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
       return;
     }
 
@@ -86,7 +90,9 @@ const UploadZone = () => {
         
         if (pdf) {
           toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-          setUserPDFCount(prev => prev + 1);
+          
+          // Refresh limits after successful upload
+          refreshLimits();
           
           setTimeout(() => {
             setIsUploading(false);
@@ -190,10 +196,11 @@ const UploadZone = () => {
   };
 
   const triggerFileInput = () => {
-    if (user && userPDFCount >= 4) {
+    const uploadCheck = canUploadPDF(0); // Check with 0 size first for PDF count limit
+    if (!uploadCheck.canUpload && uploadCheck.reason === 'pdf_limit') {
       const errorMsg = language === 'ar' 
-        ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
-        : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.';
+        ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${uploadCheck.maxPdfs}). يرجى ترقية حسابك أو حذف بعض الملفات.`
+        : `You have reached the maximum number of PDFs (${uploadCheck.maxPdfs}). Please upgrade your account or delete some files.`;
       toast.error(errorMsg);
       setUploadError(errorMsg);
       return;
@@ -219,7 +226,7 @@ const UploadZone = () => {
     navigate('/signin');
   };
 
-  const hasReachedMaxPDFs = user && userPDFCount >= 4;
+  const hasReachedMaxPDFs = !isUnlimited && current_pdf_count >= max_pdfs;
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -272,8 +279,8 @@ const UploadZone = () => {
                 <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-500 mx-auto mb-2" />
                 <p className="text-sm text-amber-800 dark:text-amber-300">
                   {language === 'ar' 
-                    ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
-                    : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.'
+                    ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${max_pdfs}). يرجى ترقية حسابك أو حذف بعض الملفات لتحميل المزيد.`
+                    : `You have reached the maximum number of PDFs (${max_pdfs}). Please upgrade your account or delete some files to upload more.`
                   }
                 </p>
                 <Button 
@@ -333,7 +340,7 @@ const UploadZone = () => {
 ) : (
               <div className="flex flex-col items-center gap-2">
                 <p className="text-sm text-purple-800 font-medium">
-                  {language === 'ar' ? 'الحد الأقصى 10 ميجابايت' : 'Max 10MB'}
+                  {language === 'ar' ? `الحد الأقصى ${max_file_size_mb} ميجابايت` : `Max ${max_file_size_mb}MB`}
                 </p>
 <Button 
   variant="outline" 
@@ -355,10 +362,15 @@ const UploadZone = () => {
                 
                 {user ? (
                   <p className="text-xs text-muted-foreground mt-2">
-                    {language === 'ar'
-                      ? `${userPDFCount}/4 ملفات تم تحميلها`
-                      : `${userPDFCount}/4 PDFs uploaded`
-                    }
+                    {isUnlimited ? (
+                      language === 'ar'
+                        ? `${current_pdf_count} ملف محمل - رفع غير محدود`
+                        : `${current_pdf_count} PDFs uploaded - Unlimited`
+                    ) : (
+                      language === 'ar'
+                        ? `${current_pdf_count}/${max_pdfs} ملفات تم تحميلها`
+                        : `${current_pdf_count}/${max_pdfs} PDFs uploaded`
+                    )}
                   </p>
                 ) : (
                   <p className="text-xs text-amber-600 mt-2">
@@ -371,6 +383,13 @@ const UploadZone = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+      
+      {/* Show upgrade card for free users */}
+      {user && !limitsLoading && !isUnlimited && (
+        <div className="mt-6">
+          <PDFUpgradeCard />
         </div>
       )}
       
