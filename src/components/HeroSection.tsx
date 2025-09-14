@@ -36,7 +36,7 @@ const HeroSection = () => {
           {/* Headline */}
           <h1
             id="hero-heading"
-            className="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight text-slate-900"
+            className="text-2xl md:text-4xl font-extrabold leading-tight tracking-tight text-slate-900"
           >
             {language === "ar" ? (
               <>
@@ -54,7 +54,7 @@ const HeroSection = () => {
           {/* Subheadline */}
          <p
           style={{ animationDelay: '0.3s' }}
-          className="mt-6 mb-8 animate-fade-in text-xl text-[#404261] font-medium leading-relaxed max-w-3xl mx-auto bg-white/20 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/30"
+          className="mt-12 mb-12 animate-fade-in text-xl text-[#404261] font-medium leading-relaxed max-w-3xl mx-auto bg-white/20 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/30"
         >
             {language === "ar"
               ? "ارفع أي ملف PDF وتحدث معه بذكاء: اسأل، لخص، استخرج المعلومة، واحصل على استشهادات خلال ثوانٍ — مجانًا مع Gemi ChatPDF."
@@ -66,7 +66,7 @@ const HeroSection = () => {
             <Button
               asChild
               size="lg"
-              className="mt-12 px-8 bg-slate-900 text-primary-foreground rounded-full transition-all duration-300 font-bold"
+              className="mt-12 px-10 bg-slate-900 text-xl text-primary-foreground rounded-full transition-all duration-300 font-bold"
             >
               <Link to="/pdfs">
                 {language === "ar" ? "ابدأ الأن" : "Start Now"}
