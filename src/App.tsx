@@ -16,6 +16,7 @@ import SignIn from "./components/auth/SignIn";
 import SignUp from "./components/auth/SignUp";
 import AuthPage from "./pages/AuthPage";
 import AdminPage from "./pages/AdminPage";
+import AppLayout from "@/components/AppLayout";   // 👈 جديد
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -42,29 +43,37 @@ const App = () => {
               <AdSenseScript />
               <BrowserRouter>
                 <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/pdfs" element={<PDFs />} />
-                  <Route path="/pdf/:id" element={<PDFViewer />} />
-                  <Route path="/pdf/temp/:id" element={<PDFViewer />} />
+                  {/* صفحات داخل AppLayout */}
+                  <Route path="/" element={<AppLayout><Index /></AppLayout>} />
+                  <Route path="/pdfs" element={<AppLayout><PDFs /></AppLayout>} />
+                  <Route path="/pdf/:id" element={<AppLayout><PDFViewer /></AppLayout>} />
+                  <Route path="/pdf/temp/:id" element={<AppLayout><PDFViewer /></AppLayout>} />
                   <Route 
                     path="/translate" 
                     element={
                       <ProtectedRoute>
-                        <TranslatePDF />
+                        <AppLayout><TranslatePDF /></AppLayout>
                       </ProtectedRoute>
                     } 
                   />
-                  <Route path="/translate/:id" element={
-                    <ProtectedRoute>
-                      <TranslatePDF />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                  <Route path="/terms-of-service" element={<TermsOfService />} />
+                  <Route 
+                    path="/translate/:id" 
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><TranslatePDF /></AppLayout>
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route path="/privacy-policy" element={<AppLayout><PrivacyPolicy /></AppLayout>} />
+                  <Route path="/terms-of-service" element={<AppLayout><TermsOfService /></AppLayout>} />
+
+                  {/* صفحات بدون Layout */}
                   <Route path="/signin" element={<AuthPage><SignIn /></AuthPage>} />
                   <Route path="/signup" element={<AuthPage><SignUp /></AuthPage>} />
                   <Route path="/admin" element={<AdminPage />} />
-                  <Route path="*" element={<NotFound />} />
+
+                  {/* Not Found */}
+                  <Route path="*" element={<AppLayout><NotFound /></AppLayout>} />
                 </Routes>
               </BrowserRouter>
             </TooltipProvider>
