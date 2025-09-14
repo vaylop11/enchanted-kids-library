@@ -43,10 +43,13 @@ const Navbar = () => {
       {/* Navbar */}
 <header
   className={cn(
-    "fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out",
-    "bg-transparent"
+    "fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out border-b",
+    isScrolled
+      ? "bg-white shadow-md border-border/20"  // لما يكون scrolling
+      : "bg-transparent border-transparent"    // لما يكون فوق (شفافة)
   )}
 >
+
 
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex h-16 sm:h-18 items-center justify-between">
