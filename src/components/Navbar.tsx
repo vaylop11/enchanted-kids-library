@@ -49,8 +49,6 @@ const Navbar = () => {
           : 'bg-background/80 backdrop-blur-sm'
       )}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-          <div className="flex h-16 sm:h-18 items-center justify-between">
-
 {/* Logo */}
 <Link 
   to="/" 
@@ -210,7 +208,6 @@ const Navbar = () => {
                           </Button>
                         )}
                       </div>
-                    </div>
                   </div>
                 </DrawerContent>
               </Drawer>
