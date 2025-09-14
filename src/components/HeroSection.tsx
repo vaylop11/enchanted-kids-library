@@ -36,17 +36,17 @@ const HeroSection = () => {
           {/* Headline */}
           <h1
             id="hero-heading"
-            className="text-2xl md:text-4xl font-extrabold leading-tight tracking-tight text-slate-900"
+            className="text-3xl md:text-6xl font-extrabold leading-tight tracking-tight text-slate-900"
           >
             {language === "ar" ? (
               <>
-                <span className="block">الأذكى، مدعومة بالذكاء الاصطناعي</span>
                 <span className="block">لدردشة ملفات PDF — Gemi ChatPDF</span>
+                <span className="block">الأذكى، مدعومة بالذكاء الاصطناعي</span>
               </>
             ) : (
               <>
+                <span className="block">Gemi ChatPDF</span>
                 <span className="block">The Smarter, AI-Powered</span>
-                <span className="block">PDF Chat — Gemi ChatPDF</span>
               </>
             )}
           </h1>
@@ -66,7 +66,7 @@ const HeroSection = () => {
             <Button
               asChild
               size="lg"
-              className="mt-12 px-10 bg-slate-900 text-xl text-primary-foreground rounded-full transition-all duration-300 font-bold"
+              className="mt-12 px-8 bg-slate-900 text-lg text-primary-foreground rounded-full transition-all duration-300 font-bold"
             >
               <Link to="/pdfs">
                 {language === "ar" ? "ابدأ الأن" : "Start Now"}
