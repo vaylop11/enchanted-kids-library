@@ -52,7 +52,10 @@ const HeroSection = () => {
           </h1>
 
           {/* Subheadline */}
-          <p className="text-lg md:text-xl text-slate-600 max-w-2xl">
+         <p
+          style={{ animationDelay: '0.3s' }}
+          className="mt-6 mb-8 animate-fade-in text-xl text-[#404261] font-medium leading-relaxed max-w-3xl mx-auto bg-white/20 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/30"
+        >
             {language === "ar"
               ? "ارفع أي ملف PDF وتحدث معه بذكاء: اسأل، لخص، استخرج المعلومة، واحصل على استشهادات خلال ثوانٍ — مجانًا مع Gemi ChatPDF."
               : "Upload any PDF and chat with it intelligently: ask questions, get summaries, extract facts, and cite sources in seconds — free with Gemi ChatPDF."}
