@@ -476,6 +476,7 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
         </div>
       </div>
     </TooltipProvider>
+<div className="h-16 sm:h-18 mb-4 sm:mb-6" />
   );
 };
 
