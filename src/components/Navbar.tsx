@@ -41,188 +41,183 @@ const Navbar = () => {
   return (
     <>
       {/* Navbar */}
-      <header
-        className={cn(
-          'fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out',
-          'border-b border-border/10',
-          isScrolled
-            ? 'bg-background/95 backdrop-blur-lg shadow-lg border-border/20'
-            : 'bg-background/80 backdrop-blur-sm'
-        )}
-      >
+      <header className={cn(
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out',
+        'border-b border-border/10',
+        isScrolled 
+          ? 'bg-background/95 backdrop-blur-lg shadow-lg border-border/20' 
+          : 'bg-background/80 backdrop-blur-sm'
+      )}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          <div className="flex h-16 sm:h-18 items-center justify-between">
 
-          {/* Logo */}
-          <Link
-            to="/"
-            className="flex items-center gap-2 sm:gap-3 transition-all duration-300 hover:scale-105 group flex-shrink-0"
-            aria-label="ChatPDF Home"
-          >
-            <img
-              src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/LOGO3D.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85YWQzN2RiZS1kZTE3LTRhNWMtOGNkYi1hOGZlOTE2NjAzYjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWcvTE9HTzNELnBuZyIsImlhdCI6MTc1NzQ0NTE1MiwiZXhwIjo0ODc5NTA5MTUyfQ.y_RRqkyKsJZbEQlyjQlKX-ozATUyEvVVu2vEZl4FSPY"
-              alt="Logo"
-              className="h-10 sm:h-12 w-auto object-contain"
-            />
-          </Link>
+{/* Logo */}
+<Link 
+  to="/" 
+  className="flex items-center gap-2 sm:gap-3 transition-all duration-300 hover:scale-105 group flex-shrink-0" 
+  aria-label="ChatPDF Home"
+>
+  <img 
+    src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/LOGO3D.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85YWQzN2RiZS1kZTE3LTRhNWMtOGNkYi1hOGZlOTE2NjAzYjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWcvTE9HTzNELnBuZyIsImlhdCI6MTc1NzQ0NTE1MiwiZXhwIjo0ODc5NTA5MTUyfQ.y_RRqkyKsJZbEQlyjQlKX-ozATUyEvVVu2vEZl4FSPY" 
+    alt="Logo" 
+    className="h-10 sm:h-12 w-auto object-contain"
+  />
+</Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-6 xl:space-x-8">
-            <NavigationMenu className="z-[49]">
-              <NavigationMenuList
-                className={`${direction === 'rtl' ? 'space-x-reverse' : ''} space-x-1`}
-              >
-                <NavigationMenuItem>
-                  <Link to="/">
-                    <NavigationMenuLink
-                      className={cn(
-                        navigationMenuTriggerStyle(),
-                        'px-4 py-2 text-sm font-medium rounded-md transition-all duration-300',
-                        'hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20',
-                        location.pathname === '/'
-                          ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-primary/20'
-                          : ''
-                      )}
-                    >
-                      {t('home')}
-                    </NavigationMenuLink>
-                  </Link>
-                </NavigationMenuItem>
-                <NavigationMenuItem>
-                  <Link to="/pdfs">
-                    <NavigationMenuLink
-                      className={cn(
-                        navigationMenuTriggerStyle(),
-                        'px-4 py-2 text-sm font-medium rounded-md transition-all duration-300',
-                        'hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20',
-                        location.pathname === '/pdfs'
-                          ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-primary/20'
-                          : ''
-                      )}
-                    >
-                      {t('pdfs')}
-                    </NavigationMenuLink>
-                  </Link>
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
 
-            <div className="flex items-center space-x-3 xl:space-x-4 border-l border-border/20 pl-4 xl:pl-6">
-              <LanguageSwitcher />
-              {user ? (
-                <UserProfileMenu />
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/signin')}
-                  className="rounded-full px-4 xl:px-6 py-2 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary/20 hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-                >
-                  {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile Navigation */}
-          <div className="lg:hidden flex items-center space-x-2 sm:space-x-3">
-            <div className="hidden sm:block">
-              <LanguageSwitcher />
-            </div>
-            {user && (
-              <div className="hidden sm:block">
-                <UserProfileMenu />
-              </div>
-            )}
-
-            <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-              <DrawerTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105 p-2"
-                  aria-label={isDrawerOpen ? 'Close menu' : 'Open menu'}
-                >
-                  <div className="relative">
-                    {isDrawerOpen ? (
-                      <X className="h-5 w-5 transition-all duration-300" />
-                    ) : (
-                      <Menu className="h-5 w-5 transition-all duration-300" />
-                    )}
-                  </div>
-                </Button>
-              </DrawerTrigger>
-
-              <DrawerContent className="h-[85vh] sm:h-[90vh] rounded-t-3xl bg-background/95 backdrop-blur-lg border-t border-border/20">
-                <div className="px-4 sm:px-6 py-6 sm:py-8 h-full overflow-y-auto">
-                  <div className="flex flex-col items-center space-y-6 sm:space-y-8 text-center">
-                    {/* Mobile Logo */}
-                    <Link
-                      to="/"
-                      className="flex flex-col items-center transition-all duration-300 hover:scale-105 group"
-                      onClick={() => setIsDrawerOpen(false)}
-                      aria-label="ChatPDF Home"
-                    >
-                      <img
-                        src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/LOGO3D.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85YWQzN2RiZS1kZTE3LTRhNWMtOGNkYi1hOGZlOTE2NjAzYjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWcvTE9HTzNELnBuZyIsImlhdCI6MTc1NzQ0NTE1MiwiZXhwIjo0ODc5NTA5MTUyfQ.y_RRqkyKsJZbEQlyjQlKX-ozATUyEvVVu2vEZl4FSPY"
-                        alt="Logo"
-                        className="h-14 sm:h-16 w-auto object-contain mb-3 sm:mb-4"
-                      />
-                    </Link>
-
-                    {/* Mobile Navigation Links */}
-                    <nav className="flex flex-col items-center space-y-3 sm:space-y-4 w-full max-w-sm">
-                      <Link
-                        to="/"
-                        onClick={() => setIsDrawerOpen(false)}
-                        className={cn(
-                          'w-full px-6 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-2xl transition-all duration-300 hover:scale-105',
-                          location.pathname === '/'
-                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
-                            : 'hover:bg-primary/10 hover:text-primary border border-border/20 hover:border-primary/30 bg-card/50'
-                        )}
-                      >
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center space-x-6 xl:space-x-8">
+              <NavigationMenu className="z-[49]">
+                <NavigationMenuList className={`${direction === 'rtl' ? 'space-x-reverse' : ''} space-x-1`}>
+                  <NavigationMenuItem>
+                    <Link to="/">
+                      <NavigationMenuLink className={cn(
+                        navigationMenuTriggerStyle(), 
+                        "px-4 py-2 text-sm font-medium rounded-md transition-all duration-300",
+                        "hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20",
+                        location.pathname === '/' 
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-primary/20" 
+                          : ""
+                      )}>
                         {t('home')}
-                      </Link>
-                      <Link
-                        to="/pdfs"
-                        onClick={() => setIsDrawerOpen(false)}
-                        className={cn(
-                          'w-full px-6 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-2xl transition-all duration-300 hover:scale-105',
-                          location.pathname === '/pdfs'
-                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
-                            : 'hover:bg-primary/10 hover:text-primary border border-border/20 hover:border-primary/30 bg-card/50'
-                        )}
-                      >
+                      </NavigationMenuLink>
+                    </Link>
+                  </NavigationMenuItem>
+                  <NavigationMenuItem>
+                    <Link to="/pdfs">
+                      <NavigationMenuLink className={cn(
+                        navigationMenuTriggerStyle(), 
+                        "px-4 py-2 text-sm font-medium rounded-md transition-all duration-300",
+                        "hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20",
+                        location.pathname === '/pdfs' 
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-primary/20" 
+                          : ""
+                      )}>
                         {t('pdfs')}
-                      </Link>
-                    </nav>
+                      </NavigationMenuLink>
+                    </Link>
+                  </NavigationMenuItem>
+                </NavigationMenuList>
+              </NavigationMenu>
+              
+              <div className="flex items-center space-x-3 xl:space-x-4 border-l border-border/20 pl-4 xl:pl-6">
+                <LanguageSwitcher />
+                {user ? (
+                  <UserProfileMenu />
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate('/signin')} 
+                    className="rounded-full px-4 xl:px-6 py-2 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg border-primary/20 hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                  >
+                    {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
+                  </Button>
+                )}
+              </div>
+            </div>
 
-                    {/* Mobile Actions */}
-                    <div className="flex flex-col items-center space-y-4 w-full max-w-sm pt-4 border-t border-border/20">
-                      <div className="sm:hidden flex items-center space-x-4">
-                        <LanguageSwitcher />
-                        {user && <UserProfileMenu />}
-                      </div>
-
-                      {!user && (
-                        <Button
-                          onClick={() => {
-                            navigate('/signin');
-                            setIsDrawerOpen(false);
-                          }}
-                          className="w-full rounded-2xl py-3 sm:py-4 text-base font-medium transition-all duration-300 hover:scale-105 shadow-lg"
-                        >
-                          {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
-                        </Button>
+            {/* Mobile Navigation */}
+            <div className="lg:hidden flex items-center space-x-2 sm:space-x-3">
+              <div className="hidden sm:block">
+                <LanguageSwitcher />
+              </div>
+              {user && (
+                <div className="hidden sm:block">
+                  <UserProfileMenu />
+                </div>
+              )}
+              
+              <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+                <DrawerTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="relative rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105 p-2"
+                    aria-label={isDrawerOpen ? "Close menu" : "Open menu"}
+                  >
+                    <div className="relative">
+                      {isDrawerOpen ? (
+                        <X className="h-5 w-5 transition-all duration-300" />
+                      ) : (
+                        <Menu className="h-5 w-5 transition-all duration-300" />
                       )}
                     </div>
+                  </Button>
+                </DrawerTrigger>
+                
+                <DrawerContent className="h-[85vh] sm:h-[90vh] rounded-t-3xl bg-background/95 backdrop-blur-lg border-t border-border/20">
+                  <div className="px-4 sm:px-6 py-6 sm:py-8 h-full overflow-y-auto">
+                    <div className="flex flex-col items-center space-y-6 sm:space-y-8 text-center">
+{/* Mobile Logo */}
+<Link 
+  to="/" 
+  className="flex flex-col items-center transition-all duration-300 hover:scale-105 group" 
+  onClick={() => setIsDrawerOpen(false)} 
+  aria-label="ChatPDF Home"
+>
+  <img 
+    src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/LOGO3D.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85YWQzN2RiZS1kZTE3LTRhNWMtOGNkYi1hOGZlOTE2NjAzYjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWcvTE9HTzNELnBuZyIsImlhdCI6MTc1NzQ0NTE1MiwiZXhwIjo0ODc5NTA5MTUyfQ.y_RRqkyKsJZbEQlyjQlKX-ozATUyEvVVu2vEZl4FSPY" 
+    alt="Logo" 
+    className="h-14 sm:h-16 w-auto object-contain mb-3 sm:mb-4"
+  />
+</Link>
+
+                      
+                      {/* Mobile Navigation Links */}
+                      <nav className="flex flex-col items-center space-y-3 sm:space-y-4 w-full max-w-sm">
+                        <Link 
+                          to="/" 
+                          onClick={() => setIsDrawerOpen(false)} 
+                          className={cn(
+                            "w-full px-6 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-2xl transition-all duration-300 hover:scale-105",
+                            location.pathname === '/' 
+                              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" 
+                              : "hover:bg-primary/10 hover:text-primary border border-border/20 hover:border-primary/30 bg-card/50"
+                          )}
+                        >
+                          {t('home')}
+                        </Link>
+                        <Link 
+                          to="/pdfs" 
+                          onClick={() => setIsDrawerOpen(false)} 
+                          className={cn(
+                            "w-full px-6 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-2xl transition-all duration-300 hover:scale-105",
+                            location.pathname === '/pdfs' 
+                              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" 
+                              : "hover:bg-primary/10 hover:text-primary border border-border/20 hover:border-primary/30 bg-card/50"
+                          )}
+                        >
+                          {t('pdfs')}
+                        </Link>
+                      </nav>
+
+                      {/* Mobile Actions */}
+                      <div className="flex flex-col items-center space-y-4 w-full max-w-sm pt-4 border-t border-border/20">
+                        <div className="sm:hidden flex items-center space-x-4">
+                          <LanguageSwitcher />
+                          {user && <UserProfileMenu />}
+                        </div>
+                        
+                        {!user && (
+                          <Button 
+                            onClick={() => {
+                              navigate('/signin');
+                              setIsDrawerOpen(false);
+                            }} 
+                            className="w-full rounded-2xl py-3 sm:py-4 text-base font-medium transition-all duration-300 hover:scale-105 shadow-lg"
+                          >
+                            {language === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </DrawerContent>
-            </Drawer>
+                </DrawerContent>
+              </Drawer>
+            </div>
           </div>
         </div>
       </header>
-      <div className="h-16 sm:h-18 mb-4 sm:mb-6" />
     </>
   );
 };
