@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useReducer, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { ArrowLeft, FileText, MessageSquare, Bot, Sparkles, Search, RotateCcw, Copy, RefreshCw } from 'lucide-react';
+import { ArrowLeft, FileText, MessageSquare, Bot, Sparkles, Search, RotateCcw, Copy, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
@@ -29,6 +29,173 @@ import {
   analyzePDFWithGemini,
   AnalysisProgress
 } from '@/services/pdfAnalysisService';
+import { ErrorBoundary } from 'react-error-boundary';
+
+// State Management with useReducer
+interface PDFViewerState {
+  pdf: UploadedPDF | null;
+  chatMessages: SmartChatMessage[];
+  isLoadingPdf: boolean;
+  pdfError: string | null;
+  isTempPdf: boolean;
+  pdfTextContent: string | null;
+  isAnalyzing: boolean;
+  analysisProgress: AnalysisProgress;
+  retryCount: number;
+}
+
+enum PDFViewerActionType {
+  SET_LOADING = 'SET_LOADING',
+  SET_PDF = 'SET_PDF',
+  SET_ERROR = 'SET_ERROR',
+  SET_CHAT_MESSAGES = 'SET_CHAT_MESSAGES',
+  ADD_CHAT_MESSAGE = 'ADD_CHAT_MESSAGE',
+  SET_ANALYZING = 'SET_ANALYZING',
+  SET_ANALYSIS_PROGRESS = 'SET_ANALYSIS_PROGRESS',
+  SET_PDF_CONTENT = 'SET_PDF_CONTENT',
+  RESET_CHAT = 'RESET_CHAT',
+  SET_TEMP_PDF = 'SET_TEMP_PDF',
+  INCREMENT_RETRY = 'INCREMENT_RETRY',
+  RESET_STATE = 'RESET_STATE'
+}
+
+interface PDFViewerAction {
+  type: PDFViewerActionType;
+  payload?: any;
+}
+
+const initialState: PDFViewerState = {
+  pdf: null,
+  chatMessages: [],
+  isLoadingPdf: true,
+  pdfError: null,
+  isTempPdf: false,
+  pdfTextContent: null,
+  isAnalyzing: false,
+  analysisProgress: {
+    stage: 'extracting',
+    progress: 0,
+    message: 'Preparing to analyze PDF...'
+  },
+  retryCount: 0
+};
+
+const pdfViewerReducer = (state: PDFViewerState, action: PDFViewerAction): PDFViewerState => {
+  switch (action.type) {
+    case PDFViewerActionType.SET_LOADING:
+      return { ...state, isLoadingPdf: action.payload, pdfError: null };
+    
+    case PDFViewerActionType.SET_PDF:
+      return { 
+        ...state, 
+        pdf: action.payload, 
+        isLoadingPdf: false, 
+        pdfError: null 
+      };
+    
+    case PDFViewerActionType.SET_ERROR:
+      return { 
+        ...state, 
+        pdfError: action.payload, 
+        isLoadingPdf: false 
+      };
+    
+    case PDFViewerActionType.SET_CHAT_MESSAGES:
+      return { ...state, chatMessages: action.payload };
+    
+    case PDFViewerActionType.ADD_CHAT_MESSAGE:
+      return { 
+        ...state, 
+        chatMessages: [...state.chatMessages, action.payload] 
+      };
+    
+    case PDFViewerActionType.SET_ANALYZING:
+      return { ...state, isAnalyzing: action.payload };
+    
+    case PDFViewerActionType.SET_ANALYSIS_PROGRESS:
+      return { ...state, analysisProgress: action.payload };
+    
+    case PDFViewerActionType.SET_PDF_CONTENT:
+      return { ...state, pdfTextContent: action.payload };
+    
+    case PDFViewerActionType.RESET_CHAT:
+      return { 
+        ...state, 
+        chatMessages: [], 
+        pdfTextContent: null 
+      };
+    
+    case PDFViewerActionType.SET_TEMP_PDF:
+      return { ...state, isTempPdf: action.payload };
+    
+    case PDFViewerActionType.INCREMENT_RETRY:
+      return { ...state, retryCount: state.retryCount + 1 };
+    
+    case PDFViewerActionType.RESET_STATE:
+      return initialState;
+    
+    default:
+      return state;
+  }
+};
+
+// Error Fallback Component
+const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => {
+  const { language } = useLanguage();
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
+      <Card className="max-w-md p-6 text-center space-y-4">
+        <div className="p-4 bg-destructive/10 rounded-full w-fit mx-auto">
+          <AlertTriangle className="h-8 w-8 text-destructive" />
+        </div>
+        <h2 className="text-xl font-semibold">
+          {language === 'ar' ? 'حدث خطأ غير متوقع' : 'Something went wrong'}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {language === 'ar' ? 'نعتذر، حدث خطأ أثناء تحميل التطبيق' : 'Sorry, an error occurred while loading the application'}
+        </p>
+        <div className="flex gap-2 justify-center">
+          <Button onClick={resetErrorBoundary} size="sm">
+            {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            {language === 'ar' ? 'إعادة تحميل الصفحة' : 'Reload Page'}
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+// Enhanced Loading Component with Skeleton
+const LoadingComponent = ({ language }: { language: string }) => (
+  <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+    <Navbar />
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-6 max-w-md">
+          <div className="relative">
+            <div className="h-16 w-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto" />
+            <FileText className="absolute inset-0 h-16 w-16 text-primary/20 mx-auto animate-pulse" />
+          </div>
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold animate-pulse">
+              {language === 'ar' ? 'جاري تحميل المستند...' : 'Loading document...'}
+            </h3>
+            <p className="text-muted-foreground text-sm">
+              {language === 'ar' ? 'يرجى الانتظار بينما نقوم بتحضير مستندك' : 'Please wait while we prepare your document'}
+            </p>
+            {/* Progress Skeleton */}
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+              <div className="bg-primary h-full animate-pulse" style={{ width: '60%' }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,22 +203,11 @@ const PDFViewer = () => {
   const { language } = useLanguage();
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  
-  const [chatMessages, setChatMessages] = useState<SmartChatMessage[]>([]);
-  const [pdf, setPdf] = useState<UploadedPDF | null>(null);
-  const [isLoadingPdf, setIsLoadingPdf] = useState(true);
-  const [pdfError, setPdfError] = useState<string | null>(null);
-  const [isTempPdf, setIsTempPdf] = useState(false);
-  const [pdfTextContent, setPdfTextContent] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>({
-    stage: 'extracting',
-    progress: 0,
-    message: 'Preparing to analyze PDF...'
-  });
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [state, dispatch] = useReducer(pdfViewerReducer, initialState);
 
-  // Enhanced quick actions for better user value
-  const quickActions = [
+  // Memoized quick actions for better performance
+  const quickActions = useMemo(() => [
     {
       id: 'summarize',
       icon: FileText,
@@ -80,66 +236,78 @@ const PDFViewer = () => {
       color: 'bg-green-500/10 text-green-600 border-green-200 hover:bg-green-500/20',
       prompt: language === 'ar' ? 'ما هي الأفكار والاستنتاجات الذكية من هذا المستند؟' : 'What are the smart insights and conclusions from this document?'
     }
-  ];
+  ], [language]);
 
-  // Convert old ChatMessage to SmartChatMessage
-  const convertToSmartMessage = (msg: ChatMessage): SmartChatMessage => ({
+  // Enhanced convert function with error handling
+  const convertToSmartMessage = useCallback((msg: ChatMessage): SmartChatMessage => ({
     id: msg.id || uuidv4(),
     content: msg.content,
     isUser: msg.isUser,
     timestamp: msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp),
-  });
+  }), []);
 
-  // Load PDF from Supabase
-  const tryLoadFromSupabase = async (): Promise<boolean> => {
+  // Enhanced Supabase loading with retry mechanism
+  const tryLoadFromSupabase = useCallback(async (signal: AbortSignal): Promise<boolean> => {
     if (!user || !id) return false;
     
     try {
       const supabasePdf = await getSupabasePDFById(id);
+      if (signal.aborted) return false;
+      
       if (supabasePdf) {
-        console.log('PDF found in Supabase:', supabasePdf);
-        // Convert SupabasePDF to UploadedPDF format
         const uploadedPdf: UploadedPDF = {
           ...supabasePdf,
           dataUrl: supabasePdf.fileUrl || ''
         };
-        setPdf(uploadedPdf);
-        setIsLoadingPdf(false);
+        
+        dispatch({ type: PDFViewerActionType.SET_PDF, payload: uploadedPdf });
         
         // Load chat messages
         const messages = await getChatMessagesForPDF(id);
-        setChatMessages(messages.map(convertToSmartMessage));
+        if (signal.aborted) return false;
+        
+        dispatch({ 
+          type: PDFViewerActionType.SET_CHAT_MESSAGES, 
+          payload: messages.map(convertToSmartMessage) 
+        });
         
         return true;
       }
     } catch (error) {
-      console.error('Error loading PDF from Supabase:', error);
+      if (!signal.aborted) {
+        console.error('Error loading PDF from Supabase:', error);
+        toast.error(language === 'ar' ? 'خطأ في تحميل المستند من السحابة' : 'Error loading document from cloud');
+      }
     }
     
     return false;
-  };
+  }, [user, id, convertToSmartMessage, language]);
 
-  // Load PDF and messages on component mount
-  useEffect(() => {
+  // Enhanced PDF loading with proper cleanup
+  const loadPdf = useCallback(async (signal: AbortSignal) => {
     if (!id) {
       navigate('/');
       return;
     }
 
-    const loadPdf = async () => {
-      console.log('Loading PDF with ID:', id);
-      
+    dispatch({ type: PDFViewerActionType.SET_LOADING, payload: true });
+
+    try {
+      // Handle temp PDFs
       if (id.startsWith('temp-') || window.location.pathname.includes('/pdf/temp/')) {
-        setIsTempPdf(true);
+        dispatch({ type: PDFViewerActionType.SET_TEMP_PDF, payload: true });
+        
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
-        if (tempPdfData) {
+        if (tempPdfData && !signal.aborted) {
           try {
             const parsedData = JSON.parse(tempPdfData);
             if (parsedData.fileData && parsedData.fileData.id === id) {
-              setPdf(parsedData.fileData);
+              dispatch({ type: PDFViewerActionType.SET_PDF, payload: parsedData.fileData });
               const messages = parsedData.fileData.chatMessages || [];
-              setChatMessages(messages.map(convertToSmartMessage));
-              setIsLoadingPdf(false);
+              dispatch({ 
+                type: PDFViewerActionType.SET_CHAT_MESSAGES, 
+                payload: messages.map(convertToSmartMessage) 
+              });
               return;
             }
           } catch (error) {
@@ -147,37 +315,71 @@ const PDFViewer = () => {
           }
         }
         
-        setPdfError('Temporary PDF not found. It may have expired.');
-        setIsLoadingPdf(false);
+        if (!signal.aborted) {
+          dispatch({ 
+            type: PDFViewerActionType.SET_ERROR, 
+            payload: language === 'ar' ? 'المستند المؤقت غير موجود. قد تكون صلاحيته منتهية.' : 'Temporary PDF not found. It may have expired.' 
+          });
+        }
         return;
       }
 
-      // Try loading from Supabase first if user is authenticated
+      // Try Supabase first if user is authenticated
       if (user) {
-        const success = await tryLoadFromSupabase();
-        if (success) return;
+        const success = await tryLoadFromSupabase(signal);
+        if (success || signal.aborted) return;
       }
 
-      // Fallback to local storage
+      // Fallback to localStorage
       const localPdf = getPDFById(id);
-      if (localPdf) {
-        console.log('PDF found in localStorage:', localPdf);
-        setPdf(localPdf);
+      if (localPdf && !signal.aborted) {
+        dispatch({ type: PDFViewerActionType.SET_PDF, payload: localPdf });
         const messages = localPdf.chatMessages || [];
-        setChatMessages(messages.map(convertToSmartMessage));
-        setIsLoadingPdf(false);
-      } else {
-        console.log('PDF not found in localStorage with ID:', id);
-        setPdfError('PDF not found. It may have been deleted or expired.');
-        setIsLoadingPdf(false);
+        dispatch({ 
+          type: PDFViewerActionType.SET_CHAT_MESSAGES, 
+          payload: messages.map(convertToSmartMessage) 
+        });
+      } else if (!signal.aborted) {
+        dispatch({ 
+          type: PDFViewerActionType.SET_ERROR, 
+          payload: language === 'ar' ? 'المستند غير موجود. قد يكون قد تم حذفه أو انتهت صلاحيته.' : 'PDF not found. It may have been deleted or expired.' 
+        });
+      }
+
+    } catch (error) {
+      if (!signal.aborted) {
+        console.error('Error loading PDF:', error);
+        dispatch({ 
+          type: PDFViewerActionType.SET_ERROR, 
+          payload: language === 'ar' ? 'خطأ في تحميل المستند' : 'Error loading document' 
+        });
+      }
+    }
+  }, [id, user, navigate, tryLoadFromSupabase, convertToSmartMessage, language]);
+
+  // Effect with proper cleanup
+  useEffect(() => {
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller
+    abortControllerRef.current = new AbortController();
+    const { signal } = abortControllerRef.current;
+
+    loadPdf(signal);
+
+    // Cleanup function
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
     };
+  }, [loadPdf]);
 
-    loadPdf();
-  }, [id, user, navigate]);
-
-  // Save message to storage
-  const saveMessage = async (messageContent: string, isUser: boolean): Promise<SmartChatMessage | null> => {
+  // Enhanced save message with better error handling
+  const saveMessage = useCallback(async (messageContent: string, isUser: boolean): Promise<SmartChatMessage | null> => {
     const newMessage: SmartChatMessage = {
       id: uuidv4(),
       content: messageContent,
@@ -185,9 +387,8 @@ const PDFViewer = () => {
       timestamp: new Date()
     };
 
-    if (isTempPdf) {
-      // For temp PDFs, save to sessionStorage
-      try {
+    try {
+      if (state.isTempPdf) {
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
         if (tempPdfData) {
           const parsedData = JSON.parse(tempPdfData);
@@ -197,164 +398,145 @@ const PDFViewer = () => {
           parsedData.fileData.chatMessages.push(newMessage);
           sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
         }
-      } catch (error) {
-        console.error('Error saving message to sessionStorage:', error);
+      } else if (user && state.pdf?.id) {
+        await addSupabaseChatMessage(state.pdf.id, newMessage.content, newMessage.isUser);
+      } else if (state.pdf?.id) {
+        addChatMessageToPDF(state.pdf.id, { 
+          content: newMessage.content, 
+          isUser: newMessage.isUser, 
+          timestamp: new Date() 
+        });
       }
-    } else if (user && pdf?.id) {
-      // Save to Supabase for authenticated users
-      try {
-        await addSupabaseChatMessage(pdf.id, newMessage.content, newMessage.isUser);
-      } catch (error) {
-        console.error('Error saving message to Supabase:', error);
-        toast.error('Failed to save message to cloud storage');
-      }
-    } else if (pdf?.id) {
-      // Save to localStorage for unauthenticated users
-      try {
-        addChatMessageToPDF(pdf.id, { content: newMessage.content, isUser: newMessage.isUser, timestamp: new Date() });
-      } catch (error) {
-        console.error('Error saving message to localStorage:', error);
-        toast.error('Failed to save message');
-      }
+    } catch (error) {
+      console.error('Error saving message:', error);
+      toast.error(language === 'ar' ? 'فشل في حفظ الرسالة' : 'Failed to save message');
+      return null;
     }
 
     return newMessage;
-  };
+  }, [state.isTempPdf, state.pdf?.id, user, language]);
 
-  // Extract PDF content for analysis
-  const extractPDFContent = async (): Promise<string> => {
-    if (pdfTextContent) {
-      return pdfTextContent;
+  // Enhanced PDF content extraction with caching
+  const extractPDFContent = useCallback(async (): Promise<string> => {
+    if (state.pdfTextContent) {
+      return state.pdfTextContent;
     }
 
-    if (!pdf?.dataUrl) {
+    if (!state.pdf?.dataUrl) {
       throw new Error('PDF data not available');
     }
 
     try {
-      const extractedText = await extractTextFromPDF(pdf.dataUrl, pdf.id);
-      setPdfTextContent(extractedText);
+      const extractedText = await extractTextFromPDF(state.pdf.dataUrl, state.pdf.id);
+      dispatch({ type: PDFViewerActionType.SET_PDF_CONTENT, payload: extractedText });
       return extractedText;
     } catch (error) {
       console.error('Error extracting PDF content:', error);
-      throw new Error('Failed to extract PDF content');
+      throw new Error(language === 'ar' ? 'فشل في استخراج محتوى المستند' : 'Failed to extract PDF content');
     }
-  };
+  }, [state.pdfTextContent, state.pdf, language]);
 
-  // Handle chat submission
-  const handleChatSubmit = async (message: string) => {
-    if (!pdf) {
-      toast.error('PDF not loaded');
+  // Enhanced chat submission with better error handling
+  const handleChatSubmit = useCallback(async (message: string) => {
+    if (!state.pdf) {
+      toast.error(language === 'ar' ? 'المستند غير محمل' : 'PDF not loaded');
       return;
     }
 
-    // Add user message immediately
+    // Add user message
     const userMessage = await saveMessage(message, true);
     if (userMessage) {
-      setChatMessages(prev => [...prev, userMessage]);
+      dispatch({ type: PDFViewerActionType.ADD_CHAT_MESSAGE, payload: userMessage });
     }
 
-    setIsAnalyzing(true);
+    dispatch({ type: PDFViewerActionType.SET_ANALYZING, payload: true });
 
     try {
-      // Extract PDF content if not already done
       const pdfContent = await extractPDFContent();
       
-      // Analyze with Gemini
       const response = await analyzePDFWithGemini(
         pdfContent,
         message,
         (progress) => {
-          setAnalysisProgress(progress);
+          dispatch({ type: PDFViewerActionType.SET_ANALYSIS_PROGRESS, payload: progress });
         }
       );
 
-      // Add assistant response
       const assistantMessage = await saveMessage(response, false);
       if (assistantMessage) {
-        setChatMessages(prev => [...prev, assistantMessage]);
+        dispatch({ type: PDFViewerActionType.ADD_CHAT_MESSAGE, payload: assistantMessage });
       }
 
     } catch (error) {
       console.error('Error during analysis:', error);
-      toast.error('Failed to analyze PDF. Please try again.');
+      toast.error(language === 'ar' ? 'فشل في تحليل المستند. يرجى المحاولة مرة أخرى.' : 'Failed to analyze PDF. Please try again.');
       
-      // Add error message
       const errorMessage = await saveMessage(
         language === 'ar' ? 'عذراً، حدث خطأ أثناء تحليل المستند. يرجى المحاولة مرة أخرى.' : 'Sorry, an error occurred while analyzing the document. Please try again.',
         false
       );
       if (errorMessage) {
-        setChatMessages(prev => [...prev, errorMessage]);
+        dispatch({ type: PDFViewerActionType.ADD_CHAT_MESSAGE, payload: errorMessage });
       }
     } finally {
-      setIsAnalyzing(false);
+      dispatch({ type: PDFViewerActionType.SET_ANALYZING, payload: false });
     }
-  };
+  }, [state.pdf, saveMessage, extractPDFContent, language]);
 
-  // Handle message regeneration
-  const handleRegenerateMessage = async (messageId: string) => {
-    const messageIndex = chatMessages.findIndex(msg => msg.id === messageId);
+  // Enhanced message regeneration
+  const handleRegenerateMessage = useCallback(async (messageId: string) => {
+    const messageIndex = state.chatMessages.findIndex(msg => msg.id === messageId);
     if (messageIndex === -1 || messageIndex === 0) return;
 
-    const userMessage = chatMessages[messageIndex - 1];
+    const userMessage = state.chatMessages[messageIndex - 1];
     if (!userMessage.isUser) return;
 
-    // Remove the AI message and regenerate
-    setChatMessages(prev => prev.slice(0, messageIndex));
+    // Remove the AI message and all subsequent messages
+    const newMessages = state.chatMessages.slice(0, messageIndex);
+    dispatch({ type: PDFViewerActionType.SET_CHAT_MESSAGES, payload: newMessages });
+    
     await handleChatSubmit(userMessage.content);
-  };
+  }, [state.chatMessages, handleChatSubmit]);
 
-  // Handle message copying
-  const handleCopyMessage = (content: string) => {
+  // Enhanced message copying with feedback
+  const handleCopyMessage = useCallback((content: string) => {
     navigator.clipboard.writeText(content).then(() => {
-      toast.success('Message copied to clipboard');
+      toast.success(language === 'ar' ? 'تم نسخ الرسالة' : 'Message copied to clipboard');
     }).catch(() => {
-      toast.error('Failed to copy message');
+      toast.error(language === 'ar' ? 'فشل في نسخ الرسالة' : 'Failed to copy message');
     });
-  };
+  }, [language]);
 
-  // Handle chat reset
-  const handleResetChat = () => {
-    setChatMessages([]);
-    setPdfTextContent(null);
-    toast.success('Chat cleared');
-  };
+  // Enhanced chat reset
+  const handleResetChat = useCallback(() => {
+    dispatch({ type: PDFViewerActionType.RESET_CHAT });
+    toast.success(language === 'ar' ? 'تم مسح المحادثة' : 'Chat cleared');
+  }, [language]);
 
-  // Handle quick action click
-  const handleQuickAction = (action: typeof quickActions[0]) => {
+  // Enhanced quick action handler
+  const handleQuickAction = useCallback((action: typeof quickActions[0]) => {
     handleChatSubmit(action.prompt);
-  };
+  }, [handleChatSubmit]);
 
-  // Loading state
-  if (isLoadingPdf) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
-        <Navbar />
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="text-center space-y-4">
-              <div className="relative">
-                <div className="h-16 w-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto" />
-                <FileText className="absolute inset-0 h-16 w-16 text-primary/20 mx-auto" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">
-                  {language === 'ar' ? 'جاري تحميل المستند...' : 'Loading document...'}
-                </h3>
-                <p className="text-muted-foreground">
-                  {language === 'ar' ? 'يرجى الانتظار بينما نقوم بتحضير مستندك' : 'Please wait while we prepare your document'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  // Retry mechanism
+  const handleRetry = useCallback(() => {
+    dispatch({ type: PDFViewerActionType.INCREMENT_RETRY });
+    
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    abortControllerRef.current = new AbortController();
+    loadPdf(abortControllerRef.current.signal);
+  }, [loadPdf]);
+
+  // Loading state with enhanced UI
+  if (state.isLoadingPdf) {
+    return <LoadingComponent language={language} />;
   }
 
-  // Error state
-  if (pdfError || !pdf) {
+  // Enhanced error state with retry option
+  if (state.pdfError || !state.pdf) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
         <Navbar />
@@ -368,19 +550,22 @@ const PDFViewer = () => {
                 {language === 'ar' ? 'مشكلة في تحميل المستند' : 'Problem loading document'}
               </h2>
               <p className="text-muted-foreground max-w-md">
-                {pdfError || (language === 'ar' ? 'لم يتم العثور على المستند. قد يكون قد تم حذفه أو انتهت صلاحيته.' : 'Document not found. It may have been deleted or expired.')}
+                {state.pdfError || (language === 'ar' ? 'لم يتم العثور على المستند. قد يكون قد تم حذفه أو انتهت صلاحيته.' : 'Document not found. It may have been deleted or expired.')}
               </p>
+              {state.retryCount > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {language === 'ar' ? `محاولة ${state.retryCount}` : `Attempt ${state.retryCount}`}
+                </p>
+              )}
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button onClick={() => navigate('/pdfs')} variant="default">
+              <Button onClick={handleRetry} variant="default" disabled={state.retryCount >= 3}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                {language === 'ar' ? 'إعادة المحاولة' : 'Retry'}
+              </Button>
+              <Button onClick={() => navigate('/pdfs')} variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 {language === 'ar' ? 'العودة إلى المستندات' : 'Back to Documents'}
-              </Button>
-              <Button 
-                onClick={() => window.location.reload()} 
-                variant="outline"
-              >
-                {language === 'ar' ? 'إعادة تحميل الصفحة' : 'Reload Page'}
               </Button>
             </div>
           </div>
@@ -389,248 +574,267 @@ const PDFViewer = () => {
     );
   }
 
-  // Enhanced Chat Interface - Main component
+  // Main render with enhanced UI
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/30">
-      <Navbar />
-      
-      <div className="container mx-auto h-[calc(100vh-80px)] flex flex-col">
-        {/* Chat Header */}
-        <div className={cn(
-          "flex-shrink-0 bg-card/80 backdrop-blur-sm border-b border-border/50 rounded-t-lg",
-          isMobile ? "p-3" : "p-4"
-        )}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/pdfs')}
-                className="text-muted-foreground"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="relative">
-                <div className={cn(
-                  "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center",
-                  isMobile ? "p-1.5" : "p-2"
-                )}>
-                  <MessageSquare className={cn("text-primary", isMobile ? "h-4 w-4" : "h-5 w-5")} />
+    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => dispatch({ type: PDFViewerActionType.RESET_STATE })}>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/30">
+        <Navbar />
+        
+        <div className="container mx-auto h-[calc(100vh-80px)] flex flex-col">
+          {/* Enhanced Chat Header */}
+          <div className={cn(
+            "flex-shrink-0 bg-card/80 backdrop-blur-sm border-b border-border/50 rounded-t-lg shadow-sm",
+            isMobile ? "p-3" : "p-4"
+          )}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/pdfs')}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="relative">
+                  <div className={cn(
+                    "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center transition-all duration-200",
+                    isMobile ? "p-1.5" : "p-2"
+                  )}>
+                    <MessageSquare className={cn("text-primary", isMobile ? "h-4 w-4" : "h-5 w-5")} />
+                  </div>
+                  {state.isAnalyzing && (
+                    <div className="absolute -top-1 -right-1 h-3 w-3 bg-green-500 rounded-full animate-pulse">
+                      <div className="h-full w-full bg-green-400 rounded-full animate-ping" />
+                    </div>
+                  )}
                 </div>
-                {isAnalyzing && (
-                  <div className="absolute -top-1 -right-1 h-3 w-3 bg-green-500 rounded-full animate-pulse" />
-                )}
+                <div className="min-w-0 flex-1">
+                  <h1 className={cn("font-semibold truncate", isMobile ? "text-sm" : "text-lg")}>
+                    {language === 'ar' ? 'محادثة ذكية مع المستند' : 'Smart Document Chat'}
+                  </h1>
+                  <p className={cn("text-muted-foreground truncate", isMobile ? "text-xs" : "text-sm")}>
+                    {state.pdf?.title ? (isMobile 
+                      ? `${state.pdf.title.substring(0, 25)}...` 
+                      : `${state.pdf.title.substring(0, 40)}...`)
+                      : (language === 'ar' ? 'جاهز للمساعدة' : 'Ready to help')
+                    }
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className={cn("font-semibold", isMobile ? "text-sm" : "text-lg")}>
-                  {language === 'ar' ? 'محادثة ذكية مع المستند' : 'Smart Document Chat'}
-                </h1>
-                <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
-                  {pdf?.title ? (isMobile 
-                    ? `${pdf.title.substring(0, 25)}...` 
-                    : `${pdf.title.substring(0, 40)}...`)
-                    : (language === 'ar' ? 'جاهز للمساعدة' : 'Ready to help')
-                  }
-                </p>
+              
+              <div className="flex items-center gap-2">
+                {state.chatMessages.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleResetChat}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                    title={language === 'ar' ? 'مسح المحادثة' : 'Clear chat'}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleResetChat}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
           </div>
-        </div>
 
-        {/* Fixed Quick Actions Bar */}
-        <div className={cn(
-          "flex-shrink-0 bg-muted/20 border-b border-border/50",
-          isMobile ? "p-2" : "p-3"
-        )}>
+          {/* Enhanced Quick Actions Bar */}
           <div className={cn(
-            "flex gap-2 overflow-x-auto scrollbar-hide",
-            isMobile ? "pb-1" : ""
+            "flex-shrink-0 bg-muted/20 border-b border-border/50 transition-all duration-200",
+            isMobile ? "p-2" : "p-3"
           )}>
-            {quickActions.map((action) => (
-              <Button
-                key={action.id}
-                variant="outline"
-                size={isMobile ? "sm" : "sm"}
-                onClick={() => handleQuickAction(action)}
-                disabled={isAnalyzing}
-                className={cn(
-                  "flex-shrink-0 gap-2 font-medium border-dashed hover:border-solid transition-all duration-200",
-                  action.color,
-                  isMobile ? "h-8 px-3 text-xs" : "h-9 px-4 text-sm"
-                )}
-              >
-                <action.icon className="h-3 w-3" />
-                <span className="whitespace-nowrap">{action.label}</span>
-              </Button>
-            ))}
+            <div className={cn(
+              "flex gap-2 overflow-x-auto scrollbar-hide",
+              isMobile ? "pb-1" : ""
+            )}>
+              {quickActions.map((action) => (
+                <Button
+                  key={action.id}
+                  variant="outline"
+                  size={isMobile ? "sm" : "sm"}
+                  onClick={() => handleQuickAction(action)}
+                  disabled={state.isAnalyzing}
+                  className={cn(
+                    "flex-shrink-0 gap-2 font-medium border-dashed hover:border-solid transition-all duration-200 hover:shadow-sm",
+                    action.color,
+                    isMobile ? "h-8 px-3 text-xs" : "h-9 px-4 text-sm",
+                    state.isAnalyzing && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  <action.icon className="h-3 w-3" />
+                  <span className="whitespace-nowrap">{action.label}</span>
+                </Button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Chat Messages Area */}
-        <div className="flex-1 min-h-0 bg-card/50 backdrop-blur-sm">
-          <ScrollArea className="h-full">
-            <div className={cn("h-full", isMobile ? "p-3" : "p-4")}>
-              <div className={cn("space-y-4 min-h-full", isMobile && "space-y-3")}>
-                {chatMessages.length === 0 ? (
-                  <div className={cn(
-                    "flex flex-col items-center justify-center h-full text-center min-h-[400px]",
-                    isMobile ? "py-8" : "py-12"
-                  )}>
-                    <div className="relative mb-6">
-                      <div className={cn(
-                        "bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center",
-                        isMobile ? "p-4" : "p-6"
-                      )}>
-                        <Bot className={cn("text-primary", isMobile ? "h-8 w-8" : "h-12 w-12")} />
-                      </div>
-                      <div className="absolute -bottom-2 -right-2 p-2 bg-background rounded-full border border-border">
-                        <Sparkles className="h-4 w-4 text-primary" />
-                      </div>
-                    </div>
-                    <h2 className={cn("font-bold mb-3", isMobile ? "text-lg" : "text-2xl")}>
-                      {language === 'ar' ? 'ابدأ محادثة ذكية' : 'Start Smart Conversation'}
-                    </h2>
-                    <p className={cn(
-                      "text-muted-foreground max-w-lg leading-relaxed mb-6",
-                      isMobile ? "text-sm px-4" : "text-base"
+          {/* Enhanced Chat Messages Area */}
+          <div className="flex-1 min-h-0 bg-card/50 backdrop-blur-sm">
+            <ScrollArea className="h-full">
+              <div className={cn("h-full", isMobile ? "p-3" : "p-4")}>
+                <div className={cn("space-y-4 min-h-full", isMobile && "space-y-3")}>
+                  {state.chatMessages.length === 0 ? (
+                    <div className={cn(
+                      "flex flex-col items-center justify-center h-full text-center min-h-[400px]",
+                      isMobile ? "py-8" : "py-12"
                     )}>
-                      {language === 'ar' 
-                        ? 'استخدم الإجراءات السريعة أعلاه أو اطرح أي سؤال حول مستندك للحصول على إجابات ذكية ومفصلة'
-                        : 'Use the quick actions above or ask any question about your document to get smart and detailed answers'
-                      }
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    {chatMessages.map((message, index) => (
-                      <div
-                        key={message.id}
-                        className={cn(
-                          "flex animate-fade-in",
-                          message.isUser ? "justify-end" : "justify-start",
-                          isMobile ? "gap-2" : "gap-3"
-                        )}
-                      >
-                        {!message.isUser && (
-                          <div className="flex-shrink-0">
-                            <div className={cn(
-                              "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center",
-                              isMobile ? "p-1.5" : "p-2"
-                            )}>
-                              <Bot className={cn("text-primary", isMobile ? "h-3 w-3" : "h-4 w-4")} />
-                            </div>
-                          </div>
-                        )}
-                        
+                      <div className="relative mb-6">
                         <div className={cn(
-                          "space-y-2",
-                          message.isUser ? "items-end" : "items-start",
-                          isMobile ? "max-w-[85%]" : "max-w-[80%]"
+                          "bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center shadow-lg",
+                          isMobile ? "p-4" : "p-6"
                         )}>
-                          <Card className={cn(
-                            "transition-all duration-200 hover:shadow-md",
-                            message.isUser 
-                              ? "bg-primary text-primary-foreground ml-auto" 
-                              : "bg-card/80 backdrop-blur-sm",
-                            isMobile ? "p-3" : "p-4"
-                          )}>
-                            <div className={cn(
-                              "whitespace-pre-wrap leading-relaxed",
-                              isMobile ? "text-sm" : ""
-                            )}>
-                              {message.content}
-                            </div>
-                            
-                            {!message.isUser && (
+                          <Bot className={cn("text-primary", isMobile ? "h-8 w-8" : "h-12 w-12")} />
+                        </div>
+                        <div className="absolute -bottom-2 -right-2 p-2 bg-background rounded-full border border-border shadow-sm">
+                          <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                        </div>
+                      </div>
+                      <h2 className={cn("font-bold mb-3", isMobile ? "text-lg" : "text-2xl")}>
+                        {language === 'ar' ? 'ابدأ محادثة ذكية' : 'Start Smart Conversation'}
+                      </h2>
+                      <p className={cn(
+                        "text-muted-foreground max-w-lg leading-relaxed mb-6",
+                        isMobile ? "text-sm px-4" : "text-base"
+                      )}>
+                        {language === 'ar' 
+                          ? 'استخدم الإجراءات السريعة أعلاه أو اطرح أي سؤال حول مستندك للحصول على إجابات ذكية ومفصلة'
+                          : 'Use the quick actions above or ask any question about your document to get smart and detailed answers'
+                        }
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {state.chatMessages.map((message, index) => (
+                        <div
+                          key={message.id}
+                          className={cn(
+                            "flex animate-fade-in transition-all duration-300",
+                            message.isUser ? "justify-end" : "justify-start",
+                            isMobile ? "gap-2" : "gap-3"
+                          )}
+                        >
+                          {!message.isUser && (
+                            <div className="flex-shrink-0">
                               <div className={cn(
-                                "flex items-center justify-between border-t border-border/30",
-                                isMobile ? "mt-2 pt-2 flex-col gap-2" : "mt-3 pt-3 flex-row"
+                                "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center shadow-sm",
+                                isMobile ? "p-1.5" : "p-2"
                               )}>
+                                <Bot className={cn("text-primary", isMobile ? "h-3 w-3" : "h-4 w-4")} />
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className={cn(
+                            "space-y-2",
+                            message.isUser ? "items-end" : "items-start",
+                            isMobile ? "max-w-[85%]" : "max-w-[80%]"
+                          )}>
+                            <Card className={cn(
+                              "transition-all duration-200 hover:shadow-md",
+                              message.isUser 
+                                ? "bg-primary text-primary-foreground ml-auto shadow-lg" 
+                                : "bg-card/80 backdrop-blur-sm border border-border/50",
+                              isMobile ? "p-3" : "p-4"
+                            )}>
+                              <div className={cn(
+                                "whitespace-pre-wrap leading-relaxed",
+                                isMobile ? "text-sm" : ""
+                              )}>
+                                {message.content}
+                              </div>
+                              
+                              {!message.isUser && (
                                 <div className={cn(
-                                  "flex items-center gap-1",
-                                  isMobile && "w-full justify-center"
+                                  "flex items-center justify-between border-t border-border/30",
+                                  isMobile ? "mt-2 pt-2 flex-col gap-2" : "mt-3 pt-3 flex-row"
                                 )}>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleCopyMessage(message.content)}
-                                    className={cn("text-xs", isMobile ? "h-6 px-2" : "h-7 px-3")}
-                                  >
-                                    <Copy className="h-3 w-3 mr-1" />
-                                    {language === 'ar' ? 'نسخ' : 'Copy'}
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleRegenerateMessage(message.id)}
-                                    className={cn("text-xs", isMobile ? "h-6 px-2" : "h-7 px-3")}
-                                  >
-                                    <RefreshCw className="h-3 w-3 mr-1" />
-                                    {language === 'ar' ? 'إعادة' : 'Retry'}
-                                  </Button>
+                                  <div className={cn(
+                                    "flex items-center gap-1",
+                                    isMobile && "w-full justify-center"
+                                  )}>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleCopyMessage(message.content)}
+                                      className={cn("text-xs hover:bg-muted/50 transition-colors", isMobile ? "h-6 px-2" : "h-7 px-3")}
+                                    >
+                                      <Copy className="h-3 w-3 mr-1" />
+                                      {language === 'ar' ? 'نسخ' : 'Copy'}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleRegenerateMessage(message.id)}
+                                      className={cn("text-xs hover:bg-muted/50 transition-colors", isMobile ? "h-6 px-2" : "h-7 px-3")}
+                                      disabled={state.isAnalyzing}
+                                    >
+                                      <RefreshCw className="h-3 w-3 mr-1" />
+                                      {language === 'ar' ? 'إعادة' : 'Retry'}
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </Card>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {/* Enhanced analysis indicator */}
+                      {state.isAnalyzing && (
+                        <div className={cn("flex animate-fade-in", isMobile ? "gap-2" : "gap-3")}>
+                          <div className={cn(
+                            "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center shadow-sm",
+                            isMobile ? "p-1.5" : "p-2"
+                          )}>
+                            <Loader2 className={cn("text-primary animate-spin", isMobile ? "h-3 w-3" : "h-4 w-4")} />
+                          </div>
+                          <Card className={cn("backdrop-blur-sm border border-border/50", isMobile ? "p-3" : "p-4")}>
+                            <div className="flex items-center gap-3">
+                              <div className="flex gap-1">
+                                {[...Array(3)].map((_, i) => (
+                                  <div
+                                    key={i}
+                                    className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                                    style={{ animationDelay: `${i * 0.2}s` }}
+                                  />
+                                ))}
+                              </div>
+                              <div className="flex-1">
+                                <span className={cn("text-muted-foreground block", isMobile ? "text-xs" : "text-sm")}>
+                                  {state.analysisProgress.message || (language === 'ar' ? 'يحلل المحتوى...' : 'Analyzing content...')}
+                                </span>
+                                <div className="w-full bg-muted rounded-full h-1 mt-1">
+                                  <div 
+                                    className="bg-primary h-full rounded-full transition-all duration-300" 
+                                    style={{ width: `${state.analysisProgress.progress}%` }}
+                                  />
                                 </div>
                               </div>
-                            )}
+                            </div>
                           </Card>
                         </div>
-                      </div>
-                    ))}
-                    
-                    {/* Analysis indicator */}
-                    {isAnalyzing && (
-                      <div className={cn("flex animate-fade-in", isMobile ? "gap-2" : "gap-3")}>
-                        <div className={cn(
-                          "bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center",
-                          isMobile ? "p-1.5" : "p-2"
-                        )}>
-                          <Bot className={cn("text-primary", isMobile ? "h-3 w-3" : "h-4 w-4")} />
-                        </div>
-                        <Card className={cn("backdrop-blur-sm", isMobile ? "p-3" : "p-4")}>
-                          <div className="flex items-center gap-2">
-                            <div className="flex gap-1">
-                              {[...Array(3)].map((_, i) => (
-                                <div
-                                  key={i}
-                                  className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                                  style={{ animationDelay: `${i * 0.2}s` }}
-                                />
-                              ))}
-                            </div>
-                            <span className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
-                              {language === 'ar' ? 'يحلل المحتوى...' : 'Analyzing content...'}
-                            </span>
-                          </div>
-                        </Card>
-                      </div>
-                    )}
-                  </>
-                )}
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </ScrollArea>
-        </div>
+            </ScrollArea>
+          </div>
 
-        {/* Chat Input */}
-        <div className="flex-shrink-0 bg-card/80 backdrop-blur-sm border-t border-border/50 rounded-b-lg">
-          <ChatInput
-            onSubmit={handleChatSubmit}
-            placeholder={language === 'ar' ? 'اكتب سؤالك حول المستند...' : 'Ask anything about your document...'}
-            disabled={isAnalyzing}
-            dir={language === 'ar' ? 'rtl' : 'ltr'}
-            autoFocus={!isMobile}
-          />
+          {/* Enhanced Chat Input */}
+          <div className="flex-shrink-0 bg-card/80 backdrop-blur-sm border-t border-border/50 rounded-b-lg shadow-lg">
+            <ChatInput
+              onSubmit={handleChatSubmit}
+              placeholder={language === 'ar' ? 'اكتب سؤالك حول المستند...' : 'Ask anything about your document...'}
+              disabled={state.isAnalyzing}
+              dir={language === 'ar' ? 'rtl' : 'ltr'}
+              autoFocus={!isMobile}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 };
 
