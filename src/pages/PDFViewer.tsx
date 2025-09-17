@@ -1,4 +1,3 @@
-
 import { useReducer, useEffect, useRef, useCallback, useMemo, Component, ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -32,29 +31,34 @@ import {
   AnalysisProgress
 } from '@/services/pdfAnalysisService';
 
-// Custom hook for auto-scrolling chat
+// ---------------------- useAutoScrollToBottom ----------------------
 const useAutoScrollToBottom = (dependency: any) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback((behavior: 'auto' | 'smooth' = 'smooth') => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ 
-        behavior,
-        block: 'end',
-        inline: 'nearest'
-      });
+    try {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({
+          behavior,
+          block: 'end',
+          inline: 'nearest'
+        });
+      } else if (scrollContainerRef.current) {
+        // fallback: set scrollTop
+        const el = scrollContainerRef.current;
+        el.scrollTop = el.scrollHeight;
+      }
+    } catch (e) {
+      // ignore scroll errors
     }
   }, []);
 
-  // Auto scroll when dependency changes (new messages)
   useEffect(() => {
-    if (dependency) {
-      // Small delay to ensure DOM is updated
+    if (dependency !== undefined) {
       const timer = setTimeout(() => {
         scrollToBottom();
       }, 100);
-
       return () => clearTimeout(timer);
     }
   }, [dependency, scrollToBottom]);
@@ -62,7 +66,7 @@ const useAutoScrollToBottom = (dependency: any) => {
   return { messagesEndRef, scrollContainerRef, scrollToBottom };
 };
 
-// Custom Error Boundary Component
+// ---------------------- ErrorBoundary ----------------------
 interface ErrorBoundaryState {
   hasError: boolean;
   error?: Error;
@@ -133,31 +137,34 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 }
 
-// State Management with useReducer
+// ---------------------- Reducer & Types ----------------------
 interface PDFViewerState {
-pdf: UploadedPDF | null;
-chatMessages: SmartChatMessage[];
-isLoadingPdf: boolean;
-pdfError: string | null;
-isTempPdf: boolean;
-pdfTextContent: string | null;
-isAnalyzing: boolean;
-analysisProgress: AnalysisProgress;
-retryCount: number;
-chatId?: string; // ✅ جديد
+  pdf: UploadedPDF | null;
+  chatMessages: SmartChatMessage[];
+  isLoadingPdf: boolean;
+  pdfError: string | null;
+  isTempPdf: boolean;
+  pdfTextContent: string | null;
+  isAnalyzing: boolean;
+  analysisProgress: AnalysisProgress;
+  retryCount: number;
+  chatId?: string | undefined;
 }
 
 enum PDFViewerActionType {
-SET_PDF = 'SET_PDF',
-SET_CHAT_MESSAGES = 'SET_CHAT_MESSAGES',
-SET_LOADING = 'SET_LOADING',
-SET_ERROR = 'SET_ERROR',
-SET_TEMP_PDF = 'SET_TEMP_PDF',
-SET_PDF_TEXT = 'SET_PDF_TEXT',
-SET_ANALYZING = 'SET_ANALYZING',
-SET_ANALYSIS_PROGRESS = 'SET_ANALYSIS_PROGRESS',
-SET_RETRY_COUNT = 'SET_RETRY_COUNT',
-SET_CHAT_ID = 'SET_CHAT_ID' // ✅ جديد
+  SET_PDF = 'SET_PDF',
+  SET_CHAT_MESSAGES = 'SET_CHAT_MESSAGES',
+  ADD_CHAT_MESSAGE = 'ADD_CHAT_MESSAGE',
+  SET_LOADING = 'SET_LOADING',
+  SET_ERROR = 'SET_ERROR',
+  SET_TEMP_PDF = 'SET_TEMP_PDF',
+  SET_PDF_TEXT = 'SET_PDF_TEXT',
+  SET_ANALYZING = 'SET_ANALYZING',
+  SET_ANALYSIS_PROGRESS = 'SET_ANALYSIS_PROGRESS',
+  SET_RETRY_COUNT = 'SET_RETRY_COUNT',
+  INCREMENT_RETRY = 'INCREMENT_RETRY',
+  SET_CHAT_ID = 'SET_CHAT_ID',
+  RESET_STATE = 'RESET_STATE'
 }
 
 interface PDFViewerAction {
@@ -166,50 +173,56 @@ interface PDFViewerAction {
 }
 
 const initialState: PDFViewerState = {
-pdf: null,
-chatMessages: [],
-isLoadingPdf: true,
-pdfError: null,
-isTempPdf: false,
-pdfTextContent: null,
-isAnalyzing: false,
-analysisProgress: {
-stage: 'extracting',
-progress: 0,
-message: 'Preparing to analyze PDF...'
-},
-retryCount: 0,
-chatId: undefined // ✅ جديد
+  pdf: null,
+  chatMessages: [],
+  isLoadingPdf: true,
+  pdfError: null,
+  isTempPdf: false,
+  pdfTextContent: null,
+  isAnalyzing: false,
+  analysisProgress: {
+    stage: 'extracting',
+    progress: 0,
+    message: 'Preparing to analyze PDF...'
+  },
+  retryCount: 0,
+  chatId: undefined
 };
 
-const pdfViewerReducer = (state: PDFViewerState, action: any): PDFViewerState => {
-switch (action.type) {
-case PDFViewerActionType.SET_PDF:
-return { ...state, pdf: action.payload };
-case PDFViewerActionType.SET_CHAT_MESSAGES:
-return { ...state, chatMessages: action.payload };
-case PDFViewerActionType.SET_LOADING:
-return { ...state, isLoadingPdf: action.payload };
-case PDFViewerActionType.SET_ERROR:
-return { ...state, pdfError: action.payload };
-case PDFViewerActionType.SET_TEMP_PDF:
-return { ...state, isTempPdf: action.payload };
-case PDFViewerActionType.SET_PDF_TEXT:
-return { ...state, pdfTextContent: action.payload };
-case PDFViewerActionType.SET_ANALYZING:
-return { ...state, isAnalyzing: action.payload };
-case PDFViewerActionType.SET_ANALYSIS_PROGRESS:
-return { ...state, analysisProgress: action.payload };
-case PDFViewerActionType.SET_RETRY_COUNT:
-return { ...state, retryCount: action.payload };
-case PDFViewerActionType.SET_CHAT_ID:
-return { ...state, chatId: action.payload }; // ✅ جديد
-default:
-return state;
-}
+const pdfViewerReducer = (state: PDFViewerState, action: PDFViewerAction): PDFViewerState => {
+  switch (action.type) {
+    case PDFViewerActionType.SET_PDF:
+      return { ...state, pdf: action.payload };
+    case PDFViewerActionType.SET_CHAT_MESSAGES:
+      return { ...state, chatMessages: action.payload };
+    case PDFViewerActionType.ADD_CHAT_MESSAGE:
+      return { ...state, chatMessages: [...state.chatMessages, action.payload] };
+    case PDFViewerActionType.SET_LOADING:
+      return { ...state, isLoadingPdf: action.payload };
+    case PDFViewerActionType.SET_ERROR:
+      return { ...state, pdfError: action.payload };
+    case PDFViewerActionType.SET_TEMP_PDF:
+      return { ...state, isTempPdf: action.payload };
+    case PDFViewerActionType.SET_PDF_TEXT:
+      return { ...state, pdfTextContent: action.payload };
+    case PDFViewerActionType.SET_ANALYZING:
+      return { ...state, isAnalyzing: action.payload };
+    case PDFViewerActionType.SET_ANALYSIS_PROGRESS:
+      return { ...state, analysisProgress: action.payload };
+    case PDFViewerActionType.SET_RETRY_COUNT:
+      return { ...state, retryCount: action.payload };
+    case PDFViewerActionType.INCREMENT_RETRY:
+      return { ...state, retryCount: state.retryCount + 1 };
+    case PDFViewerActionType.SET_CHAT_ID:
+      return { ...state, chatId: action.payload };
+    case PDFViewerActionType.RESET_STATE:
+      return initialState;
+    default:
+      return state;
+  }
 };
 
-// Error Fallback Component
+// ---------------------- ErrorFallback & Loading ----------------------
 const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => {
   const { language } = useLanguage();
 
@@ -238,11 +251,9 @@ const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetError
   );
 };
 
-// Enhanced Loading Component with Skeleton
 const LoadingComponent = ({ language }: { language: string }) => (
   <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
     <Navbar />
-    {/* IMPROVED: Better spacing from Navbar */}
     <div className="container mx-auto px-4 pt-6 pb-8">
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-6 max-w-md">
@@ -267,6 +278,7 @@ const LoadingComponent = ({ language }: { language: string }) => (
   </div>
 );
 
+// ---------------------- PDFViewer Component ----------------------
 const PDFViewer = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -277,14 +289,11 @@ const PDFViewer = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const [state, dispatch] = useReducer(pdfViewerReducer, initialState);
 
-  // IMPROVED: Determine text direction based on language
   const isRTL = language === 'ar';
   const textDirection = isRTL ? 'rtl' : 'ltr';
 
-  // Auto-scroll hook - will trigger when messages change
   const { messagesEndRef, scrollContainerRef, scrollToBottom } = useAutoScrollToBottom(state.chatMessages.length);
 
-  // Memoized quick actions for better performance
   const quickActions = useMemo(() => [
     {
       id: 'summarize',
@@ -316,15 +325,13 @@ const PDFViewer = () => {
     }
   ], [language]);
 
-  // Enhanced convert function with error handling
   const convertToSmartMessage = useCallback((msg: ChatMessage): SmartChatMessage => ({
-    id: msg.id || uuidv4(),
-    content: msg.content,
-    isUser: msg.isUser,
-    timestamp: msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp),
+    id: (msg as any).id || uuidv4(),
+    content: (msg as any).content,
+    isUser: (msg as any).isUser ?? ((msg as any).role === 'user'),
+    timestamp: msg.timestamp instanceof Date ? msg.timestamp : new Date((msg as any).timestamp || Date.now()),
   }), []);
 
-  // Enhanced Supabase loading with retry mechanism
   const tryLoadFromSupabase = useCallback(async (signal: AbortSignal): Promise<boolean> => {
     if (!user || !id) return false;
 
@@ -340,13 +347,12 @@ const PDFViewer = () => {
 
         dispatch({ type: PDFViewerActionType.SET_PDF, payload: uploadedPdf });
 
-        // Load chat messages
         const messages = await getChatMessagesForPDF(id);
         if (signal.aborted) return false;
 
-        dispatch({ 
-          type: PDFViewerActionType.SET_CHAT_MESSAGES, 
-          payload: messages.map(convertToSmartMessage) 
+        dispatch({
+          type: PDFViewerActionType.SET_CHAT_MESSAGES,
+          payload: messages.map(convertToSmartMessage)
         });
 
         return true;
@@ -361,7 +367,6 @@ const PDFViewer = () => {
     return false;
   }, [user, id, convertToSmartMessage, language]);
 
-  // Enhanced PDF loading with proper cleanup
   const loadPdf = useCallback(async (signal: AbortSignal) => {
     if (!id) {
       navigate('/');
@@ -371,10 +376,9 @@ const PDFViewer = () => {
     dispatch({ type: PDFViewerActionType.SET_LOADING, payload: true });
 
     try {
-      // Handle temp PDFs
+      // temp PDF handling
       if (id.startsWith('temp-') || window.location.pathname.includes('/pdf/temp/')) {
         dispatch({ type: PDFViewerActionType.SET_TEMP_PDF, payload: true });
-
         const tempPdfData = sessionStorage.getItem('tempPdfFile');
         if (tempPdfData && !signal.aborted) {
           try {
@@ -382,9 +386,9 @@ const PDFViewer = () => {
             if (parsedData.fileData && parsedData.fileData.id === id) {
               dispatch({ type: PDFViewerActionType.SET_PDF, payload: parsedData.fileData });
               const messages = parsedData.fileData.chatMessages || [];
-              dispatch({ 
-                type: PDFViewerActionType.SET_CHAT_MESSAGES, 
-                payload: messages.map(convertToSmartMessage) 
+              dispatch({
+                type: PDFViewerActionType.SET_CHAT_MESSAGES,
+                payload: messages.map(convertToSmartMessage)
               });
               return;
             }
@@ -394,68 +398,62 @@ const PDFViewer = () => {
         }
 
         if (!signal.aborted) {
-          dispatch({ 
-            type: PDFViewerActionType.SET_ERROR, 
-            payload: language === 'ar' ? 'المستند المؤقت غير موجود. قد تكون صلاحيته منتهية.' : 'Temporary PDF not found. It may have expired.' 
+          dispatch({
+            type: PDFViewerActionType.SET_ERROR,
+            payload: language === 'ar' ? 'المستند المؤقت غير موجود. قد تكون صلاحيته منتهية.' : 'Temporary PDF not found. It may have expired.'
           });
         }
         return;
       }
 
-      // Try Supabase first if user is authenticated
+      // Try Supabase first
       if (user) {
         const success = await tryLoadFromSupabase(signal);
         if (success || signal.aborted) return;
       }
 
-      // Fallback to localStorage
+      // fallback to local
       const localPdf = getPDFById(id);
       if (localPdf && !signal.aborted) {
         dispatch({ type: PDFViewerActionType.SET_PDF, payload: localPdf });
         const messages = localPdf.chatMessages || [];
-        dispatch({ 
-          type: PDFViewerActionType.SET_CHAT_MESSAGES, 
-          payload: messages.map(convertToSmartMessage) 
+        dispatch({
+          type: PDFViewerActionType.SET_CHAT_MESSAGES,
+          payload: messages.map(convertToSmartMessage)
         });
       } else if (!signal.aborted) {
-        dispatch({ 
-          type: PDFViewerActionType.SET_ERROR, 
-          payload: language === 'ar' ? 'المستند غير موجود. قد يكون قد تم حذفه أو انتهت صلاحيته.' : 'PDF not found. It may have been deleted or expired.' 
+        dispatch({
+          type: PDFViewerActionType.SET_ERROR,
+          payload: language === 'ar' ? 'المستند غير موجود. قد يكون قد تم حذفه أو انتهت صلاحيته.' : 'PDF not found. It may have been deleted or expired.'
         });
       }
     } catch (error) {
       if (!signal.aborted) {
         console.error('Error loading PDF:', error);
-        dispatch({ 
-          type: PDFViewerActionType.SET_ERROR, 
-          payload: language === 'ar' ? 'خطأ في تحميل المستند' : 'Error loading document' 
+        dispatch({
+          type: PDFViewerActionType.SET_ERROR,
+          payload: language === 'ar' ? 'خطأ في تحميل المستند' : 'Error loading document'
         });
+      }
+    } finally {
+      if (!signal.aborted) {
+        dispatch({ type: PDFViewerActionType.SET_LOADING, payload: false });
       }
     }
   }, [id, user, navigate, tryLoadFromSupabase, convertToSmartMessage, language]);
 
-  // Effect with proper cleanup
   useEffect(() => {
-    // Cancel previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-
-    // Create new abort controller
     abortControllerRef.current = new AbortController();
     const { signal } = abortControllerRef.current;
-
     loadPdf(signal);
-
-    // Cleanup function
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      if (abortControllerRef.current) abortControllerRef.current.abort();
     };
   }, [loadPdf]);
 
-  // Enhanced save message with better error handling
   const saveMessage = useCallback(async (messageContent: string, isUser: boolean): Promise<SmartChatMessage | null> => {
     const newMessage: SmartChatMessage = {
       id: uuidv4(),
@@ -476,12 +474,14 @@ const PDFViewer = () => {
           sessionStorage.setItem('tempPdfFile', JSON.stringify(parsedData));
         }
       } else if (user && state.pdf?.id) {
+        // supabase store
         await addSupabaseChatMessage(state.pdf.id, newMessage.content, newMessage.isUser);
       } else if (state.pdf?.id) {
-        addChatMessageToPDF(state.pdf.id, { 
-          content: newMessage.content, 
-          isUser: newMessage.isUser, 
-          timestamp: new Date() 
+        // local storage service
+        addChatMessageToPDF(state.pdf.id, {
+          content: newMessage.content,
+          isUser: newMessage.isUser,
+          timestamp: new Date()
         });
       }
     } catch (error) {
@@ -493,7 +493,6 @@ const PDFViewer = () => {
     return newMessage;
   }, [state.isTempPdf, state.pdf?.id, user, language]);
 
-  // Enhanced PDF content extraction with caching
   const extractPDFContent = useCallback(async (): Promise<string> => {
     if (state.pdfTextContent) {
       return state.pdfTextContent;
@@ -505,7 +504,7 @@ const PDFViewer = () => {
 
     try {
       const extractedText = await extractTextFromPDF(state.pdf.dataUrl, state.pdf.id);
-      dispatch({ type: PDFViewerActionType.SET_PDF_CONTENT, payload: extractedText });
+      dispatch({ type: PDFViewerActionType.SET_PDF_TEXT, payload: extractedText });
       return extractedText;
     } catch (error) {
       console.error('Error extracting PDF content:', error);
@@ -513,14 +512,12 @@ const PDFViewer = () => {
     }
   }, [state.pdfTextContent, state.pdf, language]);
 
-  // Enhanced chat submission with better error handling and auto-scroll
   const handleChatSubmit = useCallback(async (message: string) => {
     if (!state.pdf) {
       toast.error(language === 'ar' ? 'المستند غير محمل' : 'PDF not loaded');
       return;
     }
 
-    // Add user message
     const userMessage = await saveMessage(message, true);
     if (userMessage) {
       dispatch({ type: PDFViewerActionType.ADD_CHAT_MESSAGE, payload: userMessage });
@@ -534,7 +531,7 @@ const PDFViewer = () => {
       const response = await analyzePDFWithGemini(
         pdfContent,
         message,
-        (progress) => {
+        (progress: AnalysisProgress) => {
           dispatch({ type: PDFViewerActionType.SET_ANALYSIS_PROGRESS, payload: progress });
         }
       );
@@ -559,7 +556,6 @@ const PDFViewer = () => {
     }
   }, [state.pdf, saveMessage, extractPDFContent, language]);
 
-  // Enhanced message regeneration
   const handleRegenerateMessage = useCallback(async (messageId: string) => {
     const messageIndex = state.chatMessages.findIndex(msg => msg.id === messageId);
     if (messageIndex === -1 || messageIndex === 0) return;
@@ -567,14 +563,12 @@ const PDFViewer = () => {
     const userMessage = state.chatMessages[messageIndex - 1];
     if (!userMessage.isUser) return;
 
-    // Remove the AI message and all subsequent messages
     const newMessages = state.chatMessages.slice(0, messageIndex);
     dispatch({ type: PDFViewerActionType.SET_CHAT_MESSAGES, payload: newMessages });
 
     await handleChatSubmit(userMessage.content);
   }, [state.chatMessages, handleChatSubmit]);
 
-  // Enhanced message copying with feedback
   const handleCopyMessage = useCallback((content: string) => {
     navigator.clipboard.writeText(content).then(() => {
       toast.success(language === 'ar' ? 'تم نسخ الرسالة' : 'Message copied to clipboard');
@@ -583,43 +577,34 @@ const PDFViewer = () => {
     });
   }, [language]);
 
-  // Enhanced chat reset
-const handleResetChat = (state: PDFViewerState, dispatch: any, language: string) => {
-if (!state.chatId) {
-toast.error(language === "ar" ? "لا توجد محادثة محددة" : "No chat selected");
-return;
-}
+  const handleResetChat = useCallback(async () => {
+    if (!state.chatId) {
+      toast.error(language === "ar" ? "لا توجد محادثة محددة" : "No chat selected");
+      return;
+    }
 
-    // 🗑️ حذف كل الرسائل المرتبطة بالـ chat_id
-    const { error } = await supabase
-      .from("chat_messages")
-      .delete()
-      .eq("chat_id", state.chatId);
+    try {
+      const { error } = await supabase
+        .from("chat_messages")
+        .delete()
+        .eq("chat_id", state.chatId);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    // 🧹 مسحها محليًا
-    dispatch({ type: PDFViewerActionType.SET_CHAT_MESSAGES, payload: [] });
-toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : "Chat has been reset");
-};
+      dispatch({ type: PDFViewerActionType.SET_CHAT_MESSAGES, payload: [] });
+      toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : "Chat has been reset");
+    } catch (err) {
+      console.error("Error deleting chat:", err);
+      toast.error(language === "ar" ? "فشل في المسح" : "Failed to delete chat");
+    }
+  }, [state.chatId, language]);
 
-    toast.success(language === "ar" ? "تم مسح المحادثة نهائيًا" : "Chat permanently deleted");
-  } catch (err) {
-    console.error("Error deleting chat:", err);
-    toast.error(language === "ar" ? "فشل في المسح" : "Failed to delete chat");
-  }
-}, [state.chatId, language]);
-
-
-
-  // Enhanced quick action handler
   const handleQuickAction = useCallback((action: typeof quickActions[0]) => {
     handleChatSubmit(action.prompt);
-  }, [handleChatSubmit]);
+  }, [handleChatSubmit, quickActions]);
 
-  // Retry mechanism
   const handleRetry = useCallback(() => {
-    dispatch({ type: PDFViewerActionType.INCREMENT_RETRY });
+    dispatch({ type: PDFViewerActionType.SET_RETRY_COUNT, payload: state.retryCount + 1 });
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -627,19 +612,16 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
 
     abortControllerRef.current = new AbortController();
     loadPdf(abortControllerRef.current.signal);
-  }, [loadPdf]);
+  }, [loadPdf, state.retryCount]);
 
-  // Loading state with enhanced UI
   if (state.isLoadingPdf) {
     return <LoadingComponent language={language} />;
   }
 
-  // Enhanced error state with retry option
   if (state.pdfError || !state.pdf) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
         <Navbar />
-        {/* IMPROVED: Better spacing from Navbar */}
         <div className="container mx-auto px-4 pt-6 pb-4 h-[calc(100vh-80px)] flex flex-col gap-4">
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
             <div className="p-4 bg-destructive/10 rounded-full">
@@ -674,18 +656,16 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
     );
   }
 
-  // Main render with enhanced UI and auto-scroll
+  // Main render
   return (
-    <ErrorBoundary 
-      FallbackComponent={ErrorFallback} 
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
       onReset={() => dispatch({ type: PDFViewerActionType.RESET_STATE })}
     >
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/30">
         <Navbar />
 
-        {/* IMPROVED: Better container spacing and responsive layout */}
         <div className="container mx-auto h-[calc(100vh-80px)] flex flex-col pt-4 pb-4 px-4 gap-6">
-          {/* Enhanced Chat Header */}
           <div className={cn(
             "flex-shrink-0 bg-card/80 backdrop-blur-sm border-b border-border/50 rounded-t-lg shadow-sm",
             isMobile ? "p-3" : "p-4"
@@ -718,8 +698,8 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
                     {language === 'ar' ? 'محادثة ذكية مع المستند' : 'Smart Document Chat'}
                   </h1>
                   <p className={cn("text-muted-foreground truncate", isMobile ? "text-xs" : "text-sm")}>
-                    {state.pdf?.title ? (isMobile 
-                      ? `${state.pdf.title.substring(0, 25)}...` 
+                    {state.pdf?.title ? (isMobile
+                      ? `${state.pdf.title.substring(0, 25)}...`
                       : `${state.pdf.title.substring(0, 40)}...`)
                       : (language === 'ar' ? 'جاهز للمساعدة' : 'Ready to help')
                     }
@@ -743,7 +723,6 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
             </div>
           </div>
 
-          {/* Enhanced Quick Actions Bar */}
           <div className={cn(
             "flex-shrink-0 bg-muted/20 border-b border-border/50 transition-all duration-200",
             isMobile ? "p-2" : "p-3"
@@ -751,7 +730,6 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
             <div className={cn(
               "flex gap-2 overflow-x-auto scrollbar-hide",
               isMobile ? "pb-1" : "",
-              // IMPROVED: RTL support for action buttons
               isRTL ? "flex-row-reverse" : "flex-row"
             )}>
               {quickActions.map((action) => (
@@ -776,9 +754,8 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
             </div>
           </div>
 
-          {/* Enhanced Chat Messages Area with Auto-Scroll and RTL Support */}
           <div className="flex-1 min-h-0 bg-card/50 backdrop-blur-sm">
-            <ScrollArea className="h-full" ref={scrollContainerRef}>
+            <ScrollArea className="h-full" ref={scrollContainerRef as any}>
               <div className={cn("h-full", isMobile ? "p-3" : "p-4")}>
                 <div className={cn("space-y-4 min-h-full", isMobile && "space-y-3")}>
                   {state.chatMessages.length === 0 ? (
@@ -806,7 +783,7 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
                       )}
                       dir={textDirection}
                       >
-                        {language === 'ar' 
+                        {language === 'ar'
                           ? 'استخدم الإجراءات السريعة أعلاه أو اطرح أي سؤال حول مستندك للحصول على إجابات ذكية ومفصلة'
                           : 'Use the quick actions above or ask any question about your document to get smart and detailed answers'
                         }
@@ -819,14 +796,12 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
                           key={message.id}
                           className={cn(
                             "flex animate-fade-in transition-all duration-300",
-                            // IMPROVED: RTL support for message alignment
-                            message.isUser 
+                            message.isUser
                               ? (isRTL ? "justify-start" : "justify-end")
                               : (isRTL ? "justify-end" : "justify-start"),
                             isMobile ? "gap-2" : "gap-3"
                           )}
                         >
-                          {/* IMPROVED: Bot avatar positioning for RTL */}
                           {!message.isUser && !isRTL && (
                             <div className="flex-shrink-0">
                               <div className={cn(
@@ -840,21 +815,19 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
 
                           <div className={cn(
                             "space-y-2",
-                            message.isUser 
+                            message.isUser
                               ? (isRTL ? "items-start" : "items-end")
                               : (isRTL ? "items-end" : "items-start"),
                             isMobile ? "max-w-[85%]" : "max-w-[80%]"
                           )}>
                             <Card className={cn(
                               "transition-all duration-200 hover:shadow-md",
-                              message.isUser 
-                                ? "bg-primary text-primary-foreground shadow-lg" 
+                              message.isUser
+                                ? "bg-primary text-primary-foreground shadow-lg"
                                 : "bg-card/80 backdrop-blur-sm border border-border/50",
                               isMobile ? "p-3" : "p-4",
-                              // IMPROVED: RTL margin handling
                               message.isUser && (isRTL ? "mr-auto" : "ml-auto")
                             )}>
-                              {/* IMPROVED: RTL text direction for message content */}
                               <div className={cn(
                                 "whitespace-pre-wrap leading-relaxed",
                                 isMobile ? "text-sm" : ""
@@ -869,7 +842,6 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
                                 <div className={cn(
                                   "flex items-center border-t border-border/30",
                                   isMobile ? "mt-2 pt-2 flex-col gap-2" : "mt-3 pt-3",
-                                  // IMPROVED: RTL layout for action buttons
                                   !isMobile && (isRTL ? "justify-start flex-row-reverse" : "justify-between flex-row")
                                 )}>
                                   <div className={cn(
@@ -901,7 +873,6 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
                             </Card>
                           </div>
 
-                          {/* IMPROVED: Bot avatar positioning for RTL */}
                           {!message.isUser && isRTL && (
                             <div className="flex-shrink-0">
                               <div className={cn(
@@ -915,7 +886,6 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
                         </div>
                       ))}
 
-                      {/* Enhanced analysis indicator with RTL support */}
                       {state.isAnalyzing && (
                         <div className={cn(
                           "flex animate-fade-in",
@@ -951,8 +921,8 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
                                   {state.analysisProgress.message || (language === 'ar' ? 'يحلل المحتوى...' : 'Analyzing content...')}
                                 </span>
                                 <div className="w-full bg-muted rounded-full h-1 mt-1">
-                                  <div 
-                                    className="bg-primary h-full rounded-full transition-all duration-300" 
+                                  <div
+                                    className="bg-primary h-full rounded-full transition-all duration-300"
                                     style={{ width: `${state.analysisProgress.progress}%` }}
                                   />
                                 </div>
@@ -972,13 +942,11 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
                     </>
                   )}
                 </div>
-                {/* Scroll anchor - invisible element at the bottom for auto-scroll */}
                 <div ref={messagesEndRef} className="h-1" />
               </div>
             </ScrollArea>
           </div>
 
-          {/* Enhanced Chat Input with RTL Support */}
           <div className="flex-shrink-0 bg-card/80 backdrop-blur-sm border-t border-border/50 rounded-b-lg shadow-lg">
             <ChatInput
               onSubmit={handleChatSubmit}
@@ -987,7 +955,6 @@ toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : 
               dir={textDirection}
               autoFocus={!isMobile}
               className={cn(
-                // IMPROVED: RTL styling for input
                 isRTL && "text-right"
               )}
             />
