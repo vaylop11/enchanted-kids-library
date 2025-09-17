@@ -637,7 +637,7 @@ const PDFViewer = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
         <Navbar />
-        <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4 h-[calc(100vh-80px)] flex flex-col gap-4">
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
             <div className="p-4 bg-destructive/10 rounded-full">
               <FileText className="h-12 w-12 text-destructive" />
