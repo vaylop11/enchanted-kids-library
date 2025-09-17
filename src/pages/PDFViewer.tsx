@@ -761,15 +761,6 @@ const PDFViewer = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={handleResetChat}
-                    className="text-muted-foreground hover:text-destructive transition-colors"
-                    title={language === 'ar' ? 'مسح المحادثة' : 'Clear chat'}
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
-                        <Button
-                    variant="ghost"
-                    size="icon"
                     onClick={handleDelChat}
                     className="text-muted-foreground hover:text-destructive transition-colors"
                     title={language === 'ar' ? 'مسح المحادثة' : 'Clear chat'}
