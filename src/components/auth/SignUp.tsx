@@ -17,7 +17,6 @@ import {
   AlertCircle, 
   Mail, 
   Lock, 
-  UserPlus,
   Check,
   X 
 } from 'lucide-react';
@@ -271,7 +270,6 @@ const SignUp = () => {
         )} dir={isRTL ? 'rtl' : 'ltr'}>
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
-              <UserPlus className="h-6 w-6 text-primary" />
               {language === 'ar' ? 'إنشاء حساب جديد' : 'Create Account'}
             </CardTitle>
             <CardDescription>
@@ -520,7 +518,6 @@ const SignUp = () => {
                     </>
                   ) : (
                     <>
-                      <UserPlus className="mr-2 h-4 w-4" />
                       {language === 'ar' ? 'إنشاء حساب' : 'Create Account'}
                     </>
                   )}
