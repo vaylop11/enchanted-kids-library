@@ -166,25 +166,22 @@ const SignIn = () => {
 
   return (
     <ToastProvider>
-<div className="min-h-screen flex items-center justify-center bg-white px-4 sm:px-6 lg:px-8">
-  <Card
-    className={cn(
-      "w-full max-w-md sm:max-w-lg md:max-w-xl mx-auto shadow-lg p-4 sm:p-6 md:p-8",
-      isRTL && "text-right"
-    )}
-    dir={isRTL ? 'rtl' : 'ltr'}
-  >
-    <CardHeader className="space-y-1 text-center">
-      <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold">
-        {language === 'ar' ? 'تسجيل الدخول' : 'Welcome Back'}
-      </CardTitle>
-      <CardDescription className="text-sm sm:text-base md:text-lg">
-        {language === 'ar' 
-          ? 'أدخل بياناتك للوصول إلى حسابك'
-          : 'Enter your credentials to access your account'}
-      </CardDescription>
-    </CardHeader>
-
+      <div className="min-h-screen flex items-center justify-center p-4 bg-white">
+        <Card className={cn(
+          "w-full max-w-md mx-auto shadow-lg",
+          isRTL && "text-right"
+        )} dir={isRTL ? 'rtl' : 'ltr'}>
+          {/* نفس محتوى الكارد كما هو */}
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-bold">
+              {language === 'ar' ? 'تسجيل الدخول' : 'Welcome Back'}
+            </CardTitle>
+            <CardDescription>
+              {language === 'ar' 
+                ? 'أدخل بياناتك للوصول إلى حسابك'
+                : 'Enter your credentials to access your account'}
+            </CardDescription>
+          </CardHeader>
 
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
