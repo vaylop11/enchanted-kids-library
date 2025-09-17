@@ -620,6 +620,27 @@ const PDFViewer = () => {
     toast.success(language === 'ar' ? 'تم مسح المحادثة' : 'Chat cleared');
   }, [language]);
 
+  const handleDelChat = async () => {
+  if (!state.pdf) return;
+
+  try {
+    if (state.pdf.type === "supabase") {
+      // يمسح الرسائل من Supabase
+      await clearChatMessagesForPDF(state.pdf.id);
+    } else {
+      // يمسح الرسائل من التخزين المحلي
+      clearChatMessagesFromLocalPDF(state.pdf.id);
+    }
+
+    // إفراغ state بعد المسح
+    dispatch({ type: PDFViewerActionType.RESET_CHAT });
+  } catch (error) {
+    console.error("خطأ أثناء مسح المحادثة:", error);
+    toast.error("فشل في مسح المحادثة");
+  }
+};
+
+
   // Enhanced quick action handler
   const handleQuickAction = useCallback((action: typeof quickActions[0]) => {
     handleChatSubmit(action.prompt);
@@ -741,6 +762,15 @@ const PDFViewer = () => {
                     variant="ghost"
                     size="icon"
                     onClick={handleResetChat}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                    title={language === 'ar' ? 'مسح المحادثة' : 'Clear chat'}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                        <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleDelChat}
                     className="text-muted-foreground hover:text-destructive transition-colors"
                     title={language === 'ar' ? 'مسح المحادثة' : 'Clear chat'}
                   >
