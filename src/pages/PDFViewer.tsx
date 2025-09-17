@@ -135,30 +135,29 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
 // State Management with useReducer
 interface PDFViewerState {
-  pdf: UploadedPDF | null;
-  chatMessages: SmartChatMessage[];
-  isLoadingPdf: boolean;
-  pdfError: string | null;
-  isTempPdf: boolean;
-  pdfTextContent: string | null;
-  isAnalyzing: boolean;
-  analysisProgress: AnalysisProgress;
-  retryCount: number;
+pdf: UploadedPDF | null;
+chatMessages: SmartChatMessage[];
+isLoadingPdf: boolean;
+pdfError: string | null;
+isTempPdf: boolean;
+pdfTextContent: string | null;
+isAnalyzing: boolean;
+analysisProgress: AnalysisProgress;
+retryCount: number;
+chatId?: string; // ✅ جديد
 }
 
 enum PDFViewerActionType {
-  SET_LOADING = 'SET_LOADING',
-  SET_PDF = 'SET_PDF',
-  SET_ERROR = 'SET_ERROR',
-  SET_CHAT_MESSAGES = 'SET_CHAT_MESSAGES',
-  ADD_CHAT_MESSAGE = 'ADD_CHAT_MESSAGE',
-  SET_ANALYZING = 'SET_ANALYZING',
-  SET_ANALYSIS_PROGRESS = 'SET_ANALYSIS_PROGRESS',
-  SET_PDF_CONTENT = 'SET_PDF_CONTENT',
-  RESET_CHAT = 'RESET_CHAT',
-  SET_TEMP_PDF = 'SET_TEMP_PDF',
-  INCREMENT_RETRY = 'INCREMENT_RETRY',
-  RESET_STATE = 'RESET_STATE'
+SET_PDF = 'SET_PDF',
+SET_CHAT_MESSAGES = 'SET_CHAT_MESSAGES',
+SET_LOADING = 'SET_LOADING',
+SET_ERROR = 'SET_ERROR',
+SET_TEMP_PDF = 'SET_TEMP_PDF',
+SET_PDF_TEXT = 'SET_PDF_TEXT',
+SET_ANALYZING = 'SET_ANALYZING',
+SET_ANALYSIS_PROGRESS = 'SET_ANALYSIS_PROGRESS',
+SET_RETRY_COUNT = 'SET_RETRY_COUNT',
+SET_CHAT_ID = 'SET_CHAT_ID' // ✅ جديد
 }
 
 interface PDFViewerAction {
@@ -167,33 +166,48 @@ interface PDFViewerAction {
 }
 
 const initialState: PDFViewerState = {
-  pdf: null,
-  chatMessages: [],
-  isLoadingPdf: true,
-  pdfError: null,
-  isTempPdf: false,
-  pdfTextContent: null,
-  isAnalyzing: false,
-  analysisProgress: {
-    stage: 'extracting',
-    progress: 0,
-    message: 'Preparing to analyze PDF...'
-  },
-  retryCount: 0
+pdf: null,
+chatMessages: [],
+isLoadingPdf: true,
+pdfError: null,
+isTempPdf: false,
+pdfTextContent: null,
+isAnalyzing: false,
+analysisProgress: {
+stage: 'extracting',
+progress: 0,
+message: 'Preparing to analyze PDF...'
+},
+retryCount: 0,
+chatId: undefined // ✅ جديد
 };
 
-const pdfViewerReducer = (state: PDFViewerState, action: PDFViewerAction): PDFViewerState => {
-  switch (action.type) {
-    case PDFViewerActionType.SET_LOADING:
-      return { ...state, isLoadingPdf: action.payload, pdfError: null };
-
-    case PDFViewerActionType.SET_PDF:
-      return { 
-        ...state, 
-        pdf: action.payload, 
-        isLoadingPdf: false, 
-        pdfError: null 
-      };
+const pdfViewerReducer = (state: PDFViewerState, action: any): PDFViewerState => {
+switch (action.type) {
+case PDFViewerActionType.SET_PDF:
+return { ...state, pdf: action.payload };
+case PDFViewerActionType.SET_CHAT_MESSAGES:
+return { ...state, chatMessages: action.payload };
+case PDFViewerActionType.SET_LOADING:
+return { ...state, isLoadingPdf: action.payload };
+case PDFViewerActionType.SET_ERROR:
+return { ...state, pdfError: action.payload };
+case PDFViewerActionType.SET_TEMP_PDF:
+return { ...state, isTempPdf: action.payload };
+case PDFViewerActionType.SET_PDF_TEXT:
+return { ...state, pdfTextContent: action.payload };
+case PDFViewerActionType.SET_ANALYZING:
+return { ...state, isAnalyzing: action.payload };
+case PDFViewerActionType.SET_ANALYSIS_PROGRESS:
+return { ...state, analysisProgress: action.payload };
+case PDFViewerActionType.SET_RETRY_COUNT:
+return { ...state, retryCount: action.payload };
+case PDFViewerActionType.SET_CHAT_ID:
+return { ...state, chatId: action.payload }; // ✅ جديد
+default:
+return state;
+}
+};
 
     case PDFViewerActionType.SET_ERROR:
       return { 
@@ -616,12 +630,11 @@ const PDFViewer = () => {
   }, [language]);
 
   // Enhanced chat reset
-const handleResetChat = useCallback(async () => {
-  try {
-    if (!state.chatId) { // تأكد عندك chatId في state
-      toast.error(language === "ar" ? "لا توجد محادثة محددة" : "No chat selected");
-      return;
-    }
+const handleResetChat = (state: PDFViewerState, dispatch: any, language: string) => {
+if (!state.chatId) {
+toast.error(language === "ar" ? "لا توجد محادثة محددة" : "No chat selected");
+return;
+}
 
     // 🗑️ حذف كل الرسائل المرتبطة بالـ chat_id
     const { error } = await supabase
@@ -632,7 +645,9 @@ const handleResetChat = useCallback(async () => {
     if (error) throw error;
 
     // 🧹 مسحها محليًا
-    dispatch({ type: PDFViewerActionType.RESET_CHAT });
+    dispatch({ type: PDFViewerActionType.SET_CHAT_MESSAGES, payload: [] });
+toast.success(language === "ar" ? "تمت إعادة ضبط المحادثة" : "Chat has been reset");
+};
 
     toast.success(language === "ar" ? "تم مسح المحادثة نهائيًا" : "Chat permanently deleted");
   } catch (err) {
