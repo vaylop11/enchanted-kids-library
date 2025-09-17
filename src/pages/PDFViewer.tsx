@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useReducer, useEffect, useRef, useCallback, useMemo, Component, ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { ArrowLeft, FileText, MessageSquare, Bot, Sparkles, Search, RotateCcw, Copy, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
@@ -29,7 +29,77 @@ import {
   analyzePDFWithGemini,
   AnalysisProgress
 } from '@/services/pdfAnalysisService';
-import { ErrorBoundary } from 'react-error-boundary';
+
+// Custom Error Boundary Component
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  FallbackComponent?: React.ComponentType<{ error: Error; resetErrorBoundary: () => void }>;
+  onReset?: () => void;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Error caught by ErrorBoundary:', error, errorInfo);
+  }
+
+  resetErrorBoundary = () => {
+    this.setState({ hasError: false, error: undefined });
+    if (this.props.onReset) {
+      this.props.onReset();
+    }
+  };
+
+  render() {
+    if (this.state.hasError && this.state.error) {
+      if (this.props.FallbackComponent) {
+        return (
+          <this.props.FallbackComponent
+            error={this.state.error}
+            resetErrorBoundary={this.resetErrorBoundary}
+          />
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
+          <Card className="max-w-md p-6 text-center space-y-4">
+            <div className="p-4 bg-destructive/10 rounded-full w-fit mx-auto">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+            </div>
+            <h2 className="text-xl font-semibold">Something went wrong</h2>
+            <p className="text-sm text-muted-foreground">
+              {this.state.error.message}
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Button onClick={this.resetErrorBoundary} size="sm">
+                Try Again
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                Reload Page
+              </Button>
+            </div>
+          </Card>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // State Management with useReducer
 interface PDFViewerState {
@@ -186,7 +256,6 @@ const LoadingComponent = ({ language }: { language: string }) => (
             <p className="text-muted-foreground text-sm">
               {language === 'ar' ? 'يرجى الانتظار بينما نقوم بتحضير مستندك' : 'Please wait while we prepare your document'}
             </p>
-            {/* Progress Skeleton */}
             <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
               <div className="bg-primary h-full animate-pulse" style={{ width: '60%' }} />
             </div>
@@ -576,7 +645,10 @@ const PDFViewer = () => {
 
   // Main render with enhanced UI
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => dispatch({ type: PDFViewerActionType.RESET_STATE })}>
+    <ErrorBoundary 
+      FallbackComponent={ErrorFallback} 
+      onReset={() => dispatch({ type: PDFViewerActionType.RESET_STATE })}
+    >
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/30">
         <Navbar />
         
