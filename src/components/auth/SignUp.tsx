@@ -265,7 +265,7 @@ const SignUp = () => {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen flex items-center justify-center p-4 bg-white">
+      <div className="flex items-center justify-center p-4 bg-white">
         <Card className={cn(
           "w-full max-w-md mx-auto shadow-lg",
           isRTL && "text-right"
