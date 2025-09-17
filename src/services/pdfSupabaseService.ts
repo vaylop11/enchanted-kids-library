@@ -376,7 +376,6 @@ export const deletePDF = async (pdfId: string): Promise<boolean> => {
   }
 };
 
-// Add a chat message to a PDF
 export const addChatMessageToPDF = async (
   pdfId: string, 
   content: string, 
@@ -439,5 +438,28 @@ export const getChatMessagesForPDF = async (pdfId: string): Promise<SupabaseChat
     console.error('Error in getChatMessagesForPDF:', error);
     toast.error('Failed to fetch chat messages');
     return [];
+  }
+};
+
+// ✅ NEW: Clear all chat messages for a PDF
+export const clearChatMessagesForPDF = async (pdfId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('pdf_chats')
+      .delete()
+      .eq('pdf_id', pdfId);
+
+    if (error) {
+      console.error('Error clearing chat messages:', error);
+      toast.error('Failed to clear chat messages');
+      return false;
+    }
+
+    toast.success('Chat messages cleared successfully');
+    return true;
+  } catch (error) {
+    console.error('Error in clearChatMessagesForPDF:', error);
+    toast.error('Failed to clear chat messages');
+    return false;
   }
 };
