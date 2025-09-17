@@ -616,32 +616,31 @@ const PDFViewer = () => {
   }, [language]);
 
   // Enhanced chat reset
- const handleResetChat = useCallback(async () => {
+const handleResetChat = useCallback(async () => {
   try {
-    if (!state.pdf?.id) {
-      toast.error(language === "ar" ? "لا يوجد مستند محدد" : "No PDF selected");
+    if (!state.chatId) { // تأكد عندك chatId في state
+      toast.error(language === "ar" ? "لا توجد محادثة محددة" : "No chat selected");
       return;
     }
 
-    // 🗑️ حذف كل الرسائل المرتبطة بـ PDF من Supabase
+    // 🗑️ حذف كل الرسائل المرتبطة بالـ chat_id
     const { error } = await supabase
       .from("chat_messages")
       .delete()
-      .eq("pdf_id", state.pdf.id);
+      .eq("chat_id", state.chatId);
 
     if (error) throw error;
 
-    // 🧹 مسح الرسائل محليًا
+    // 🧹 مسحها محليًا
     dispatch({ type: PDFViewerActionType.RESET_CHAT });
 
-    toast.success(
-      language === "ar" ? "تم مسح المحادثة نهائيًا" : "Chat permanently deleted"
-    );
+    toast.success(language === "ar" ? "تم مسح المحادثة نهائيًا" : "Chat permanently deleted");
   } catch (err) {
     console.error("Error deleting chat:", err);
     toast.error(language === "ar" ? "فشل في المسح" : "Failed to delete chat");
   }
-}, [state.pdf?.id, language]);
+}, [state.chatId, language]);
+
 
 
   // Enhanced quick action handler
