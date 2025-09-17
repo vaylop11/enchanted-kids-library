@@ -209,52 +209,6 @@ return state;
 }
 };
 
-    case PDFViewerActionType.SET_ERROR:
-      return { 
-        ...state, 
-        pdfError: action.payload, 
-        isLoadingPdf: false 
-      };
-
-    case PDFViewerActionType.SET_CHAT_MESSAGES:
-      return { ...state, chatMessages: action.payload };
-
-    case PDFViewerActionType.ADD_CHAT_MESSAGE:
-      return { 
-        ...state, 
-        chatMessages: [...state.chatMessages, action.payload] 
-      };
-
-    case PDFViewerActionType.SET_ANALYZING:
-      return { ...state, isAnalyzing: action.payload };
-
-    case PDFViewerActionType.SET_ANALYSIS_PROGRESS:
-      return { ...state, analysisProgress: action.payload };
-
-    case PDFViewerActionType.SET_PDF_CONTENT:
-      return { ...state, pdfTextContent: action.payload };
-
-    case PDFViewerActionType.RESET_CHAT:
-      return { 
-        ...state, 
-        chatMessages: [], 
-        pdfTextContent: null 
-      };
-
-    case PDFViewerActionType.SET_TEMP_PDF:
-      return { ...state, isTempPdf: action.payload };
-
-    case PDFViewerActionType.INCREMENT_RETRY:
-      return { ...state, retryCount: state.retryCount + 1 };
-
-    case PDFViewerActionType.RESET_STATE:
-      return initialState;
-
-    default:
-      return state;
-  }
-};
-
 // Error Fallback Component
 const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => {
   const { language } = useLanguage();
