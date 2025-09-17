@@ -698,7 +698,7 @@ const PDFViewer = () => {
             "flex-shrink-0 bg-card/80 backdrop-blur-sm border-b border-border/50 rounded-t-lg shadow-sm",
             isMobile ? "p-3" : "p-4"
           )}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mt-10">
               <div className="flex items-center gap-3">
                 <Button
                   variant="ghost"
