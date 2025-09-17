@@ -23,7 +23,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ children }) => {
       <Navbar />
       
       <main className="flex-1 pt-24 pb-20 px-4 md:px-6 container mx-auto max-w-7xl">
-        <div className="text-center">
+        <div className="mb-10 text-center">
           <h1 className="heading-2 mb-4">
             {language === 'ar' ? 'مرحبًا بك في أداة دردشة PDF' : 'Welcome to PDF Chat Tool'}
           </h1>
