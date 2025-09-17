@@ -692,7 +692,7 @@ const PDFViewer = () => {
         <Navbar />
 
         {/* IMPROVED: Better container spacing and responsive layout */}
-        <div className="container mx-auto h-[calc(100vh-80px)] flex flex-col pt-4 pb-4 px-4 gap-2">
+        <div className="container mx-auto h-[calc(100vh-80px)] flex flex-col pt-4 pb-4 px-4 gap-6">
           {/* Enhanced Chat Header */}
           <div className={cn(
             "flex-shrink-0 bg-card/80 backdrop-blur-sm border-b border-border/50 rounded-t-lg shadow-sm",
