@@ -4,7 +4,7 @@ import type { User } from '@supabase/supabase-js';
 
 interface PayPalSubscriptionButtonProps {
   currentUser: User;
-  paypalPlanId: string; // PayPal plan ID (من جدول subscription_plans)
+  paypalPlanId: string;
 }
 
 const PayPalSubscriptionButton: React.FC<PayPalSubscriptionButtonProps> = ({ currentUser, paypalPlanId }) => {
@@ -31,17 +31,20 @@ const PayPalSubscriptionButton: React.FC<PayPalSubscriptionButtonProps> = ({ cur
   }, [paypalPlanId]);
 
   useEffect(() => {
-    if (!gemiProPlanId) return;
+    if (!gemiProPlanId || !paypalRef.current) return;
 
-    const script = document.createElement('script');
-    script.src = "https://www.paypal.com/sdk/js?client-id=AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIuHBIjy_OcQFqtUxUGN2n1DjHnM4A4u62h&vault=true&intent=subscription";
-    script.async = true;
+    const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+    if (!clientId) {
+      console.error("❌ PayPal Client ID is missing in .env");
+      return;
+    }
 
-    script.onload = () => {
-      if (window.paypal && paypalRef.current) {
+    const loadPayPal = () => {
+      if (window.paypal) {
         window.paypal.Buttons({
           style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'subscribe' },
-          createSubscription: (data: any, actions: any) => actions.subscription.create({ plan_id: paypalPlanId }),
+          createSubscription: (_data: any, actions: any) =>
+            actions.subscription.create({ plan_id: paypalPlanId }),
           onApprove: async (data: any) => {
             setLoading(true);
             try {
@@ -58,7 +61,6 @@ const PayPalSubscriptionButton: React.FC<PayPalSubscriptionButtonProps> = ({ cur
                 }]);
 
               if (error) throw error;
-
               alert('✅ تم تفعيل Gemi Pro بنجاح!');
             } catch (err) {
               console.error('Error creating subscription:', err);
@@ -67,15 +69,20 @@ const PayPalSubscriptionButton: React.FC<PayPalSubscriptionButtonProps> = ({ cur
               setLoading(false);
             }
           }
-        }).render(paypalRef.current);
+        }).render(paypalRef.current!);
       }
     };
 
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
+    if (!document.querySelector("#paypal-sdk")) {
+      const script = document.createElement('script');
+      script.id = "paypal-sdk";
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
+      script.async = true;
+      script.onload = loadPayPal;
+      document.body.appendChild(script);
+    } else {
+      loadPayPal();
+    }
   }, [paypalPlanId, gemiProPlanId, currentUser.id]);
 
   return <div ref={paypalRef}>{loading && <p>Processing...</p>}</div>;
