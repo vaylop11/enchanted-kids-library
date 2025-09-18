@@ -3,16 +3,36 @@ import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 
 interface PayPalSubscriptionButtonProps {
-  planId: string; // PayPal plan ID
   currentUser: User;
-  gemiProPlanId: string; // subscription_plans.id في Supabase
+  paypalPlanId: string; // PayPal plan ID (من جدول subscription_plans)
 }
 
-const PayPalSubscriptionButton: React.FC<PayPalSubscriptionButtonProps> = ({ planId, currentUser, gemiProPlanId }) => {
+const PayPalSubscriptionButton: React.FC<PayPalSubscriptionButtonProps> = ({ currentUser, paypalPlanId }) => {
   const paypalRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
+  const [gemiProPlanId, setGemiProPlanId] = useState<string | null>(null);
+
+  // 🔹 جلب UUID الخاص بالخطة من Supabase
+  useEffect(() => {
+    const fetchPlan = async () => {
+      const { data, error } = await supabase
+        .from('subscription_plans')
+        .select('id')
+        .eq('paypal_plan_id', paypalPlanId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching plan:', error);
+      } else {
+        setGemiProPlanId(data.id);
+      }
+    };
+    fetchPlan();
+  }, [paypalPlanId]);
 
   useEffect(() => {
+    if (!gemiProPlanId) return;
+
     const script = document.createElement('script');
     script.src = "https://www.paypal.com/sdk/js?client-id=AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIuHBIjy_OcQFqtUxUGN2n1DjHnM4A4u62h&vault=true&intent=subscription";
     script.async = true;
@@ -21,7 +41,7 @@ const PayPalSubscriptionButton: React.FC<PayPalSubscriptionButtonProps> = ({ pla
       if (window.paypal && paypalRef.current) {
         window.paypal.Buttons({
           style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'subscribe' },
-          createSubscription: (data: any, actions: any) => actions.subscription.create({ plan_id: planId }),
+          createSubscription: (data: any, actions: any) => actions.subscription.create({ plan_id: paypalPlanId }),
           onApprove: async (data: any) => {
             setLoading(true);
             try {
@@ -39,10 +59,10 @@ const PayPalSubscriptionButton: React.FC<PayPalSubscriptionButtonProps> = ({ pla
 
               if (error) throw error;
 
-              alert('تم تفعيل Gemi Pro بنجاح!');
+              alert('✅ تم تفعيل Gemi Pro بنجاح!');
             } catch (err) {
               console.error('Error creating subscription:', err);
-              alert('حدث خطأ أثناء تفعيل الاشتراك.');
+              alert('❌ حدث خطأ أثناء تفعيل الاشتراك.');
             } finally {
               setLoading(false);
             }
@@ -56,7 +76,7 @@ const PayPalSubscriptionButton: React.FC<PayPalSubscriptionButtonProps> = ({ pla
     return () => {
       document.body.removeChild(script);
     };
-  }, [planId, currentUser.id, gemiProPlanId]);
+  }, [paypalPlanId, gemiProPlanId, currentUser.id]);
 
   return <div ref={paypalRef}>{loading && <p>Processing...</p>}</div>;
 };
