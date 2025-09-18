@@ -11,12 +11,31 @@ export default function SubscriptionsPage() {
 
   return (
     <div className="max-w-lg mx-auto mt-10">
-      <SubscriptionCard
-        userId={user.id}
-        plan={plan}
-        paypalPlanId="P-0V356102U2698115XNDBPMCQ" // PayPal ID الخاص بالخطة PRO
-        highlighted={plan?.subscription_plans.name === 'Gemi PRO'}
-      />
+      {plan ? (
+        <SubscriptionCard
+          userId={user.id}
+          plan={plan}
+          paypalPlanId="P-0V356102U2698115XNDBPMCQ"
+          highlighted={plan?.subscription_plans.name === 'Gemi PRO'}
+        />
+      ) : (
+        // لو المستخدم ما عندوش اشتراك → نعرض Free Plan
+        <SubscriptionCard
+          userId={user.id}
+          plan={{
+            subscription_plans: {
+              id: 'free-plan',
+              name: 'Free Plan',
+              price: 0,
+              currency: 'USD',
+              interval: 'month',
+              description: 'الخطة المجانية تتضمن الاستخدام الأساسي.'
+            }
+          }}
+          paypalPlanId="P-0V356102U2698115XNDBPMCQ"
+          highlighted={false}
+        />
+      )}
     </div>
   );
 }
