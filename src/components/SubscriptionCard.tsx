@@ -26,11 +26,11 @@ const SubscriptionCard: FC<SubscriptionCardProps> = ({ userId, plan, paypalPlanI
         <p className="mb-6">{currentPlan.description}</p>
 
         {currentPlan.name === 'Free Plan' ? (
-          <PayPalSubscriptionButton
-            planId={paypalPlanId}
-            currentUser={{ id: userId } as any}
-            gemiProPlanId={currentPlan.id}
-          />
+<PayPalSubscriptionButton
+  currentUser={{ id: userId } as any}
+  paypalPlanId={paypalPlanId}
+/>
+
         ) : (
           <button
             className="w-full py-3 rounded-lg font-semibold bg-green-500 text-white"
