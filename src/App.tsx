@@ -11,6 +11,7 @@ import PDFViewer from "./pages/PDFViewer";
 import TranslatePDF from "./pages/TranslatePDF";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import SubscriptionsPage from "./pages/Subscriptions";  // 👈 استورد الصفحة الجديدة
 import TermsOfService from "./pages/TermsOfService";
 import SignIn from "./components/auth/SignIn";
 import SignUp from "./components/auth/SignUp";
@@ -48,6 +49,14 @@ const App = () => {
                   <Route path="/pdfs" element={<AppLayout><PDFs /></AppLayout>} />
                   <Route path="/pdf/:id" element={<AppLayout><PDFViewer /></AppLayout>} />
                   <Route path="/pdf/temp/:id" element={<AppLayout><PDFViewer /></AppLayout>} />
+                     <Route 
+      path="/subscriptions" 
+      element={
+        <ProtectedRoute>
+          <AppLayout><SubscriptionsPage /></AppLayout>
+        </ProtectedRoute>
+      } 
+    />
                   <Route 
                     path="/translate" 
                     element={
