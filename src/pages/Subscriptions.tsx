@@ -1,13 +1,13 @@
-import { useUser } from '@supabase/auth-helpers-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useUserPlan } from '@/hooks/useUserPlan';
 import SubscriptionCard from '@/components/SubscriptionCard';
 
 export default function SubscriptionsPage() {
-  const user = useUser();
-  const { plan, loading } = useUserPlan(user?.id);
+  const { user, loading: authLoading } = useAuth();
+  const { plan, loading: planLoading } = useUserPlan(user?.id);
 
+  if (authLoading || planLoading) return <p>Loading...</p>;
   if (!user) return <p>Please log in.</p>;
-  if (loading) return <p>Loading...</p>;
 
   return (
     <div className="max-w-lg mx-auto mt-10">
