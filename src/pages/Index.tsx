@@ -90,17 +90,18 @@ const Index = () => {
                 ]}
                 paypalLink="#"
               />
-              <SubscriptionCard
-                title="Gemi Pro"
-                price="$10 / month"
-                features={[
-                  language === 'ar' ? 'دردشة غير محدودة مع PDF' : 'Unlimited PDF Chats',
-                  language === 'ar' ? 'إجابات AI متقدمة' : 'Priority AI Responses',
-                  language === 'ar' ? 'تحليلات متقدمة' : 'Advanced Analytics'
-                ]}
-                paypalLink="https://www.paypal.com/ncp/payment/8YELQBG5C55VU"
-                highlighted
-              />
+<SubscriptionCard
+  title="Gemi Pro"
+  price="$9.99 / month"
+  features={[
+    'Unlimited PDF Chats',
+    'Priority AI Responses',
+    'Advanced Analytics'
+  ]}
+  planId="P-0V356102U2698115XNDBPMCQ"
+  highlighted
+/>
+
             </div>
           </div>
         </section>
