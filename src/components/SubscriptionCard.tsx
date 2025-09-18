@@ -36,12 +36,11 @@ const SubscriptionCard: FC<SubscriptionCardProps> = ({ title, price, features, p
             Active Gemi Pro
           </button>
         ) : planId && gemiProPlanId && currentUser ? (
-          <PayPalSubscriptionButton
-            planId={planId}
-            currentUser={currentUser}
-            gemiProPlanId={gemiProPlanId}
-            onSuccess={() => setIsActive(true)}
-          />
+<PayPalSubscriptionButton
+  currentUser={currentUser} 
+  paypalPlanId="P-0V356102U2698115XNDBPMCQ"
+/>
+
         ) : (
           <button
             className={`w-full py-3 rounded-lg font-semibold ${highlighted ? 'bg-white text-indigo-600 hover:bg-gray-100' : 'bg-indigo-500 text-white hover:bg-indigo-600'}`}
