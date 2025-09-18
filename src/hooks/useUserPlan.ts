@@ -11,7 +11,7 @@ export function useUserPlan(userId?: string) {
     async function fetchPlan() {
       setLoading(true);
       const { data, error } = await supabase
-        .from('subscriptions')
+        .from('user_subscriptions')
         .select(`
           status,
           subscription_plans (
