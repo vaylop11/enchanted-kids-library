@@ -1,15 +1,20 @@
-import { FC } from 'react';
+import { FC, useState } from 'react';
 import PayPalSubscriptionButton from './PayPalSubscriptionButton';
+import type { User } from '@supabase/supabase-js';
 
 interface SubscriptionCardProps {
   title: string;
   price: string;
   features: string[];
-  planId?: string; // إذا كان الاشتراك مدفوع، ضع planId
-  highlighted?: boolean; // لإبراز الخطة المميزة
+  planId?: string; // PayPal plan ID
+  gemiProPlanId?: string; // Supabase plan ID
+  currentUser?: User;
+  highlighted?: boolean;
 }
 
-const SubscriptionCard: FC<SubscriptionCardProps> = ({ title, price, features, planId, highlighted = false }) => {
+const SubscriptionCard: FC<SubscriptionCardProps> = ({ title, price, features, planId, gemiProPlanId, currentUser, highlighted = false }) => {
+  const [isActive, setIsActive] = useState(false); // حالة الاشتراك
+
   return (
     <div className={`flex flex-col rounded-2xl shadow-lg overflow-hidden border transition-transform hover:scale-105
       ${highlighted ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white'}`}>
@@ -26,13 +31,16 @@ const SubscriptionCard: FC<SubscriptionCardProps> = ({ title, price, features, p
           ))}
         </ul>
 
-        {planId ? (
+        {isActive ? (
+          <button className={`w-full py-3 rounded-lg font-semibold bg-green-500 text-white`} disabled>
+            Active Gemi Pro
+          </button>
+        ) : planId && gemiProPlanId && currentUser ? (
           <PayPalSubscriptionButton
             planId={planId}
-            onSuccess={(subscriptionID) => {
-              // هنا يمكنك استدعاء API لتفعيل Gemi Pro للمستخدم تلقائيًا
-              console.log('Subscription completed!', subscriptionID);
-            }}
+            currentUser={currentUser}
+            gemiProPlanId={gemiProPlanId}
+            onSuccess={() => setIsActive(true)}
           />
         ) : (
           <button
