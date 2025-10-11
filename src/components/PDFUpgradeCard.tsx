@@ -1,17 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, Star, Infinity, Upload, Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import PayPalSubscribeButton from '@/components/payments/PayPalSubscribeButton';
+import { usePDFLimits } from '@/hooks/usePDFLimits';
 
 const PDFUpgradeCard = () => {
   const { user } = useAuth();
   const { language } = useLanguage();
-  const paypalRef = useRef<HTMLDivElement>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const { refreshLimits } = usePDFLimits();
   const [subscriptionPlan, setSubscriptionPlan] = useState<any>(null);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ const PDFUpgradeCard = () => {
         .from('subscription_plans')
         .select('*')
         .eq('name', 'Gemi PRO')
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setSubscriptionPlan(data);
@@ -33,86 +33,10 @@ const PDFUpgradeCard = () => {
     }
   };
 
-  useEffect(() => {
-    if (!subscriptionPlan || !paypalRef.current) return;
-
-    // Load PayPal SDK
-    const script = document.createElement('script');
-    script.src = 'https://www.paypal.com/sdk/js?client-id=AfJiAZE6-pcu4pzJZT-ICXYuYmgycbWUXcdW-TVeCNciCPIuHBIjy_OcQFqtUxUGN2n1DjHnM4A4u62h&vault=true&intent=subscription';
-    script.async = true;
-    
-    script.onload = () => {
-      if (window.paypal && paypalRef.current) {
-        window.paypal.Buttons({
-          style: {
-            shape: 'rect',
-            color: 'blue',
-            layout: 'vertical',
-            label: 'subscribe',
-            height: 45
-          },
-          createSubscription: function(data: any, actions: any) {
-            return actions.subscription.create({
-              plan_id: subscriptionPlan.paypal_plan_id
-            });
-          },
-          onApprove: async function(data: any, actions: any) {
-            setIsLoading(true);
-            try {
-              // Save subscription to Supabase
-              const { error } = await supabase
-                .from('user_subscriptions')
-                .insert({
-                  user_id: user?.id,
-                  plan_id: subscriptionPlan.id,
-                  paypal_subscription_id: data.subscriptionID,
-                  status: 'ACTIVE',
-                  current_period_start: new Date().toISOString(),
-                  current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
-                });
-
-              if (error) throw error;
-
-              toast.success(
-                language === 'ar' 
-                  ? 'تم تفعيل اشتراك Gemini Pro بنجاح!' 
-                  : 'Gemini Pro subscription activated successfully!'
-              );
-              
-              // Reload page to update UI
-              setTimeout(() => window.location.reload(), 2000);
-              
-            } catch (error) {
-              console.error('Error saving subscription:', error);
-              toast.error(
-                language === 'ar'
-                  ? 'حدث خطأ في حفظ الاشتراك'
-                  : 'Error saving subscription'
-              );
-            } finally {
-              setIsLoading(false);
-            }
-          },
-          onError: function(err: any) {
-            console.error('PayPal error:', err);
-            toast.error(
-              language === 'ar'
-                ? 'حدث خطأ في عملية الدفع'
-                : 'Payment error occurred'
-            );
-          }
-        }).render(paypalRef.current);
-      }
-    };
-
-    document.head.appendChild(script);
-
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
-    };
-  }, [subscriptionPlan, user, language]);
+  const handleSubscriptionSuccess = () => {
+    // Refresh PDF limits to show unlimited access
+    refreshLimits();
+  };
 
   const features = [
     {
@@ -183,17 +107,13 @@ const PDFUpgradeCard = () => {
             </p>
           </div>
           
-          <div 
-            ref={paypalRef} 
-            className="min-h-[45px] flex items-center justify-center"
-          >
-            {isLoading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-                {language === 'ar' ? 'جاري المعالجة...' : 'Processing...'}
-              </div>
-            )}
-          </div>
+          {subscriptionPlan && (
+            <PayPalSubscribeButton
+              planId={subscriptionPlan.id}
+              paypalPlanId={subscriptionPlan.paypal_plan_id}
+              onSuccess={handleSubscriptionSuccess}
+            />
+          )}
 
           <p className="text-xs text-muted-foreground text-center">
             {language === 'ar' 
@@ -205,12 +125,5 @@ const PDFUpgradeCard = () => {
     </Card>
   );
 };
-
-// Extend window type for PayPal
-declare global {
-  interface Window {
-    paypal?: any;
-  }
-}
 
 export default PDFUpgradeCard;

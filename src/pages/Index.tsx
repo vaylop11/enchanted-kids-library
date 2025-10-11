@@ -9,7 +9,7 @@ import UnifiedPDFInterface from '@/components/UnifiedPDFInterface';
 import PDFGrid from '@/components/PDFGrid';
 import SEO from '@/components/SEO';
 import StatsCard from '@/components/StatsCard';
-import SubscriptionCard from '@/components/SubscriptionCard';
+import PDFUpgradeCard from '@/components/PDFUpgradeCard';
 
 const Index = () => {
   const { language } = useLanguage();
@@ -80,28 +80,10 @@ const Index = () => {
             <h2 className="heading-2 mb-8">
               {language === 'ar' ? 'اختر اشتراكك' : 'Choose Your Subscription'}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <SubscriptionCard
-                title={language === 'ar' ? 'Gemi Free' : 'Gemi Free'}
-                price="$0"
-                features={[
-                  language === 'ar' ? 'الدردشة مع ملفات PDF' : 'Chat with PDFs',
-                  language === 'ar' ? 'إجابات AI أساسية' : 'Basic AI Responses'
-                ]}
-                paypalLink="#"
-              />
-<SubscriptionCard
-  title="Gemi Pro"
-  price="$9.99 / month"
-  features={[
-    'Unlimited PDF Chats',
-    'Priority AI Responses',
-    'Advanced Analytics'
-  ]}
-  planId="P-0V356102U2698115XNDBPMCQ"
-  highlighted
-/>
-
+            <div className="flex justify-center">
+              <div className="max-w-md w-full">
+                <PDFUpgradeCard />
+              </div>
             </div>
           </div>
         </section>

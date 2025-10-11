@@ -24,7 +24,7 @@ export function useUserPlan(userId?: string) {
           )
         `)
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error(error);

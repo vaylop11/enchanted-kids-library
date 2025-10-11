@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import PayPalSubscriptionButton from './PayPalSubscriptionButton';
+import PayPalSubscribeButton from './payments/PayPalSubscribeButton';
 
 interface SubscriptionCardProps {
   userId: string;
@@ -26,11 +26,10 @@ const SubscriptionCard: FC<SubscriptionCardProps> = ({ userId, plan, paypalPlanI
         <p className="mb-6">{currentPlan.description}</p>
 
         {currentPlan.name === 'Free Plan' ? (
-<PayPalSubscriptionButton
-  currentUser={{ id: userId } as any}
-  paypalPlanId={paypalPlanId}
-/>
-
+          <PayPalSubscribeButton
+            planId={plan.id}
+            paypalPlanId={paypalPlanId}
+          />
         ) : (
           <button
             className="w-full py-3 rounded-lg font-semibold bg-green-500 text-white"

@@ -200,6 +200,7 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
   );
 
   return (
+    <>
     <TooltipProvider>
       <div className={cn(
         "flex flex-col h-full bg-gradient-to-br from-background/95 via-background to-muted/20",
@@ -476,7 +477,8 @@ const ModernPDFViewer: React.FC<ModernPDFViewerProps> = ({
         </div>
       </div>
     </TooltipProvider>
-<div className="h-16 sm:h-18 mb-4 sm:mb-6" />
+    <div className="h-16 sm:h-18 mb-4 sm:mb-6" />
+    </>
   );
 };
 
