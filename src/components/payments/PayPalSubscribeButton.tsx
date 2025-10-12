@@ -20,29 +20,41 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
+  const [hasError, setHasError] = useState(false);
 
   // Fetch PayPal client ID from edge function
   useEffect(() => {
-    const fetchClientId = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('get-paypal-config');
-        
-        if (error) throw error;
-        
-        setClientId(data.clientId);
-    } catch (error) {
-        console.error('Error fetching PayPal config:', error);
-        toast.error(
-          language === 'ar'
-            ? 'خطأ في تحميل إعدادات الدفع'
-            : 'Error loading payment settings'
-        );
-        setIsLoading(false);
-      }
-    };
-
-    fetchClientId();
+    fetchPayPalConfig();
   }, [language]);
+
+  const fetchPayPalConfig = async () => {
+    try {
+      setHasError(false);
+      setIsLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('get-paypal-config');
+      
+      if (error) {
+        console.error('PayPal config error:', error);
+        throw error;
+      }
+      
+      if (!data?.clientId) {
+        throw new Error('Client ID not returned from server');
+      }
+      
+      setClientId(data.clientId);
+    } catch (error) {
+      console.error('Error fetching PayPal config:', error);
+      setHasError(true);
+      setIsLoading(false);
+      toast.error(
+        language === 'ar'
+          ? 'خطأ في تحميل إعدادات الدفع. الرجاء المحاولة مرة أخرى.'
+          : 'Error loading payment settings. Please try again.'
+      );
+    }
+  };
 
   // Load PayPal SDK and render button
   useEffect(() => {
@@ -163,6 +175,24 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
 
     loadPayPalSDK();
   }, [clientId, paypalPlanId, planId, language, onSuccess]);
+
+  if (hasError) {
+    return (
+      <div className="space-y-2">
+        <button
+          onClick={fetchPayPalConfig}
+          className="w-full h-11 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+        >
+          {language === 'ar' ? 'إعادة المحاولة' : 'Retry'}
+        </button>
+        <div className="text-xs text-center text-destructive">
+          {language === 'ar' 
+            ? 'فشل تحميل نظام الدفع. انقر لإعادة المحاولة.'
+            : 'Failed to load payment system. Click to retry.'}
+        </div>
+      </div>
+    );
+  }
 
   if (!clientId || isLoading) {
     return (

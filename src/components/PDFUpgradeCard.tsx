@@ -7,11 +7,12 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import PayPalSubscribeButton from '@/components/payments/PayPalSubscribeButton';
 import { usePDFLimits } from '@/hooks/usePDFLimits';
+import { toast } from 'sonner';
 
 const PDFUpgradeCard = () => {
   const { user } = useAuth();
   const { language } = useLanguage();
-  const { refreshLimits } = usePDFLimits();
+  const { refreshLimits, has_paid_subscription, plan_name } = usePDFLimits();
   const [subscriptionPlan, setSubscriptionPlan] = useState<any>(null);
 
   useEffect(() => {
@@ -33,9 +34,14 @@ const PDFUpgradeCard = () => {
     }
   };
 
-  const handleSubscriptionSuccess = () => {
-    // Refresh PDF limits to show unlimited access
-    refreshLimits();
+  const handleSubscriptionSuccess = async () => {
+    // Refresh PDF limits to show unlimited access immediately
+    await refreshLimits();
+    toast.success(
+      language === 'ar'
+        ? '🎉 تم تفعيل Gemi PRO! أصبح لديك رفع غير محدود الآن.'
+        : '🎉 Gemi PRO activated! You now have unlimited uploads.'
+    );
   };
 
   const features = [
@@ -57,7 +63,10 @@ const PDFUpgradeCard = () => {
     }
   ];
 
-  if (!user) return null;
+  // Don't show upgrade card if user already has paid subscription
+  if (!user || has_paid_subscription || plan_name === 'Gemi PRO') {
+    return null;
+  }
 
   return (
     <Card className="premium-gradient border-2 border-primary/20 shadow-xl">

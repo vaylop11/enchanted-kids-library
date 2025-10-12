@@ -1,17 +1,23 @@
 import { FC } from 'react';
 import PayPalSubscribeButton from './payments/PayPalSubscribeButton';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface SubscriptionCardProps {
   userId: string;
   plan: any; // بيانات الخطة من useUserPlan
   paypalPlanId: string; // PayPal Plan ID للخطة PRO
   highlighted?: boolean;
+  onSuccess?: () => void;
 }
 
-const SubscriptionCard: FC<SubscriptionCardProps> = ({ userId, plan, paypalPlanId, highlighted = false }) => {
-  if (!plan) return <p>Loading plan...</p>;
+const SubscriptionCard: FC<SubscriptionCardProps> = ({ userId, plan, paypalPlanId, highlighted = false, onSuccess }) => {
+  const { language } = useLanguage();
+  
+  if (!plan) return <p>{language === 'ar' ? 'جاري التحميل...' : 'Loading plan...'}</p>;
 
   const currentPlan = plan.subscription_plans;
+  const isActive = plan.status === 'ACTIVE';
+  const isPro = currentPlan.name === 'Gemi PRO';
 
   return (
     <div className={`flex flex-col rounded-2xl shadow-lg overflow-hidden border transition-transform hover:scale-105
@@ -25,17 +31,18 @@ const SubscriptionCard: FC<SubscriptionCardProps> = ({ userId, plan, paypalPlanI
 
         <p className="mb-6">{currentPlan.description}</p>
 
-        {currentPlan.name === 'Free Plan' ? (
+        {!isActive || !isPro ? (
           <PayPalSubscribeButton
-            planId={plan.id}
+            planId={currentPlan.id}
             paypalPlanId={paypalPlanId}
+            onSuccess={onSuccess}
           />
         ) : (
           <button
-            className="w-full py-3 rounded-lg font-semibold bg-green-500 text-white"
+            className="w-full py-3 rounded-lg font-semibold bg-green-500 text-white cursor-not-allowed"
             disabled
           >
-            You are on {currentPlan.name}
+            {language === 'ar' ? `أنت على خطة ${currentPlan.name} ✓` : `You are on ${currentPlan.name} ✓`}
           </button>
         )}
       </div>
