@@ -30,13 +30,14 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
         if (error) throw error;
         
         setClientId(data.clientId);
-      } catch (error) {
+    } catch (error) {
         console.error('Error fetching PayPal config:', error);
         toast.error(
           language === 'ar'
             ? 'خطأ في تحميل إعدادات الدفع'
             : 'Error loading payment settings'
         );
+        setIsLoading(false);
       }
     };
 
@@ -57,7 +58,7 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
       // Load PayPal SDK
       const script = document.createElement('script');
       script.id = 'paypal-sdk';
-      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons&vault=true&intent=subscription`;
       script.async = true;
       script.onload = renderPayPalButton;
       script.onerror = () => {
@@ -74,7 +75,16 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
     };
 
     const renderPayPalButton = () => {
-      if (!window.paypal || !paypalRef.current) return;
+      if (!window.paypal || !paypalRef.current) {
+        setIsLoading(false);
+        console.error('PayPal SDK not available');
+        toast.error(
+          language === 'ar'
+            ? 'فشل تحميل نظام الدفع'
+            : 'Failed to load payment system'
+        );
+        return;
+      }
 
       setIsLoading(false);
 
