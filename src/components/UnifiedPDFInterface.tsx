@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle, MessageSquare, Upload, Sparkles, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,45 +6,22 @@ import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { uploadPDFToSupabase, getUserPDFs } from '@/services/pdfSupabaseService';
+import { uploadPDFToSupabase } from '@/services/pdfSupabaseService';
+import { usePDFLimits } from '@/hooks/usePDFLimits';
 
 const UnifiedPDFInterface = () => {
   const { language } = useLanguage();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { canUploadPDF, max_file_size_mb, isUnlimited, current_pdf_count, max_pdfs, refreshLimits } = usePDFLimits();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [userPDFCount, setUserPDFCount] = useState(0);
-  
-  useEffect(() => {
-    if (user) {
-      const checkUserPDFs = async () => {
-        try {
-          const pdfs = await getUserPDFs(user.id);
-          setUserPDFCount(pdfs.length);
-        } catch (error) {
-          console.error('Error checking user PDFs:', error);
-        }
-      };
-      
-      checkUserPDFs();
-    }
-  }, [user]);
 
   const handleFileUpload = async (file: File) => {
     setUploadError(null);
-    
-    if (user && userPDFCount >= 4) {
-      const errorMsg = language === 'ar' 
-        ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
-        : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.';
-      toast.error(errorMsg);
-      setUploadError(errorMsg);
-      return;
-    }
     
     if (file.type !== 'application/pdf') {
       toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
@@ -52,10 +29,24 @@ const UnifiedPDFInterface = () => {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
-      setUploadError(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
-      return;
+    // Use usePDFLimits for validation
+    if (user) {
+      const uploadCheck = canUploadPDF(file.size);
+      if (!uploadCheck.canUpload) {
+        let errorMsg = '';
+        if (uploadCheck.reason === 'file_size') {
+          errorMsg = language === 'ar'
+            ? `حجم الملف كبير جدًا (الحد الأقصى ${uploadCheck.maxSize} ميجابايت)`
+            : `File size too large (max ${uploadCheck.maxSize}MB)`;
+        } else if (uploadCheck.reason === 'pdf_limit') {
+          errorMsg = language === 'ar'
+            ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${uploadCheck.maxPdfs}). يرجى حذف بعض الملفات لتحميل المزيد.`
+            : `You have reached the maximum number of PDFs (${uploadCheck.maxPdfs}). Please delete some files to upload more.`;
+        }
+        toast.error(errorMsg);
+        setUploadError(errorMsg);
+        return;
+      }
     }
 
     try {
@@ -79,7 +70,7 @@ const UnifiedPDFInterface = () => {
         
         if (pdf) {
           toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-          setUserPDFCount(prev => prev + 1);
+          await refreshLimits();
           
           setTimeout(() => {
             setIsUploading(false);
@@ -311,7 +302,10 @@ const UnifiedPDFInterface = () => {
         {language === 'ar' ? 'اختر ملف' : 'Choose File'}
       </Button>
       <p className="text-xs text-slate-900 mt-2">
-        {language === 'ar' ? 'الحد الأقصى 10 ميجابايت' : 'Max 10MB'}
+        {language === 'ar' 
+          ? `الحد الأقصى ${max_file_size_mb} ميجابايت${isUnlimited ? ' • رفع غير محدود' : ` • ${current_pdf_count}/${max_pdfs} ملفات`}`
+          : `Max ${max_file_size_mb}MB${isUnlimited ? ' • Unlimited uploads' : ` • ${current_pdf_count}/${max_pdfs} PDFs`}`
+        }
       </p>
     </div>
   </div>

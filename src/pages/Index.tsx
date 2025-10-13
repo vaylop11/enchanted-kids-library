@@ -9,7 +9,7 @@ import UnifiedPDFInterface from '@/components/UnifiedPDFInterface';
 import PDFGrid from '@/components/PDFGrid';
 import SEO from '@/components/SEO';
 import StatsCard from '@/components/StatsCard';
-import PDFUpgradeCard from '@/components/PDFUpgradeCard';
+import PlansSection from '@/components/PlansSection';
 
 const Index = () => {
   const { language } = useLanguage();
@@ -75,16 +75,20 @@ const Index = () => {
         <FeaturesSection />
 
         {/* Subscription Plans */}
-        <section className="py-16 px-4 md:px-6 bg-gray-50">
-          <div className="container mx-auto max-w-7xl text-center">
-            <h2 className="heading-2 mb-8">
-              {language === 'ar' ? 'اختر اشتراكك' : 'Choose Your Subscription'}
-            </h2>
-            <div className="flex justify-center">
-              <div className="max-w-md w-full">
-                <PDFUpgradeCard />
-              </div>
+        <section className="py-16 px-4 md:px-6 bg-muted/30">
+          <div className="container mx-auto max-w-7xl">
+            <div className="text-center mb-12">
+              <h2 className="heading-2 mb-4">
+                {language === 'ar' ? 'خطط الاشتراك' : 'Subscription Plans'}
+              </h2>
+              <p className="paragraph max-w-2xl mx-auto">
+                {language === 'ar'
+                  ? 'اختر الخطة المناسبة لك واستمتع بمزايا إضافية'
+                  : 'Choose the plan that suits you and enjoy additional benefits'
+                }
+              </p>
             </div>
+            <PlansSection />
           </div>
         </section>
 

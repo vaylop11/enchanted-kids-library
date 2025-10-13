@@ -1,50 +1,44 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserPlan } from '@/hooks/useUserPlan';
-import SubscriptionCard from '@/components/SubscriptionCard';
-import { usePDFLimits } from '@/hooks/usePDFLimits';
+import { useLanguage } from '@/contexts/LanguageContext';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import PlansSection from '@/components/PlansSection';
 
 export default function SubscriptionsPage() {
   const { user, loading: authLoading } = useAuth();
-  const { plan, loading: planLoading } = useUserPlan(user?.id);
-  const { refreshLimits } = usePDFLimits();
+  const { language } = useLanguage();
 
-  if (authLoading || planLoading) return <p>Loading...</p>;
-  if (!user) return <p>Please log in.</p>;
-
-  const handleSubscriptionSuccess = async () => {
-    await refreshLimits();
-  };
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/20 border-t-primary animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-lg mx-auto mt-10">
-      {plan ? (
-        <SubscriptionCard
-          userId={user.id}
-          plan={plan}
-          paypalPlanId="P-0V356102U2698115XNDBPMCQ"
-          highlighted={plan?.subscription_plans.name === 'Gemi PRO'}
-          onSuccess={handleSubscriptionSuccess}
-        />
-      ) : (
-        // لو المستخدم ما عندوش اشتراك → نعرض Free Plan
-        <SubscriptionCard
-          userId={user.id}
-          plan={{
-            status: 'inactive',
-            subscription_plans: {
-              id: 'free-plan',
-              name: 'Free Plan',
-              price: 0,
-              currency: 'USD',
-              interval: 'month',
-              description: 'الخطة المجانية تتضمن الاستخدام الأساسي.'
-            }
-          }}
-          paypalPlanId="P-0V356102U2698115XNDBPMCQ"
-          highlighted={false}
-          onSuccess={handleSubscriptionSuccess}
-        />
-      )}
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-background via-muted/5">
+      <Navbar />
+      
+      <main className="flex-1 pt-24 pb-20 px-4 md:px-6">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              {language === 'ar' ? 'خطط الاشتراك' : 'Subscription Plans'}
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              {language === 'ar'
+                ? 'اختر الخطة المناسبة لك واستمتع بمزايا إضافية'
+                : 'Choose the plan that suits you and enjoy additional benefits'
+              }
+            </p>
+          </div>
+
+          <PlansSection />
+        </div>
+      </main>
+
+      <Footer />
     </div>
   );
 }

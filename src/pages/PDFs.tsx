@@ -9,12 +9,14 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserPDFs, uploadPDFToSupabase, SupabasePDF } from '@/services/pdfSupabaseService';
+import { usePDFLimits } from '@/hooks/usePDFLimits';
 
 const PDFs = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { language } = useLanguage();
   const { user, loading: authLoading } = useAuth();
+  const { canUploadPDF, max_file_size_mb, isUnlimited, max_pdfs, refreshLimits } = usePDFLimits();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,23 +81,25 @@ const PDFs = () => {
       return;
     }
     
-    // Check if user has reached the maximum PDFs limit (4)
-    if (pdfs.length >= 4) {
-      toast.error(
-        language === 'ar' 
-          ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4)' 
-          : 'You have reached the maximum number of PDFs (4)'
-      );
-      return;
-    }
-    
     if (file.type !== 'application/pdf') {
       toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error(language === 'ar' ? 'حجم الملف كبير جدًا (الحد الأقصى 10 ميجابايت)' : 'File size too large (max 10MB)');
+    // Use usePDFLimits for validation
+    const uploadCheck = canUploadPDF(file.size);
+    if (!uploadCheck.canUpload) {
+      let errorMsg = '';
+      if (uploadCheck.reason === 'file_size') {
+        errorMsg = language === 'ar'
+          ? `حجم الملف كبير جدًا (الحد الأقصى ${uploadCheck.maxSize} ميجابايت)`
+          : `File size too large (max ${uploadCheck.maxSize}MB)`;
+      } else if (uploadCheck.reason === 'pdf_limit') {
+        errorMsg = language === 'ar'
+          ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${uploadCheck.maxPdfs}). يرجى حذف بعض الملفات لتحميل المزيد.`
+          : `You have reached the maximum number of PDFs (${uploadCheck.maxPdfs}). Please delete some files to upload more.`;
+      }
+      toast.error(errorMsg);
       return;
     }
 
@@ -107,6 +111,7 @@ const PDFs = () => {
       if (pdf) {
         toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
         setPdfs(prevPDFs => [pdf, ...prevPDFs]);
+        await refreshLimits();
         setIsUploading(false);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -123,12 +128,13 @@ const PDFs = () => {
   };
 
   const handleUploadClick = () => {
-    // Check if user has reached the maximum PDFs limit before opening file selector
-    if (pdfs.length >= 4) {
+    // Check using usePDFLimits
+    const uploadCheck = canUploadPDF(0); // Check with 0 bytes to just validate count
+    if (!uploadCheck.canUpload && uploadCheck.reason === 'pdf_limit') {
       toast.error(
-        language === 'ar' 
-          ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4)' 
-          : 'You have reached the maximum number of PDFs (4)'
+        language === 'ar'
+          ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${uploadCheck.maxPdfs})`
+          : `You have reached the maximum number of PDFs (${uploadCheck.maxPdfs})`
       );
       return;
     }
@@ -154,8 +160,9 @@ const PDFs = () => {
     return null;
   }
   
-  // Calculate if the user has reached the maximum upload limit
-  const hasReachedMaxPDFs = pdfs.length >= 4;
+  // Calculate if the user has reached the maximum upload limit using usePDFLimits
+  const uploadCheck = canUploadPDF(0);
+  const hasReachedMaxPDFs = !uploadCheck.canUpload && uploadCheck.reason === 'pdf_limit';
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -170,13 +177,13 @@ const PDFs = () => {
               : 'Browse all PDFs you have uploaded. You can search for a specific file or upload a new one.'
             }
           </p>
-          {hasReachedMaxPDFs && (
+          {hasReachedMaxPDFs && !isUnlimited && (
             <div className="mt-4 flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-950/20 p-3 rounded-md border border-amber-200 dark:border-amber-800">
               <AlertTriangle className="h-4 w-4" />
               <p className="text-sm">
-                {language === 'ar' 
-                  ? 'لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (4). يرجى حذف بعض الملفات لتحميل المزيد.'
-                  : 'You have reached the maximum number of PDFs (4). Please delete some files to upload more.'
+                {language === 'ar'
+                  ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${max_pdfs}). يرجى حذف بعض الملفات أو الترقية لتحميل المزيد.`
+                  : `You have reached the maximum number of PDFs (${max_pdfs}). Please delete some files or upgrade to upload more.`
                 }
               </p>
             </div>

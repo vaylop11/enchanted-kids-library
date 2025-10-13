@@ -21,6 +21,8 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
+  const [loadTimeout, setLoadTimeout] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch PayPal client ID from edge function
   useEffect(() => {
@@ -31,8 +33,23 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
     try {
       setHasError(false);
       setIsLoading(true);
+      setLoadTimeout(false);
+      console.log('Fetching PayPal config...');
+      
+      // Set timeout for config fetching
+      timeoutRef.current = setTimeout(() => {
+        console.warn('PayPal config fetch timeout');
+        setLoadTimeout(true);
+        setHasError(true);
+        setIsLoading(false);
+      }, 10000); // 10 seconds
       
       const { data, error } = await supabase.functions.invoke('get-paypal-config');
+      
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       
       if (error) {
         console.error('PayPal config error:', error);
@@ -43,9 +60,14 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
         throw new Error('Client ID not returned from server');
       }
       
+      console.log('PayPal client ID received');
       setClientId(data.clientId);
     } catch (error) {
       console.error('Error fetching PayPal config:', error);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       setHasError(true);
       setIsLoading(false);
       toast.error(
@@ -61,25 +83,42 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
     if (!clientId || !paypalRef.current) return;
 
     const loadPayPalSDK = () => {
+      console.log('Loading PayPal SDK...');
+      
       // Check if SDK is already loaded
       if (document.querySelector('#paypal-sdk')) {
+        console.log('PayPal SDK already loaded');
         renderPayPalButton();
         return;
       }
+
+      // Set timeout for SDK loading
+      const sdkTimeout = setTimeout(() => {
+        console.warn('PayPal SDK load timeout');
+        setLoadTimeout(true);
+        setHasError(true);
+        setIsLoading(false);
+      }, 15000); // 15 seconds for SDK
 
       // Load PayPal SDK
       const script = document.createElement('script');
       script.id = 'paypal-sdk';
       script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons&vault=true&intent=subscription`;
       script.async = true;
-      script.onload = renderPayPalButton;
+      script.onload = () => {
+        clearTimeout(sdkTimeout);
+        console.log('PayPal SDK loaded successfully');
+        renderPayPalButton();
+      };
       script.onerror = () => {
+        clearTimeout(sdkTimeout);
         console.error('Failed to load PayPal SDK');
         toast.error(
           language === 'ar'
             ? 'فشل تحميل نظام الدفع'
             : 'Failed to load payment system'
         );
+        setHasError(true);
         setIsLoading(false);
       };
 
@@ -109,11 +148,13 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
           height: 45
         },
         createSubscription: function(data: any, actions: any) {
+          console.log('Creating PayPal subscription...');
           return actions.subscription.create({
             plan_id: paypalPlanId
           });
         },
         onApprove: async function(data: any) {
+          console.log('Subscription approved:', data.subscriptionID);
           setIsProcessing(true);
           
           try {
@@ -135,6 +176,8 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
               }
             );
 
+            console.log('Verification response:', error ? 'Error' : 'Success');
+
             if (error) throw error;
 
             toast.success(
@@ -145,9 +188,11 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
 
             // Call success callback
             if (onSuccess) {
+              console.log('Calling onSuccess callback');
               onSuccess();
             } else {
               // Reload page to update UI if no callback
+              console.log('Reloading page to update UI');
               setTimeout(() => window.location.reload(), 1500);
             }
             
@@ -174,6 +219,12 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
     };
 
     loadPayPalSDK();
+    
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, [clientId, paypalPlanId, planId, language, onSuccess]);
 
   if (hasError) {
@@ -186,9 +237,14 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
           {language === 'ar' ? 'إعادة المحاولة' : 'Retry'}
         </button>
         <div className="text-xs text-center text-destructive">
-          {language === 'ar' 
-            ? 'فشل تحميل نظام الدفع. انقر لإعادة المحاولة.'
-            : 'Failed to load payment system. Click to retry.'}
+          {loadTimeout
+            ? (language === 'ar' 
+                ? 'انتهت مهلة التحميل. انقر لإعادة المحاولة.'
+                : 'Loading timeout. Click to retry.')
+            : (language === 'ar' 
+                ? 'فشل تحميل نظام الدفع. انقر لإعادة المحاولة.'
+                : 'Failed to load payment system. Click to retry.')
+          }
         </div>
       </div>
     );
