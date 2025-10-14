@@ -10,14 +10,12 @@ interface PayPalSubscribeButtonProps {
 const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
   planId,
   paypalPlanId,
-  onSuccess
+  onSuccess,
 }) => {
   const [loading, setLoading] = useState(true);
   const paypalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let paypalButtonInstance: any;
-
     const loadPayPalScript = async () => {
       try {
         if (!paypalPlanId) {
@@ -27,69 +25,91 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
           return;
         }
 
+        // استدعاء Edge Function من Supabase
         const response = await fetch(
           'https://nknrkkzegbrkqtutmafo.supabase.co/functions/v1/get-paypal-config',
           {
             method: 'GET',
             headers: {
               Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-              Accept: 'application/json'
-            }
+              Accept: 'application/json',
+            },
           }
         );
 
-        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}`);
+        }
 
         const data = await response.json();
         const clientId = data?.clientId;
-        if (!clientId) throw new Error('PayPal clientId غير متوفر');
+        if (!clientId) {
+          throw new Error('PayPal clientId غير متوفر');
+        }
 
-const renderButton = () => {
-  if (!window.paypal || !paypalRef.current) {
-    console.error('PayPal SDK not loaded');
-    setLoading(false);
-    return;
-  }
+        const renderButton = () => {
+          if (!window.paypal || !paypalRef.current) {
+            console.error('PayPal SDK not loaded');
+            setLoading(false);
+            return;
+          }
 
-  // حذف الأزرار القديمة قبل إعادة الرسم
-  paypalRef.current.innerHTML = '';
+          // حذف الأزرار القديمة قبل إعادة الرسم
+          paypalRef.current.innerHTML = '';
 
-  window.paypal
-    .Buttons({
-      style: {
-        shape: 'rect',
-        color: 'gold',
-        layout: 'vertical',
-        label: 'subscribe',
-      },
-      createSubscription: (_data: any, actions: any) => {
-        return actions.subscription.create({
-          plan_id: paypalPlanId,
-        });
-      },
-      onApprove: async () => {
-        toast.success('تم الاشتراك بنجاح');
-        onSuccess?.();
-      },
-      onError: (err: any) => {
-        console.error('PayPal error:', err);
-        toast.error('حدث خطأ أثناء الاشتراك');
-      },
-    })
-    .render(paypalRef.current);
+          window.paypal
+            .Buttons({
+              style: {
+                shape: 'rect',
+                color: 'gold',
+                layout: 'vertical',
+                label: 'subscribe',
+              },
+              createSubscription: (_data: any, actions: any) => {
+                return actions.subscription.create({
+                  plan_id: paypalPlanId,
+                });
+              },
+              onApprove: async () => {
+                toast.success('تم الاشتراك بنجاح');
+                onSuccess?.();
+              },
+              onError: (err: any) => {
+                console.error('PayPal error:', err);
+                toast.error('حدث خطأ أثناء الاشتراك');
+              },
+            })
+            .render(paypalRef.current);
 
-  setLoading(false);
-};
+          setLoading(false);
+        };
 
+        // تحميل PayPal SDK مرة واحدة فقط
+        if (!window.paypal) {
+          const existingScript = document.querySelector<HTMLScriptElement>(
+            'script[src*="paypal.com/sdk/js"]'
+          );
+          if (!existingScript) {
+            const script = document.createElement('script');
+            script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
+            script.async = true;
+            script.onload = renderButton;
+            document.body.appendChild(script);
+          } else {
+            existingScript.onload = renderButton;
+          }
+        } else {
+          renderButton();
+        }
+      } catch (err) {
+        console.error('Error loading PayPal:', err);
+        toast.error('فشل تحميل PayPal');
+        setLoading(false);
+      }
+    };
 
     loadPayPalScript();
-
-    // تنظيف عند إزالة المكون
-    return () => {
-      if (paypalRef.current) paypalRef.current.innerHTML = '';
-      paypalButtonInstance = null;
-    };
-  }, [paypalPlanId]); // حذف onSuccess و planId لتجنب التكرار غير الضروري
+  }, [paypalPlanId, planId, onSuccess]);
 
   return (
     <div className="w-full">
