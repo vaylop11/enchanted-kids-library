@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { BookOpen, Menu, X, Sparkles } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
+import { useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,12 @@ const Navbar = () => {
   const { direction, language, t } = useLanguage();
   const { user } = useAuth();
 
+  const Header = () => {
+  const location = useLocation();
+
+  // حدد هنا الصفحة أو الواجهة اللي تريدها شفافة
+  const isHomePage = location.pathname === '/';
+
   useEffect(() => {
     setIsDrawerOpen(false);
   }, [location.pathname]);
@@ -32,7 +39,11 @@ const Navbar = () => {
   return (
     <>
       {/* Navbar */}
-<header className="absolute top-0 left-0 right-0 z-50 bg-transparent border-transparent">
+    <header
+      className={`absolute top-0 left-0 right-0 z-50 ${
+        isHomePage ? 'bg-transparent border-transparent' : 'bg-white border-b'
+      }`}
+    >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex h-16 sm:h-18 items-center justify-between">
 
