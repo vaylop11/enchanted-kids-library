@@ -109,7 +109,7 @@ const Navbar = () => {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="relative rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105 p-2"
+                    className="relative rounded-xl bg-white hover:text-primary transition-all duration-300 hover:scale-105 p-2"
                     aria-label={isDrawerOpen ? "Close menu" : "Open menu"}
                   >
                     <div className="relative">
