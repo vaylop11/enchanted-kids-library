@@ -17,7 +17,12 @@ import {
   Copy,
   RefreshCw,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Sparkles,
+  Send,
+  Mic,
+  Paperclip,
+  MoreVertical
 } from 'lucide-react';
 import { EnhancedChatInput } from '@/components/ui/enhanced-chat-input';
 import { ChatMessageSkeleton } from '@/components/ui/skeleton';
@@ -32,32 +37,32 @@ import { useToast } from '@/hooks/use-toast';
 
 // Enhanced Modern Skeleton Loader with Typing Animation
 const MessageSkeleton = ({ language }: { language: 'ar' | 'en' }) => (
-  <div className={cn("flex gap-2 sm:gap-3", language === 'ar' ? 'flex-row-reverse' : '')}>
-    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg animate-pulse flex-shrink-0">
-      <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+  <div className={cn("flex gap-3", language === 'ar' ? 'flex-row-reverse' : '')}>
+    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg animate-pulse flex-shrink-0">
+      <Bot className="w-5 h-5 text-white" />
     </div>
-    <div className="max-w-[75%] sm:max-w-[80%] space-y-2">
-      <div className="bg-white/90 border border-gray-200/60 dark:bg-gray-800/90 dark:border-gray-700/60 rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-lg backdrop-blur-sm relative overflow-hidden">
+    <div className="max-w-[80%] space-y-3">
+      <div className="bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-750 border border-gray-200/60 dark:border-gray-700/60 rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm relative overflow-hidden">
         {/* Animated background */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/50 to-transparent dark:via-blue-900/20 animate-shimmer bg-[length:200%_100%]" />
         
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-3">
             <div className="flex gap-1">
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+              <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-bounce"></div>
             </div>
             <span className="text-xs text-muted-foreground font-medium">
               {language === 'ar' ? 'يكتب...' : 'AI is thinking...'}
             </span>
           </div>
           
-          <div className="space-y-2.5">
-            <div className="h-3 sm:h-4 bg-gradient-to-r from-gray-200/80 via-gray-100 to-gray-200/80 dark:from-gray-700/80 dark:via-gray-600 dark:to-gray-700/80 rounded-full animate-pulse" style={{ width: '85%' }} />
-            <div className="h-3 sm:h-4 bg-gradient-to-r from-gray-200/80 via-gray-100 to-gray-200/80 dark:from-gray-700/80 dark:via-gray-600 dark:to-gray-700/80 rounded-full animate-pulse [animation-delay:0.2s]" style={{ width: '65%' }} />
-            <div className="h-3 sm:h-4 bg-gradient-to-r from-gray-200/80 via-gray-100 to-gray-200/80 dark:from-gray-700/80 dark:via-gray-600 dark:to-gray-700/80 rounded-full animate-pulse [animation-delay:0.4s]" style={{ width: '90%' }} />
-            <div className="h-3 sm:h-4 bg-gradient-to-r from-gray-200/80 via-gray-100 to-gray-200/80 dark:from-gray-700/80 dark:via-gray-600 dark:to-gray-700/80 rounded-full animate-pulse [animation-delay:0.6s]" style={{ width: '45%' }} />
+          <div className="space-y-3">
+            <div className="h-4 bg-gradient-to-r from-gray-200/80 via-gray-100 to-gray-200/80 dark:from-gray-700/80 dark:via-gray-600 dark:to-gray-700/80 rounded-full animate-pulse" style={{ width: '85%' }} />
+            <div className="h-4 bg-gradient-to-r from-gray-200/80 via-gray-100 to-gray-200/80 dark:from-gray-700/80 dark:via-gray-600 dark:to-gray-700/80 rounded-full animate-pulse [animation-delay:0.2s]" style={{ width: '65%' }} />
+            <div className="h-4 bg-gradient-to-r from-gray-200/80 via-gray-100 to-gray-200/80 dark:from-gray-700/80 dark:via-gray-600 dark:to-gray-700/80 rounded-full animate-pulse [animation-delay:0.4s]" style={{ width: '90%' }} />
+            <div className="h-4 bg-gradient-to-r from-gray-200/80 via-gray-100 to-gray-200/80 dark:from-gray-700/80 dark:via-gray-600 dark:to-gray-700/80 rounded-full animate-pulse [animation-delay:0.6s]" style={{ width: '45%' }} />
           </div>
         </div>
       </div>
@@ -115,6 +120,7 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
   const { language } = useLanguage();
   const { toast } = useToast();
   const [showQuickActions, setShowQuickActions] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -234,29 +240,29 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
     <>
     <TooltipProvider>
       <div className={cn(
-        "flex flex-col h-full bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm",
-        "dark:bg-gray-900 dark:border-gray-800",
+        "flex flex-col h-full bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 rounded-2xl overflow-hidden shadow-xl border border-gray-200/50 dark:border-gray-700/50",
         "w-full max-w-none",
         className
       )}>
-        {/* Header */}
-        <div className="flex-shrink-0 flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b bg-gray-50/80 dark:bg-gray-800/50">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
-              <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+        {/* Header with gradient background */}
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+              <Bot className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+              <h3 className="font-semibold text-white flex items-center gap-2">
                 {language === 'ar' ? 'مساعد PDF الذكي' : 'Smart PDF Assistant'}
+                <Sparkles className="w-4 h-4 text-yellow-300" />
               </h3>
               {pdfTitle && (
-                <p className="text-xs text-gray-500 truncate max-w-[120px] sm:max-w-[200px]" title={pdfTitle}>
+                <p className="text-xs text-white/80 truncate max-w-[200px]" title={pdfTitle}>
                   {pdfTitle}
                 </p>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {messages.length > 0 && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -264,7 +270,7 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowQuickActions(!showQuickActions)}
-                    className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="h-8 w-8 p-0 hover:bg-white/20 text-white"
                   >
                     <Plus className={cn("w-4 h-4 transition-transform", showQuickActions && "rotate-45")} />
                   </Button>
@@ -280,7 +286,7 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={onResetChat}
-                  className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  className="h-8 w-8 p-0 text-white hover:bg-white/20"
                 >
                   <RotateCcw className="w-4 h-4" />
                 </Button>
@@ -292,14 +298,14 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
           </div>
         </div>
 
-        {/* Messages Area */}
+        {/* Messages Area with enhanced styling */}
         <div className="flex-1 min-h-0 relative">
           <ScrollArea 
             className="h-full" 
             onScrollCapture={handleScroll}
             ref={scrollAreaRef}
           >
-            <div className="p-3 sm:p-4 space-y-4 sm:space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+            <div className="p-4 space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
               {messages.map((message) => {
                 const messageDir = message.metadata?.language 
                   ? (message.metadata.language === 'ar' ? 'rtl' : 'ltr')
@@ -308,37 +314,37 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                 return (
                   <div key={message.id} className="group">
                     <div className={cn(
-                      "flex gap-2 sm:gap-3 mb-3 sm:mb-4", 
+                      "flex gap-3 mb-4", 
                       message.isUser 
                         ? (language === 'ar' ? "flex-row" : "flex-row-reverse") 
                         : (language === 'ar' ? "flex-row-reverse" : "flex-row")
                     )}>
-                      {/* Avatar */}
+                      {/* Avatar with enhanced styling */}
                       <div className={cn(
-                        "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 transition-transform hover:scale-105",
+                        "w-10 h-10 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 transition-transform hover:scale-105",
                         message.isUser 
                           ? "bg-gradient-to-br from-emerald-500 to-teal-600" 
                           : "bg-gradient-to-br from-blue-500 to-purple-600"
                       )}>
                         {message.isUser ? (
-                          <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                          <User className="w-5 h-5 text-white" />
                         ) : (
-                          <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                          <Bot className="w-5 h-5 text-white" />
                         )}
                       </div>
 
-                      {/* Message Content */}
+                      {/* Message Content with enhanced styling */}
                       <div className={cn(
-                        "max-w-[75%] sm:max-w-[80%] md:max-w-[75%] space-y-2 flex flex-col", 
+                        "max-w-[80%] space-y-2 flex flex-col", 
                         message.isUser 
                           ? (language === 'ar' ? "items-start" : "items-end")
                           : (language === 'ar' ? "items-end" : "items-start")
                       )}>
                         <div className={cn(
-                          "rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-lg border backdrop-blur-sm transition-all duration-200 hover:shadow-xl break-words",
+                          "rounded-2xl px-4 py-3 shadow-md border backdrop-blur-sm transition-all duration-200 hover:shadow-xl break-words",
                           message.isUser 
                             ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-emerald-200/20" 
-                            : "bg-white/90 border-gray-200/60 text-gray-900 dark:bg-gray-800/90 dark:border-gray-700/60 dark:text-gray-100"
+                            : "bg-white border-gray-200/60 text-gray-900 dark:bg-gray-800 dark:border-gray-700/60 dark:text-gray-100"
                         )} dir={messageDir}>
                           {message.isUser ? (
                             <div className="text-sm leading-relaxed whitespace-pre-wrap word-wrap">
@@ -353,10 +359,10 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                           <StatusIndicator message={message} />
                         </div>
 
-                        {/* Action Buttons for Bot Messages */}
+                        {/* Action Buttons for Bot Messages with enhanced styling */}
                         {!message.isUser && !isAnalyzing && (
                           <div className={cn(
-                            "flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 sm:opacity-100",
+                            "flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200",
                             language === 'ar' ? "flex-row-reverse" : "flex-row"
                           )}>
                             <Tooltip>
@@ -365,9 +371,9 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleCopyMessage(message.content)}
-                                  className="h-6 w-6 sm:h-7 sm:w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                                  className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                                 >
-                                  <Copy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  <Copy className="w-3.5 h-3.5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -381,9 +387,9 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => onRegenerateMessage?.(message.id)}
-                                  className="h-6 w-6 sm:h-7 sm:w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                                  className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                                 >
-                                  <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  <RefreshCw className="w-3.5 h-3.5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -398,11 +404,11 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                                   size="sm"
                                   onClick={() => handleFeedback(message.id, 'positive')}
                                   className={cn(
-                                    "h-6 w-6 sm:h-7 sm:w-7 p-0 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 rounded-lg",
+                                    "h-7 w-7 p-0 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 rounded-lg",
                                     message.feedback === 'positive' && "bg-green-50 text-green-600 dark:bg-green-900/20"
                                   )}
                                 >
-                                  <ThumbsUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  <ThumbsUp className="w-3.5 h-3.5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -417,11 +423,11 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                                   size="sm"
                                   onClick={() => handleFeedback(message.id, 'negative')}
                                   className={cn(
-                                    "h-6 w-6 sm:h-7 sm:w-7 p-0 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 rounded-lg",
+                                    "h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 rounded-lg",
                                     message.feedback === 'negative' && "bg-red-50 text-red-600 dark:bg-red-900/20"
                                   )}
                                 >
-                                  <ThumbsDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  <ThumbsDown className="w-3.5 h-3.5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -447,9 +453,9 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
             </div>
           </ScrollArea>
 
-          {/* Enhanced scroll to bottom button with responsive sizing */}
+          {/* Enhanced scroll to bottom button */}
           {!autoScroll && (
-            <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-10">
+            <div className="absolute bottom-4 right-4 z-10">
               <Button
                 size="icon"
                 onClick={() => {
@@ -461,26 +467,81 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
                   });
                 }}
                 className={cn(
-                  "w-10 h-10 sm:w-12 sm:h-12 rounded-full shadow-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 transition-all duration-300 hover:scale-110 hover:shadow-2xl",
+                  "w-12 h-12 rounded-full shadow-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 transition-all duration-300 hover:scale-110 hover:shadow-2xl",
                   "animate-bounce"
                 )}
               >
-                <ArrowDown className="w-4 h-4 sm:w-5 sm:h-5" />
+                <ArrowDown className="w-5 h-5" />
               </Button>
             </div>
           )}
         </div>
 
-        {/* Input Area - Enhanced responsive design */}
-        <div className="flex-shrink-0 border-t bg-gray-50/50 dark:bg-gray-800/30 p-2 sm:p-0">
-          <EnhancedChatInput
-            onSubmit={onSendMessage}
-            placeholder={language === 'ar' ? 'اكتب سؤالك هنا...' : 'Type your question here...'}
-            suggestions={suggestions}
-            isAnalyzing={isAnalyzing}
-            dir={language === 'ar' ? 'rtl' : 'ltr'}
-            className="border-0 bg-transparent text-sm sm:text-base"
-          />
+        {/* Enhanced Input Area with additional features */}
+        <div className="flex-shrink-0 border-t bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-3">
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {language === 'ar' ? 'إرفاق ملف' : 'Attach file'}
+              </TooltipContent>
+            </Tooltip>
+            
+            <div className="flex-1">
+              <EnhancedChatInput
+                onSubmit={onSendMessage}
+                placeholder={language === 'ar' ? 'اكتب سؤالك هنا...' : 'Type your question here...'}
+                suggestions={suggestions}
+                isAnalyzing={isAnalyzing}
+                dir={language === 'ar' ? 'rtl' : 'ltr'}
+                className="border-0 bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-2 text-sm"
+              />
+            </div>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-9 w-9 rounded-full",
+                    isRecording 
+                      ? "text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" 
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  )}
+                  onClick={() => setIsRecording(!isRecording)}
+                >
+                  <Mic className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {language === 'ar' ? 'تسجيل صوتي' : 'Voice recording'}
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {language === 'ar' ? 'المزيد من الخيارات' : 'More options'}
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       </div>
     </TooltipProvider>
