@@ -36,34 +36,40 @@ export default function PlansSection() {
           .order('price', { ascending: true });
 
         if (error) throw error;
-        
-        let plansList = data || [];
-        
-// تأكد أن الخطة المجانية موجودة مرة واحدة فقط
-const hasFree = plansList.some(
-  (p) => p.name.trim().toLowerCase() === 'free' || p.name.trim().toLowerCase() === 'free plan'
-);
 
-if (!hasFree) {
-  plansList.unshift({
-    id: 'free-plan-default',
-    name: 'Free',
-    description: language === 'ar' ? 'للاستخدام الأساسي' : 'For basic usage',
-    price: 0,
-    currency: 'USD',
-    interval: 'month',
-    paypal_plan_id: '',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  } as SubscriptionPlan);
-} else {
-  plansList = plansList.map((p) =>
-    p.name.trim().toLowerCase() === 'free plan'
-      ? { ...p, name: 'Free' }
-      : p
-  );
-}     
+        let plansList = data || [];
+
+        // تأكد أن الخطة المجانية موجودة مرة واحدة فقط
+        const hasFree =
+          plansList.some(
+            (p) =>
+              p.name.trim().toLowerCase() === 'free' ||
+              p.name.trim().toLowerCase() === 'free plan'
+          );
+
+        if (!hasFree) {
+          plansList.unshift({
+            id: 'free-plan-default',
+            name: 'Free',
+            description:
+              language === 'ar' ? 'للاستخدام الأساسي' : 'For basic usage',
+            price: 0,
+            currency: 'USD',
+            interval: 'month',
+            paypal_plan_id: '',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as SubscriptionPlan);
+        } else {
+          plansList = plansList.map((p) => {
+            const name = p.name.trim().toLowerCase();
+            if (name === 'free plan') return { ...p, name: 'Free' };
+            return p;
+          });
+        }
+
         setPlans(plansList);
+        console.log('Plans loaded:', plansList);
       } catch (error) {
         console.error('Error fetching plans:', error);
       } finally {
@@ -84,15 +90,21 @@ if (!hasFree) {
         language === 'ar' ? 'تحميل ملف PDF واحد فقط' : 'Upload 1 PDF only',
         language === 'ar' ? 'حجم ملف حتى 5 ميجابايت' : 'File size up to 5MB',
         language === 'ar' ? 'محادثة مع PDF' : 'Chat with PDF',
-        language === 'ar' ? 'تحليل أساسي' : 'Basic analysis'
+        language === 'ar' ? 'تحليل أساسي' : 'Basic analysis',
       ];
     } else {
       return [
-        language === 'ar' ? 'تحميل غير محدود للملفات' : 'Unlimited PDF uploads',
-        language === 'ar' ? 'حجم ملف حتى 50 ميجابايت' : 'File size up to 50MB',
+        language === 'ar'
+          ? 'تحميل غير محدود للملفات'
+          : 'Unlimited PDF uploads',
+        language === 'ar'
+          ? 'حجم ملف حتى 50 ميجابايت'
+          : 'File size up to 50MB',
         language === 'ar' ? 'ترجمة متقدمة' : 'Advanced translation',
-        language === 'ar' ? 'تحليل عميق بالذكاء الاصطناعي' : 'Deep AI analysis',
-        language === 'ar' ? 'دعم أولوية' : 'Priority support'
+        language === 'ar'
+          ? 'تحليل عميق بالذكاء الاصطناعي'
+          : 'Deep AI analysis',
+        language === 'ar' ? 'دعم أولوية' : 'Priority support',
       ];
     }
   };
@@ -170,10 +182,12 @@ if (!hasFree) {
             ) : !user ? (
               <div className="space-y-2">
                 <button
-                  onClick={() => window.location.href = '/signin'}
+                  onClick={() => (window.location.href = '/signin')}
                   className="w-full py-3 rounded-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
-                  {language === 'ar' ? 'سجل الدخول للاشتراك' : 'Sign In to Subscribe'}
+                  {language === 'ar'
+                    ? 'سجل الدخول للاشتراك'
+                    : 'Sign In to Subscribe'}
                 </button>
               </div>
             ) : (
