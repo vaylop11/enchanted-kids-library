@@ -61,24 +61,25 @@ const LanguageSwitcher = () => {
 </DropdownMenuTrigger>
 
       
-      <DropdownMenuContent align="end" className="w-40">
-        {languages.map((lang) => (
-          <DropdownMenuItem
-            key={lang.code}
-            onClick={() => handleLanguageChange(lang.code as 'en' | 'ar')}
-            className={cn(
-              "flex items-center gap-2 cursor-pointer",
-              language === lang.code && "bg-accent"
-            )}
-          >
-            <span>{lang.flag}</span>
-            <span className="flex-1">{lang.name}</span>
-            {language === lang.code && (
-              <Check className="h-4 w-4" />
-            )}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
+<DropdownMenuContent align="end" className="w-40">
+  {languages.map((lang) => (
+    <DropdownMenuItem
+      key={lang.code}
+      onClick={() => handleLanguageChange(lang.code as 'en' | 'ar')}
+      className={cn(
+        "flex items-center gap-2 cursor-pointer hover:bg-transparent focus:bg-transparent",
+        language === lang.code && "bg-accent"
+      )}
+    >
+      <span>{lang.flag}</span>
+      <span className="flex-1">{lang.name}</span>
+      {language === lang.code && (
+        <Check className="h-4 w-4" />
+      )}
+    </DropdownMenuItem>
+  ))}
+</DropdownMenuContent>
+
     </DropdownMenu>
   );
 };
