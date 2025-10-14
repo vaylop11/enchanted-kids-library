@@ -39,28 +39,30 @@ export default function PlansSection() {
         
         let plansList = data || [];
         
-        // Ensure Free plan exists - add fallback if not in database
-const hasFree = plansList.some(p => p.name.trim().toLowerCase() === 'free');
-if (!hasFree) {
-  plansList = [
-    {
-      id: 'free-plan-default',
-      name: 'Free',
-      description: language === 'ar' ? 'للاستخدام الأساسي' : 'For basic usage',
-      price: 0,
-      currency: 'USD',
-      interval: 'month',
-      paypal_plan_id: '',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    } as SubscriptionPlan,
-    ...plansList.filter(p => p.name.trim().toLowerCase() !== 'free plan')
-  ];
-} else {
-  plansList = plansList.filter(p => p.name.trim().toLowerCase() === 'free' || p.name.trim().toLowerCase() !== 'free plan');
-}
+// تأكد أن الخطة المجانية موجودة مرة واحدة فقط
+const hasFree = plansList.some(
+  (p) => p.name.trim().toLowerCase() === 'free' || p.name.trim().toLowerCase() === 'free plan'
+);
 
-        
+if (!hasFree) {
+  plansList.unshift({
+    id: 'free-plan-default',
+    name: 'Free',
+    description: language === 'ar' ? 'للاستخدام الأساسي' : 'For basic usage',
+    price: 0,
+    currency: 'USD',
+    interval: 'month',
+    paypal_plan_id: '',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  } as SubscriptionPlan);
+} else {
+  plansList = plansList.map((p) =>
+    p.name.trim().toLowerCase() === 'free plan'
+      ? { ...p, name: 'Free' }
+      : p
+  );
+}     
         setPlans(plansList);
       } catch (error) {
         console.error('Error fetching plans:', error);
