@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 
 interface PayPalSubscribeButtonProps {
   planId: string;
@@ -26,17 +25,27 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
           return;
         }
 
-        // جلب clientId من Edge Function
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_FUNCTION_URL}/get-paypal-config`
+        // جلب clientId من Edge Function مع التصريح الصحيح
+        const response = await fetch(
+          `https://YOUR_PROJECT_REF.supabase.co/functions/v1/get-paypal-config`,
+          {
+            headers: {
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            }
+          }
         );
-        const { clientId } = await res.json();
 
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}`);
+        }
+
+        const data = await response.json();
+        const clientId = data?.clientId;
         if (!clientId) {
           throw new Error('PayPal clientId غير متوفر');
         }
 
-        // تحميل SDK فقط إذا لم يكن محمّلًا
+        // تحميل SDK فقط إذا لم يكن موجودًا
         if (!window.paypal) {
           const script = document.createElement('script');
           script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
@@ -60,27 +69,29 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
         return;
       }
 
-      window.paypal.Buttons({
-        style: {
-          shape: 'rect',
-          color: 'gold',
-          layout: 'vertical',
-          label: 'subscribe'
-        },
-        createSubscription: (_data: any, actions: any) => {
-          return actions.subscription.create({
-            plan_id: paypalPlanId
-          });
-        },
-        onApprove: async (_data: any, _actions: any) => {
-          toast.success('تم الاشتراك بنجاح');
-          if (onSuccess) onSuccess();
-        },
-        onError: (err: any) => {
-          console.error('PayPal error:', err);
-          toast.error('حدث خطأ أثناء الاشتراك');
-        }
-      }).render(paypalRef.current);
+      window.paypal
+        .Buttons({
+          style: {
+            shape: 'rect',
+            color: 'gold',
+            layout: 'vertical',
+            label: 'subscribe'
+          },
+          createSubscription: (_data: any, actions: any) => {
+            return actions.subscription.create({
+              plan_id: paypalPlanId
+            });
+          },
+          onApprove: async (_data: any, _actions: any) => {
+            toast.success('تم الاشتراك بنجاح');
+            if (onSuccess) onSuccess();
+          },
+          onError: (err: any) => {
+            console.error('PayPal error:', err);
+            toast.error('حدث خطأ أثناء الاشتراك');
+          }
+        })
+        .render(paypalRef.current);
 
       setLoading(false);
     };
