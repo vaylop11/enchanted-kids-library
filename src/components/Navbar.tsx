@@ -61,7 +61,7 @@ const Navbar = () => {
   aria-label="ChatPDF Home"
 >
   <img 
-    src="https://nknrkkzegbrkqtutmafo.supabase.co/storage/v1/object/sign/img/LOGO3D.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85YWQzN2RiZS1kZTE3LTRhNWMtOGNkYi1hOGZlOTE2NjAzYjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWcvTE9HTzNELnBuZyIsImlhdCI6MTc1NzQ0NTE1MiwiZXhwIjo0ODc5NTA5MTUyfQ.y_RRqkyKsJZbEQlyjQlKX-ozATUyEvVVu2vEZl4FSPY" 
+    src="https://res.cloudinary.com/dbjcwigtg/image/upload/v1760474817/LOGO3D_dgrgan.png" 
     alt="Logo" 
     className="h-10 sm:h-12 w-auto object-contain"
   />
