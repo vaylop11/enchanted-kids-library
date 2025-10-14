@@ -51,7 +51,7 @@ const LanguageSwitcher = () => {
   <Button 
     variant="ghost" 
     size="sm"
-    className="h-8 px-2 gap-1 text-white hover:bg-primary/10"
+    className="h-8 px-2 gap-1 text-white"
   >
     <Globe className="h-4 w-4 text-white" />
     <span className="hidden sm:inline text-sm">{currentLanguage?.flag}</span>
