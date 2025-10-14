@@ -16,6 +16,8 @@ interface SubscriptionPlan {
   currency: string;
   interval: string;
   paypal_plan_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function PlansSection() {
@@ -34,7 +36,29 @@ export default function PlansSection() {
           .order('price', { ascending: true });
 
         if (error) throw error;
-        setPlans(data || []);
+        
+        let plansList = data || [];
+        
+        // Ensure Free plan exists - add fallback if not in database
+        const hasFree = plansList.some(p => p.name === 'Free');
+        if (!hasFree) {
+          plansList = [
+            {
+              id: 'free-plan-default',
+              name: 'Free',
+              description: language === 'ar' ? 'للاستخدام الأساسي' : 'For basic usage',
+              price: 0,
+              currency: 'USD',
+              interval: 'month',
+              paypal_plan_id: '',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            } as SubscriptionPlan,
+            ...plansList
+          ];
+        }
+        
+        setPlans(plansList);
       } catch (error) {
         console.error('Error fetching plans:', error);
       } finally {
@@ -43,7 +67,7 @@ export default function PlansSection() {
     };
 
     fetchPlans();
-  }, []);
+  }, [language]);
 
   const handleSubscriptionSuccess = async () => {
     await refreshLimits();
@@ -52,7 +76,7 @@ export default function PlansSection() {
   const getPlanFeatures = (planName: string) => {
     if (planName === 'Free') {
       return [
-        language === 'ar' ? 'تحميل ملفين PDF فقط' : 'Upload 2 PDFs only',
+        language === 'ar' ? 'تحميل ملف PDF واحد فقط' : 'Upload 1 PDF only',
         language === 'ar' ? 'حجم ملف حتى 5 ميجابايت' : 'File size up to 5MB',
         language === 'ar' ? 'محادثة مع PDF' : 'Chat with PDF',
         language === 'ar' ? 'تحليل أساسي' : 'Basic analysis'
@@ -141,7 +165,7 @@ export default function PlansSection() {
             ) : !user ? (
               <div className="space-y-2">
                 <button
-                  onClick={() => window.location.href = '/auth'}
+                  onClick={() => window.location.href = '/signin'}
                   className="w-full py-3 rounded-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
                   {language === 'ar' ? 'سجل الدخول للاشتراك' : 'Sign In to Subscribe'}

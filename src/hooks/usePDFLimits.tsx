@@ -17,7 +17,7 @@ export const usePDFLimits = () => {
   const [limits, setLimits] = useState<PDFLimits>({
     has_paid_subscription: false,
     current_pdf_count: 0,
-    max_pdfs: 2,
+    max_pdfs: 1,
     max_file_size_mb: 5,
     can_translate: false,
     plan_name: 'Free',
@@ -41,7 +41,7 @@ export const usePDFLimits = () => {
       setLimits({
         has_paid_subscription: limitData.has_paid_subscription || false,
         current_pdf_count: limitData.current_pdf_count || 0,
-        max_pdfs: limitData.max_pdfs || 2,
+        max_pdfs: limitData.max_pdfs || 1,
         max_file_size_mb: limitData.max_file_size_mb || 5,
         can_translate: limitData.can_translate || false,
         plan_name: limitData.plan_name || 'Free',

@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface PayPalSubscribeButtonProps {
   planId: string;
@@ -100,10 +99,11 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
         setIsLoading(false);
       }, 15000); // 15 seconds for SDK
 
-      // Load PayPal SDK
+      // Load PayPal SDK with locale
+      const locale = language === 'ar' ? 'ar_AR' : 'en_US';
       const script = document.createElement('script');
       script.id = 'paypal-sdk';
-      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons&vault=true&intent=subscription`;
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons&vault=true&intent=subscription&locale=${locale}`;
       script.async = true;
       script.onload = () => {
         clearTimeout(sdkTimeout);
@@ -139,7 +139,13 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
 
       setIsLoading(false);
 
-      window.paypal.Buttons({
+      // Clear container before rendering
+      if (paypalRef.current) {
+        paypalRef.current.innerHTML = '';
+      }
+
+      try {
+        window.paypal.Buttons({
         style: {
           shape: 'rect',
           color: 'gold',
@@ -216,6 +222,15 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
           );
         }
       }).render(paypalRef.current);
+      } catch (error) {
+        console.error('Error rendering PayPal button:', error);
+        setHasError(true);
+        toast.error(
+          language === 'ar'
+            ? 'فشل تحميل زر الدفع'
+            : 'Failed to load payment button'
+        );
+      }
     };
 
     loadPayPalSDK();

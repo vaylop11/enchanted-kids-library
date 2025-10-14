@@ -29,7 +29,33 @@ const UnifiedPDFInterface = () => {
       return;
     }
 
-    // Use usePDFLimits for validation
+    // For non-logged-in users: enforce 5MB and 1 PDF limit
+    if (!user) {
+      const fileSizeMB = file.size / (1024 * 1024);
+      
+      // Check 5MB limit
+      if (fileSizeMB > 5) {
+        const errorMsg = language === 'ar'
+          ? 'حجم الملف كبير جدًا (الحد الأقصى 5 ميجابايت للخطة المجانية)'
+          : 'File size too large (max 5MB for free plan)';
+        toast.error(errorMsg);
+        setUploadError(errorMsg);
+        return;
+      }
+      
+      // Check 1 PDF limit using sessionStorage
+      const existingPdf = sessionStorage.getItem('tempPdfFile');
+      if (existingPdf) {
+        const errorMsg = language === 'ar'
+          ? 'لقد وصلت إلى الحد الأقصى (1 ملف PDF). سجل الدخول للحصول على المزيد.'
+          : 'You have reached the limit (1 PDF). Sign in for more.';
+        toast.error(errorMsg);
+        setUploadError(errorMsg);
+        return;
+      }
+    }
+
+    // Use usePDFLimits for validation for logged-in users
     if (user) {
       const uploadCheck = canUploadPDF(file.size);
       if (!uploadCheck.canUpload) {
