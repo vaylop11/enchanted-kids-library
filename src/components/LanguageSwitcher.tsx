@@ -59,7 +59,7 @@ const LanguageSwitcher = () => {
             key={lang.code}
             onClick={() => handleLanguageChange(lang.code as 'en' | 'ar')}
             className={cn(
-              "flex items-center gap-2 cursor-pointer text-white hover:bg-gray-900 focus:bg-gray-900 rounded-lg px-3 py-2",
+              "flex items-center gap-2 cursor-pointer text-white rounded-lg px-3 py-2",
               language === lang.code && "bg-gray-800"
             )}
           >
