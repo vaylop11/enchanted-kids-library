@@ -19,20 +19,11 @@ import {
 import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 
 const Navbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { direction, language, t } = useLanguage();
   const { user } = useAuth();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     setIsDrawerOpen(false);
@@ -41,16 +32,7 @@ const Navbar = () => {
   return (
     <>
       {/* Navbar */}
-<header
-  className={cn(
-    "fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out border-b",
-    isScrolled
-      ? "bg-white shadow-md border-border/20"  // لما يكون scrolling
-      : "bg-transparent border-transparent"    // لما يكون فوق (شفافة)
-  )}
->
-
-
+<header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-border/20 shadow-md">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex h-16 sm:h-18 items-center justify-between">
 
@@ -71,36 +53,28 @@ const Navbar = () => {
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center space-x-6 xl:space-x-8">
               <NavigationMenu className="z-[49]">
-                <NavigationMenuList className={`${direction === 'rtl' ? 'space-x-reverse' : ''} space-x-1`}>
-                  <NavigationMenuItem>
-                    <Link to="/">
-                      <NavigationMenuLink className={cn(
-                        navigationMenuTriggerStyle(), 
-                        "px-4 py-2 text-sm font-medium rounded-md transition-all duration-300",
-                        "hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20",
-                        location.pathname === '/' 
-                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-primary/20" 
-                          : ""
-                      )}>
-                        {t('home')}
-                      </NavigationMenuLink>
-                    </Link>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <Link to="/pdfs">
-                      <NavigationMenuLink className={cn(
-                        navigationMenuTriggerStyle(), 
-                        "px-4 py-2 text-sm font-medium rounded-md transition-all duration-300",
-                        "hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20",
-                        location.pathname === '/pdfs' 
-                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-primary/20" 
-                          : ""
-                      )}>
-                        {t('pdfs')}
-                      </NavigationMenuLink>
-                    </Link>
-                  </NavigationMenuItem>
-                </NavigationMenuList>
+<NavigationMenuList className={`${direction === 'rtl' ? 'space-x-reverse' : ''} space-x-2`}>
+  {[
+    { to: '/', label: t('home') },
+    { to: '/pdfs', label: t('pdfs') },
+  ].map((item) => (
+    <NavigationMenuItem key={item.to}>
+      <Link to={item.to}>
+        <NavigationMenuLink
+          className={cn(
+            "px-5 py-2.5 text-sm font-semibold rounded-full transition-all duration-300 border",
+            location.pathname === item.to
+              ? "bg-primary text-white border-primary shadow-lg shadow-primary/25"
+              : "bg-white text-gray-700 border-border hover:bg-primary/10 hover:text-primary"
+          )}
+        >
+          {item.label}
+        </NavigationMenuLink>
+      </Link>
+    </NavigationMenuItem>
+  ))}
+</NavigationMenuList>
+
               </NavigationMenu>
               
               <div className="flex items-center space-x-3 xl:space-x-4 border-l border-border/20 pl-4 xl:pl-6">
