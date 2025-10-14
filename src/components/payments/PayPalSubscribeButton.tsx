@@ -253,7 +253,7 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
   if (!clientId || isLoading) {
     return (
       <div className="space-y-2">
-        <Skeleton className="h-11 w-full rounded-lg" />
+        <div className="h-11 w-full rounded-lg bg-muted animate-pulse" />
         <div className="text-xs text-center text-muted-foreground">
           {language === 'ar' ? 'جاري التحميل...' : 'Loading...'}
         </div>

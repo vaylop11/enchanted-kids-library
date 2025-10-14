@@ -126,10 +126,10 @@ export default function PlansSection() {
 
             {isFree ? (
               <button
-                className="w-full py-3 rounded-lg font-semibold bg-muted text-muted-foreground cursor-not-allowed"
+                className="w-full py-3 rounded-lg font-semibold bg-primary/10 text-primary border border-primary/20"
                 disabled
               >
-                {language === 'ar' ? 'الخطة المجانية' : 'Free Plan'}
+                {language === 'ar' ? '✓ الخطة المجانية' : '✓ Free Plan'}
               </button>
             ) : isCurrentPlan && has_paid_subscription ? (
               <button
@@ -138,22 +138,21 @@ export default function PlansSection() {
               >
                 {language === 'ar' ? '✓ أنت على هذه الخطة' : '✓ Current Plan'}
               </button>
+            ) : !user ? (
+              <div className="space-y-2">
+                <button
+                  onClick={() => window.location.href = '/auth'}
+                  className="w-full py-3 rounded-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  {language === 'ar' ? 'سجل الدخول للاشتراك' : 'Sign In to Subscribe'}
+                </button>
+              </div>
             ) : (
-              user && (
-                <PayPalSubscribeButton
-                  planId={plan.id}
-                  paypalPlanId={plan.paypal_plan_id}
-                  onSuccess={handleSubscriptionSuccess}
-                />
-              )
-            )}
-
-            {!user && !isFree && (
-              <p className="text-center text-sm text-muted-foreground mt-4">
-                {language === 'ar'
-                  ? 'يرجى تسجيل الدخول للاشتراك'
-                  : 'Please sign in to subscribe'}
-              </p>
+              <PayPalSubscribeButton
+                planId={plan.id}
+                paypalPlanId={plan.paypal_plan_id}
+                onSuccess={handleSubscriptionSuccess}
+              />
             )}
           </Card>
         );
