@@ -25,19 +25,17 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
           return;
         }
 
-        // جلب clientId من Edge Function مع التصريح الصحيح
-const response = await fetch(
-  "https://nknrkkzegbrkqtutmafo.supabase.co/functions/v1/get-paypal-config",
-  {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-    }
-  }
-);
-
+        // استدعاء Edge Function من Supabase
+        const response = await fetch(
+          'https://nknrkkzegbrkqtutmafo.supabase.co/functions/v1/get-paypal-config',
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Accept': 'application/json'
+            }
+          }
+        );
 
         if (!response.ok) {
           throw new Error(`HTTP error ${response.status}`);
@@ -49,7 +47,41 @@ const response = await fetch(
           throw new Error('PayPal clientId غير متوفر');
         }
 
-        // تحميل SDK فقط إذا لم يكن موجودًا
+        // تحميل PayPal SDK فقط مرة واحدة
+        const renderButton = () => {
+          if (!window.paypal || !paypalRef.current) {
+            console.error('PayPal SDK not loaded');
+            setLoading(false);
+            return;
+          }
+
+          window.paypal
+            .Buttons({
+              style: {
+                shape: 'rect',
+                color: 'gold',
+                layout: 'vertical',
+                label: 'subscribe'
+              },
+              createSubscription: (_data: any, actions: any) => {
+                return actions.subscription.create({
+                  plan_id: paypalPlanId
+                });
+              },
+              onApprove: async () => {
+                toast.success('تم الاشتراك بنجاح');
+                onSuccess?.();
+              },
+              onError: (err: any) => {
+                console.error('PayPal error:', err);
+                toast.error('حدث خطأ أثناء الاشتراك');
+              }
+            })
+            .render(paypalRef.current);
+
+          setLoading(false);
+        };
+
         if (!window.paypal) {
           const script = document.createElement('script');
           script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
@@ -66,42 +98,8 @@ const response = await fetch(
       }
     };
 
-    const renderButton = () => {
-      if (!window.paypal || !paypalRef.current) {
-        console.error('PayPal SDK not loaded');
-        setLoading(false);
-        return;
-      }
-
-      window.paypal
-        .Buttons({
-          style: {
-            shape: 'rect',
-            color: 'gold',
-            layout: 'vertical',
-            label: 'subscribe'
-          },
-          createSubscription: (_data: any, actions: any) => {
-            return actions.subscription.create({
-              plan_id: paypalPlanId
-            });
-          },
-          onApprove: async (_data: any, _actions: any) => {
-            toast.success('تم الاشتراك بنجاح');
-            if (onSuccess) onSuccess();
-          },
-          onError: (err: any) => {
-            console.error('PayPal error:', err);
-            toast.error('حدث خطأ أثناء الاشتراك');
-          }
-        })
-        .render(paypalRef.current);
-
-      setLoading(false);
-    };
-
     loadPayPalScript();
-  }, [paypalPlanId]);
+  }, [paypalPlanId, planId, onSuccess]);
 
   return (
     <div className="w-full">
