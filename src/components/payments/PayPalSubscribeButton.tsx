@@ -44,55 +44,43 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
         const clientId = data?.clientId;
         if (!clientId) throw new Error('PayPal clientId غير متوفر');
 
-        const renderButton = () => {
-          if (!window.paypal || !paypalRef.current) {
-            console.error('PayPal SDK not loaded');
-            setLoading(false);
-            return;
-          }
+const renderButton = () => {
+  if (!window.paypal || !paypalRef.current) {
+    console.error('PayPal SDK not loaded');
+    setLoading(false);
+    return;
+  }
 
-          // إزالة أي زر سابق قبل إعادة الرسم
-          paypalRef.current.innerHTML = '';
+  // حذف الأزرار القديمة قبل إعادة الرسم
+  paypalRef.current.innerHTML = '';
 
-          paypalButtonInstance = window.paypal
-            .Buttons({
-              style: {
-                shape: 'rect',
-                color: 'gold',
-                layout: 'vertical',
-                label: 'subscribe'
-              },
-              createSubscription: (_data: any, actions: any) =>
-                actions.subscription.create({ plan_id: paypalPlanId }),
-              onApprove: async () => {
-                toast.success('تم الاشتراك بنجاح');
-                onSuccess?.();
-              },
-              onError: (err: any) => {
-                console.error('PayPal error:', err);
-                toast.error('حدث خطأ أثناء الاشتراك');
-              }
-            })
-            .render(paypalRef.current);
+  window.paypal
+    .Buttons({
+      style: {
+        shape: 'rect',
+        color: 'gold',
+        layout: 'vertical',
+        label: 'subscribe',
+      },
+      createSubscription: (_data: any, actions: any) => {
+        return actions.subscription.create({
+          plan_id: paypalPlanId,
+        });
+      },
+      onApprove: async () => {
+        toast.success('تم الاشتراك بنجاح');
+        onSuccess?.();
+      },
+      onError: (err: any) => {
+        console.error('PayPal error:', err);
+        toast.error('حدث خطأ أثناء الاشتراك');
+      },
+    })
+    .render(paypalRef.current);
 
-          setLoading(false);
-        };
+  setLoading(false);
+};
 
-        if (!window.paypal) {
-          const script = document.createElement('script');
-          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
-          script.async = true;
-          script.onload = renderButton;
-          document.body.appendChild(script);
-        } else {
-          renderButton();
-        }
-      } catch (err) {
-        console.error('Error loading PayPal:', err);
-        toast.error('فشل تحميل PayPal');
-        setLoading(false);
-      }
-    };
 
     loadPayPalScript();
 
