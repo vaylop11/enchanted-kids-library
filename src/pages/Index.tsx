@@ -49,23 +49,6 @@ const Index = () => {
         <HeroSection />
         <UnifiedPDFInterface />
 
-        {/* Platform Statistics */}
-        <section className="py-16 px-4 md:px-6">
-          <div className="container mx-auto max-w-7xl">
-            <div className="text-center mb-12">
-              <h2 className="heading-2 mb-4">
-                {language === 'ar' ? 'إحصائيات المنصة' : 'Platform Statistics'}
-              </h2>
-              <p className="paragraph max-w-2xl mx-auto">
-                {language === 'ar'
-                  ? 'انضم إلى آلاف المستخدمين الذين يستفيدون من تقنياتنا المتقدمة'
-                  : 'Join thousands of users who benefit from our advanced technologies'
-                }
-              </p>
-            </div>
-          </div>
-        </section>
-
         {/* PDF Grid */}
         <PDFGrid />
 
