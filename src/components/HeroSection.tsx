@@ -34,7 +34,7 @@ const HeroSection = () => {
           {/* Headline */}
           <h1
             id="hero-heading"
-            className="text-3xl md:text-6xl font-extrabold leading-tight tracking-tight text-white"
+            className="text-2xl md:text-4xl font-extrabold leading-tight tracking-tight text-white"
           >
             {language === "ar" ? (
               <>
