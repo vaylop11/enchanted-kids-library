@@ -16,6 +16,8 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
   const paypalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let paypalButtonInstance: any;
+
     const loadPayPalScript = async () => {
       try {
         if (!paypalPlanId) {
@@ -25,29 +27,23 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
           return;
         }
 
-        // استدعاء Edge Function من Supabase
         const response = await fetch(
           'https://nknrkkzegbrkqtutmafo.supabase.co/functions/v1/get-paypal-config',
           {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-              'Accept': 'application/json'
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              Accept: 'application/json'
             }
           }
         );
 
-        if (!response.ok) {
-          throw new Error(`HTTP error ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
         const data = await response.json();
         const clientId = data?.clientId;
-        if (!clientId) {
-          throw new Error('PayPal clientId غير متوفر');
-        }
+        if (!clientId) throw new Error('PayPal clientId غير متوفر');
 
-        // تحميل PayPal SDK فقط مرة واحدة
         const renderButton = () => {
           if (!window.paypal || !paypalRef.current) {
             console.error('PayPal SDK not loaded');
@@ -55,7 +51,10 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
             return;
           }
 
-          window.paypal
+          // إزالة أي زر سابق قبل إعادة الرسم
+          paypalRef.current.innerHTML = '';
+
+          paypalButtonInstance = window.paypal
             .Buttons({
               style: {
                 shape: 'rect',
@@ -63,11 +62,8 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
                 layout: 'vertical',
                 label: 'subscribe'
               },
-              createSubscription: (_data: any, actions: any) => {
-                return actions.subscription.create({
-                  plan_id: paypalPlanId
-                });
-              },
+              createSubscription: (_data: any, actions: any) =>
+                actions.subscription.create({ plan_id: paypalPlanId }),
               onApprove: async () => {
                 toast.success('تم الاشتراك بنجاح');
                 onSuccess?.();
@@ -99,7 +95,13 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
     };
 
     loadPayPalScript();
-  }, [paypalPlanId, planId, onSuccess]);
+
+    // تنظيف عند إزالة المكون
+    return () => {
+      if (paypalRef.current) paypalRef.current.innerHTML = '';
+      paypalButtonInstance = null;
+    };
+  }, [paypalPlanId]); // حذف onSuccess و planId لتجنب التكرار غير الضروري
 
   return (
     <div className="w-full">
