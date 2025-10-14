@@ -47,22 +47,19 @@ const LanguageSwitcher = () => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className="h-8 px-2 gap-1 hover:bg-accent"
-        >
-          <Globe className="h-4 w-4" />
-          <span className="hidden sm:inline text-sm">
-            {currentLanguage?.flag}
-          </span>
-          <span className="hidden md:inline text-sm">
-            {currentLanguage?.name}
-          </span>
-          <ChevronDown className="h-3 w-3 opacity-50" />
-        </Button>
-      </DropdownMenuTrigger>
+<DropdownMenuTrigger asChild>
+  <Button 
+    variant="ghost" 
+    size="sm"
+    className="h-8 px-2 gap-1 text-white hover:bg-primary/10"
+  >
+    <Globe className="h-4 w-4 text-white" />
+    <span className="hidden sm:inline text-sm">{currentLanguage?.flag}</span>
+    <span className="hidden md:inline text-sm">{currentLanguage?.name}</span>
+    <ChevronDown className="h-3 w-3 opacity-50 text-white" />
+  </Button>
+</DropdownMenuTrigger>
+
       
       <DropdownMenuContent align="end" className="w-40">
         {languages.map((lang) => (
