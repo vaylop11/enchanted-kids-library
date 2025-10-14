@@ -15,16 +15,8 @@ const LanguageSwitcher = () => {
   const { language, setLanguage } = useLanguage();
   
   const languages = [
-    { 
-      code: 'en', 
-      name: 'English',
-      flag: '🇺🇸'
-    },
-    { 
-      code: 'ar', 
-      name: 'العربية',
-      flag: '🇸🇦'
-    }
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'ar', name: 'العربية', flag: '🇸🇦' }
   ];
 
   const currentLanguage = languages.find(lang => lang.code === language);
@@ -38,48 +30,44 @@ const LanguageSwitcher = () => {
         language === 'ar' 
           ? `Switched to ${selectedLang?.name}` 
           : `تم التبديل إلى ${selectedLang?.name}`,
-        {
-          duration: 1500,
-        }
+        { duration: 1500 }
       );
     }
   };
 
   return (
     <DropdownMenu>
-<DropdownMenuTrigger asChild>
-  <Button 
-    variant="ghost" 
-    size="sm"
-    className="h-8 px-2 gap-1 text-white"
-  >
-    <Globe className="h-4 w-4 text-white" />
-    <span className="hidden sm:inline text-sm">{currentLanguage?.flag}</span>
-    <span className="hidden md:inline text-sm">{currentLanguage?.name}</span>
-    <ChevronDown className="h-3 w-3 opacity-50 text-white" />
-  </Button>
-</DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="sm"
+          className="h-8 px-2 gap-1 text-yellow-400" // لون ذهبي للنصوص
+        >
+          <Globe className="h-4 w-4 text-yellow-400" /> {/* أيقونة ذهبية */}
+          <span className="hidden sm:inline text-sm">{currentLanguage?.flag}</span>
+          <span className="hidden md:inline text-sm">{currentLanguage?.name}</span>
+          <ChevronDown className="h-3 w-3 opacity-50 text-yellow-400" /> {/* أيقونة ذهبية */}
+        </Button>
+      </DropdownMenuTrigger>
 
-      
-<DropdownMenuContent align="end" className="w-40">
-  {languages.map((lang) => (
-    <DropdownMenuItem
-      key={lang.code}
-      onClick={() => handleLanguageChange(lang.code as 'en' | 'ar')}
-      className={cn(
-        "flex items-center gap-2 cursor-pointer hover:bg-transparent focus:bg-transparent",
-        language === lang.code && "bg-accent"
-      )}
-    >
-      <span>{lang.flag}</span>
-      <span className="flex-1">{lang.name}</span>
-      {language === lang.code && (
-        <Check className="h-4 w-4" />
-      )}
-    </DropdownMenuItem>
-  ))}
-</DropdownMenuContent>
-
+      <DropdownMenuContent align="end" className="w-40">
+        {languages.map((lang) => (
+          <DropdownMenuItem
+            key={lang.code}
+            onClick={() => handleLanguageChange(lang.code as 'en' | 'ar')}
+            className={cn(
+              "flex items-center gap-2 cursor-pointer hover:bg-transparent focus:bg-transparent text-yellow-400", // لون ذهبي للنصوص
+              language === lang.code && "bg-accent"
+            )}
+          >
+            <span>{lang.flag}</span>
+            <span className="flex-1">{lang.name}</span>
+            {language === lang.code && (
+              <Check className="h-4 w-4 text-yellow-400" /> // أيقونة ذهبي
+            )}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
     </DropdownMenu>
   );
 };
