@@ -26,14 +26,18 @@ const PayPalSubscribeButton: React.FC<PayPalSubscribeButtonProps> = ({
         }
 
         // جلب clientId من Edge Function مع التصريح الصحيح
-        const response = await fetch(
-            `https://nknrkkzegbrkqtutmafo.supabase.co/functions/v1/get-paypal-config`,
-          {
-            headers: {
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-            }
-          }
-        );
+const response = await fetch(
+  "https://nknrkkzegbrkqtutmafo.supabase.co/functions/v1/get-paypal-config",
+  {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+    }
+  }
+);
+
 
         if (!response.ok) {
           throw new Error(`HTTP error ${response.status}`);
