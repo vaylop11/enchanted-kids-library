@@ -32,7 +32,7 @@ const Navbar = () => {
   return (
     <>
       {/* Navbar */}
-<header className="fixed top-0 left-0 right-0 z-50 bg-transparent border-transparent transition-all duration-500 ease-out">
+<header className="fixed top-0 left-0 right-0 z-50 bg-transparent border-transparent">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex h-16 sm:h-18 items-center justify-between">
 
