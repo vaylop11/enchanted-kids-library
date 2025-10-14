@@ -48,13 +48,7 @@ const Index = () => {
       <main>
         <HeroSection />
         <UnifiedPDFInterface />
-
-        {/* PDF Grid */}
-        <PDFGrid />
-
-        {/* Features */}
-        <FeaturesSection />
-
+        
         {/* Subscription Plans */}
         <section className="py-16 px-4 md:px-6 bg-muted/30">
           <div className="container mx-auto max-w-7xl">
@@ -72,7 +66,11 @@ const Index = () => {
             <PlansSection />
           </div>
         </section>
+        {/* PDF Grid */}
+        <PDFGrid />
 
+        {/* Features */}
+        <FeaturesSection />
         {/* FAQ */}
         <FAQSection />
       </main>
