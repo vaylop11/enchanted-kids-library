@@ -34,7 +34,7 @@ const HeroSection = () => {
           {/* Headline */}
           <h1
             id="hero-heading"
-            className="text-3xl md:text-6xl font-extrabold leading-tight tracking-tight text-slate-900"
+            className="text-3xl md:text-6xl font-extrabold leading-tight tracking-tight text-white"
           >
             {language === "ar" ? (
               <>
@@ -52,7 +52,7 @@ const HeroSection = () => {
           {/* Subheadline */}
          <p
           style={{ animationDelay: '0.3s' }}
-          className="mt-12 mb-12 animate-fade-in text-xl text-[#404261] font-medium leading-relaxed max-w-3xl mx-auto bg-white/20 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/30"
+          className="mt-12 mb-12 animate-fade-in text-xl text-white font-medium leading-relaxed max-w-3xl mx-auto bg-white/20 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/30"
         >
             {language === "ar"
               ? "ارفع أي ملف PDF وتحدث معه بذكاء: اسأل، لخص، استخرج المعلومة، واحصل على استشهادات خلال ثوانٍ — مجانًا مع Gemi ChatPDF."
