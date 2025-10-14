@@ -153,7 +153,6 @@ export default function PlansSection() {
                   /{language === 'ar' ? 'شهر' : 'month'}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground">{plan.description}</p>
             </div>
 
             <ul className="space-y-3 mb-8">
