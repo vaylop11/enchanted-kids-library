@@ -10,16 +10,14 @@ const HeroSection = () => {
       className="relative py-20 md:py-28 bg-white overflow-hidden"
       dir={language === "ar" ? "rtl" : "ltr"}
     >
-      {/* Background Video */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover z-0"
-      >
-        <source src="https://res.cloudinary.com/dbjcwigtg/video/upload/v1757516724/hero-video_qz89bf.mp4" type="video/mp4" />
-      </video>
+
+{/* Background Image بدل الفيديو */}
+<img
+  src="https://res.cloudinary.com/dbjcwigtg/image/upload/v1760465061/gemi-logo_qzrbpe.webp"
+  alt="Gemi ChatPDF Background"
+  className="absolute inset-0 w-full h-full object-cover z-0"
+/>
+
 
       {/* Gradient overlay from bottom */}
       <div
