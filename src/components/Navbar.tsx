@@ -29,11 +29,15 @@ const Navbar = () => {
   }, [location.pathname]);
 
   return (
-    <header
-      className={`absolute top-0 left-0 right-0 z-50 ${
-        isHomePage ? 'bg-transparent border-transparent' : 'bg-white border-b'
-      }`}
-    >
+<header
+  className={cn(
+    "absolute top-0 left-0 right-0 z-50 transition-colors duration-300",
+    location.pathname === '/' 
+      ? 'bg-transparent border-transparent' 
+      : 'bg-white border-b'
+  )}
+>
+
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
         <div className="flex h-16 sm:h-18 items-center justify-between">
           
