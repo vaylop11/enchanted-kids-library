@@ -8,7 +8,6 @@ import FAQSection from '@/components/FAQSection';
 import UnifiedPDFInterface from '@/components/UnifiedPDFInterface';
 import PDFGrid from '@/components/PDFGrid';
 import SEO from '@/components/SEO';
-import StatsCard from '@/components/StatsCard';
 import PlansSection from '@/components/PlansSection';
 
 const Index = () => {
@@ -64,7 +63,6 @@ const Index = () => {
                 }
               </p>
             </div>
-            <StatsCard className="max-w-2xl mx-auto" />
           </div>
         </section>
 
