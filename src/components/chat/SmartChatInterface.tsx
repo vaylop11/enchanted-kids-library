@@ -14,19 +14,15 @@ import {
   XCircle,
   Loader2,
   ArrowDown,
-  Copy,
-  RefreshCw,
-  ThumbsUp,
-  ThumbsDown,
   Sparkles,
-  Send,
-  Mic,
   Paperclip,
+  Mic,
   MoreVertical
 } from 'lucide-react';
 import { EnhancedChatInput } from '@/components/ui/enhanced-chat-input';
+import { EnhancedMessageCard } from '@/components/ui/enhanced-message-card';
+import { SmartSuggestionsPanel } from '@/components/ui/smart-suggestions-panel';
 import { ChatMessageSkeleton } from '@/components/ui/skeleton';
-import { MarkdownMessage } from '@/components/ui/markdown-message';
 import {
   Tooltip,
   TooltipContent,
@@ -306,141 +302,30 @@ const SmartChatInterface: React.FC<SmartChatInterfaceProps> = ({
             ref={scrollAreaRef}
           >
             <div className="p-4 space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-              {messages.map((message) => {
-                const messageDir = message.metadata?.language 
-                  ? (message.metadata.language === 'ar' ? 'rtl' : 'ltr')
-                  : detectTextDirection(message.content);
+              {/* Smart Suggestions Panel (only when no messages) */}
+              {messages.length === 0 && !isAnalyzing && (
+                <SmartSuggestionsPanel
+                  suggestions={suggestions}
+                  onSuggestionClick={onSendMessage}
+                  language={language}
+                  className="mb-6"
+                />
+              )}
 
-                return (
-                  <div key={message.id} className="group">
-                    <div className={cn(
-                      "flex gap-3 mb-4", 
-                      message.isUser 
-                        ? (language === 'ar' ? "flex-row" : "flex-row-reverse") 
-                        : (language === 'ar' ? "flex-row-reverse" : "flex-row")
-                    )}>
-                      {/* Avatar with enhanced styling */}
-                      <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 transition-transform hover:scale-105",
-                        message.isUser 
-                          ? "bg-gradient-to-br from-emerald-500 to-teal-600" 
-                          : "bg-gradient-to-br from-blue-500 to-purple-600"
-                      )}>
-                        {message.isUser ? (
-                          <User className="w-5 h-5 text-white" />
-                        ) : (
-                          <Bot className="w-5 h-5 text-white" />
-                        )}
-                      </div>
-
-                      {/* Message Content with enhanced styling */}
-                      <div className={cn(
-                        "max-w-[80%] space-y-2 flex flex-col", 
-                        message.isUser 
-                          ? (language === 'ar' ? "items-start" : "items-end")
-                          : (language === 'ar' ? "items-end" : "items-start")
-                      )}>
-                        <div className={cn(
-                          "rounded-2xl px-4 py-3 shadow-md border backdrop-blur-sm transition-all duration-200 hover:shadow-xl break-words",
-                          message.isUser 
-                            ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-emerald-200/20" 
-                            : "bg-white border-gray-200/60 text-gray-900 dark:bg-gray-800 dark:border-gray-700/60 dark:text-gray-100"
-                        )} dir={messageDir}>
-                          {message.isUser ? (
-                            <div className="text-sm leading-relaxed whitespace-pre-wrap word-wrap">
-                              {message.content}
-                            </div>
-                          ) : (
-                            <MarkdownMessage 
-                              content={message.content} 
-                              className="text-sm leading-relaxed"
-                            />
-                          )}
-                          <StatusIndicator message={message} />
-                        </div>
-
-                        {/* Action Buttons for Bot Messages with enhanced styling */}
-                        {!message.isUser && !isAnalyzing && (
-                          <div className={cn(
-                            "flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200",
-                            language === 'ar' ? "flex-row-reverse" : "flex-row"
-                          )}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleCopyMessage(message.content)}
-                                  className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                                >
-                                  <Copy className="w-3.5 h-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {language === 'ar' ? 'نسخ' : 'Copy'}
-                              </TooltipContent>
-                            </Tooltip>
-
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => onRegenerateMessage?.(message.id)}
-                                  className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                                >
-                                  <RefreshCw className="w-3.5 h-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {language === 'ar' ? 'إعادة توليد' : 'Regenerate'}
-                              </TooltipContent>
-                            </Tooltip>
-
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleFeedback(message.id, 'positive')}
-                                  className={cn(
-                                    "h-7 w-7 p-0 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 rounded-lg",
-                                    message.feedback === 'positive' && "bg-green-50 text-green-600 dark:bg-green-900/20"
-                                  )}
-                                >
-                                  <ThumbsUp className="w-3.5 h-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {language === 'ar' ? 'إعجاب' : 'Like'}
-                              </TooltipContent>
-                            </Tooltip>
-
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleFeedback(message.id, 'negative')}
-                                  className={cn(
-                                    "h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 rounded-lg",
-                                    message.feedback === 'negative' && "bg-red-50 text-red-600 dark:bg-red-900/20"
-                                  )}
-                                >
-                                  <ThumbsDown className="w-3.5 h-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {language === 'ar' ? 'عدم إعجاب' : 'Dislike'}
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {messages.map((message) => (
+                <EnhancedMessageCard
+                  key={message.id}
+                  content={message.content}
+                  isUser={message.isUser}
+                  timestamp={message.timestamp}
+                  language={language}
+                  feedback={message.feedback}
+                  onCopy={() => handleCopyMessage(message.content)}
+                  onRegenerate={() => onRegenerateMessage?.(message.id)}
+                  onFeedback={(type) => handleFeedback(message.id, type)}
+                  className="mb-4"
+                />
+              ))}
 
               {/* Enhanced Skeleton for Bot output */}
               {isAnalyzing && (
