@@ -3,7 +3,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+// Using gemini-2.5-flash for better performance and quality
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -50,9 +51,9 @@ serve(async (req) => {
     const textLength = pdfText.length;
     console.log(`Processing PDF with text length: ${textLength} characters`);
 
-    // Use a chunking approach for very large documents
+    // Use a chunking approach for very large documents (increased to 100,000)
     let processedText = pdfText;
-    const maxTextLength = 30000; // Increased limit for more comprehensive analysis
+    const maxTextLength = 100000; // Significantly increased for comprehensive analysis
     
     if (textLength > maxTextLength) {
       console.log(`PDF text exceeds ${maxTextLength} characters, using smart chunking strategy`);
@@ -62,32 +63,49 @@ serve(async (req) => {
       processedText = smartChunkText(pdfText, keywords, maxTextLength);
     }
     
-    // Build context with optional previous chat messages
+    // Build context with optional previous chat messages (full history)
     let chatContext = "";
     if (previousChat && previousChat.length > 0) {
-      // Include up to 10 recent exchanges for context (increased from 5)
-      const recentMessages = previousChat.slice(-10);
+      // Include full conversation history for better context
       chatContext = "Previous conversation:\n" + 
-        recentMessages.map(m => `${m.isUser ? "User" : "Assistant"}: ${m.content}`).join("\n") +
+        previousChat.map(m => `${m.isUser ? "User" : "Assistant"}: ${m.content}`).join("\n") +
         "\n\n";
     }
 
-    // Build prompt with improved instructions
-    const prompt = `
-      You are an AI assistant that helps users analyze PDF documents and answer questions about them.
-      
-      ${chatContext}
-      
-      Here is the text content from a PDF document:
-      """
-      ${processedText}
-      """
-      
-      User question: ${userQuestion}
-      
-      Provide a relevant, accurate, and comprehensive response based on the PDF content. If the answer cannot be determined from the PDF content, clearly state that. 
-      Make sure your response is well-structured and easy to understand. Include specific information from the document when relevant.
-    `;
+    // Enhanced system prompt with better instructions for Arabic and English
+    const prompt = `You are an expert AI assistant specializing in document analysis and comprehension. 
+
+Your capabilities:
+- Deep understanding of document content and context
+- Accurate citation with section references when available
+- Bilingual support (Arabic and English)
+- Clear, well-structured responses with formatting
+- Ability to explain complex concepts in simple terms
+
+Response guidelines:
+1. Always provide accurate, relevant answers based strictly on the document content
+2. If information is not in the document, clearly state this fact
+3. For Arabic queries (العربية), respond in formal Arabic (الفصحى) with proper structure
+4. For English queries, use clear, professional language
+5. Use markdown formatting for better readability:
+   - Use **bold** for key points
+   - Use bullet points for lists
+   - Use numbered lists for steps or sequences
+6. Break down complex answers into digestible sections
+7. When referencing document content, be specific
+8. If asked to summarize, provide comprehensive yet concise summaries
+9. Always maintain context from previous conversation
+
+${chatContext}
+
+Document content:
+"""
+${processedText}
+"""
+
+User question: ${userQuestion}
+
+Provide your response:`;
 
     console.log(`Processing question: "${userQuestion}"`);
     console.log(`Using ${processedText.length} characters of processed text`);
@@ -104,10 +122,10 @@ serve(async (req) => {
             parts: [{ text: prompt }]
           }],
           generationConfig: {
-            temperature: 0.2, // Slightly increased for more natural responses
-            topK: 40,         // Increased for more diversity
-            topP: 0.95,       // Adjusted for better quality
-            maxOutputTokens: 1500, // Increased for more comprehensive responses
+            temperature: 0.3,      // Balanced for accuracy and natural responses
+            topK: 50,              // More diversity in token selection
+            topP: 0.95,            // High quality responses
+            maxOutputTokens: 2048, // Significantly increased for comprehensive answers
           }
         }),
       });

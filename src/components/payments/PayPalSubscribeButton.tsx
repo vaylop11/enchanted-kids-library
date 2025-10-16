@@ -1,6 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+// Type declaration for PayPal SDK
+declare global {
+  interface Window {
+    paypal?: any;
+  }
+}
+
 interface PayPalSubscribeButtonProps {
   planId: string;
   paypalPlanId: string;

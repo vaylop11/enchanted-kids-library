@@ -21,11 +21,57 @@ export interface AnalysisProgress {
   message: string;
 }
 
-let cachedPDFText: Record<string, string> = {};
+interface CachedPDFData {
+  text: string;
+  timestamp: number;
+  pageCount: number;
+  metadata?: {
+    hasHeaders: boolean;
+    hasTables: boolean;
+    language?: string;
+  };
+}
+
+let cachedPDFText: Record<string, CachedPDFData> = {};
+const CACHE_EXPIRY = 30 * 60 * 1000; // 30 minutes
 
 /**
- * Extracts text content from a PDF file
- * Added cache to prevent re-extraction of PDFs that were already processed
+ * Pre-process extracted text to improve quality
+ */
+const preprocessText = (text: string): string => {
+  // Remove excessive whitespace
+  let processed = text.replace(/\s+/g, ' ');
+  
+  // Remove special characters that might interfere
+  processed = processed.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+  
+  // Normalize line breaks
+  processed = processed.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  
+  // Remove repeated dots/dashes (common in TOC)
+  processed = processed.replace(/\.{3,}/g, '...');
+  processed = processed.replace(/-{3,}/g, '---');
+  
+  return processed.trim();
+};
+
+/**
+ * Detect document structure and extract metadata
+ */
+const analyzeDocumentStructure = (text: string): CachedPDFData['metadata'] => {
+  const hasHeaders = /^(Chapter|Section|\d+\.).*$/m.test(text);
+  const hasTables = /\|.*\|/.test(text) || /\t.*\t/.test(text);
+  
+  // Simple language detection
+  const arabicChars = (text.match(/[\u0600-\u06FF]/g) || []).length;
+  const totalChars = text.length;
+  const language = arabicChars / totalChars > 0.3 ? 'ar' : 'en';
+  
+  return { hasHeaders, hasTables, language };
+};
+
+/**
+ * Extracts text content from a PDF file with enhanced caching and pre-processing
  */
 export const extractTextFromPDF = async (
   pdfUrl: string, 
@@ -38,15 +84,23 @@ export const extractTextFromPDF = async (
   } = {}
 ): Promise<string> => {
   try {
-    // Only use cache if we're not extracting a specific page
+    // Check cache validity (not expired and not extracting specific page)
     if (!extractionOptions.specificPage && cachedPDFText[pdfId]) {
-      console.log('Using cached PDF text');
-      updateProgress?.({
-        stage: 'extracting',
-        progress: 100,
-        message: 'Using cached PDF text'
-      });
-      return cachedPDFText[pdfId];
+      const cached = cachedPDFText[pdfId];
+      const isExpired = Date.now() - cached.timestamp > CACHE_EXPIRY;
+      
+      if (!isExpired) {
+        console.log('Using cached PDF text (cached at:', new Date(cached.timestamp).toLocaleString(), ')');
+        updateProgress?.({
+          stage: 'extracting',
+          progress: 100,
+          message: 'Using cached PDF text'
+        });
+        return cached.text;
+      } else {
+        console.log('Cache expired, re-extracting PDF text');
+        delete cachedPDFText[pdfId];
+      }
     }
     
     updateProgress?.({
@@ -56,6 +110,7 @@ export const extractTextFromPDF = async (
     });
     
     const pdf = await pdfjs.getDocument(pdfUrl).promise;
+    const totalPages = pdf.numPages;
     let fullText = '';
     
     const { quickMode, maxPages, specificPage } = extractionOptions;
@@ -100,9 +155,25 @@ export const extractTextFromPDF = async (
       }
     }
     
+    // Pre-process the extracted text
+    const processedText = preprocessText(fullText);
+    
+    // Analyze document structure
+    const metadata = analyzeDocumentStructure(processedText);
+    
     // Only cache if we're not extracting a specific page
     if (!specificPage) {
-      cachedPDFText[pdfId] = fullText.trim();
+      cachedPDFText[pdfId] = {
+        text: processedText,
+        timestamp: Date.now(),
+        pageCount: totalPages,
+        metadata
+      };
+      console.log(`Cached PDF text for ${pdfId}:`, {
+        length: processedText.length,
+        pages: totalPages,
+        metadata
+      });
     }
     
     updateProgress?.({
@@ -111,7 +182,7 @@ export const extractTextFromPDF = async (
       message: 'Text extraction complete'
     });
     
-    return fullText.trim();
+    return processedText;
   } catch (error) {
     console.error('Error extracting text from PDF:', error);
     updateProgress?.({
@@ -213,11 +284,34 @@ export const analyzePDFWithGemini = async (
   }
 };
 
-// Clear the cache for a specific PDF or all PDFs
+/**
+ * Clear the cache for a specific PDF or all PDFs
+ */
 export const clearPDFTextCache = (pdfId?: string) => {
   if (pdfId) {
     delete cachedPDFText[pdfId];
+    console.log(`Cleared cache for PDF: ${pdfId}`);
   } else {
     cachedPDFText = {};
+    console.log('Cleared all PDF cache');
   }
+};
+
+/**
+ * Get cache statistics
+ */
+export const getCacheStats = () => {
+  const stats = Object.entries(cachedPDFText).map(([id, data]) => ({
+    id,
+    size: data.text.length,
+    pages: data.pageCount,
+    age: Date.now() - data.timestamp,
+    metadata: data.metadata
+  }));
+  
+  return {
+    totalCached: stats.length,
+    totalSize: stats.reduce((sum, s) => sum + s.size, 0),
+    entries: stats
+  };
 };
