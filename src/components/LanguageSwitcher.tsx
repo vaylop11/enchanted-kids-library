@@ -2,8 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Globe, Check, ChevronDown } from 'lucide-react';
-import { toast } from 'sonner';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -24,14 +23,6 @@ const LanguageSwitcher = () => {
   const handleLanguageChange = (newLanguage: 'en' | 'ar') => {
     if (newLanguage !== language) {
       setLanguage(newLanguage);
-      const selectedLang = languages.find(lang => lang.code === newLanguage);
-      
-      toast.success(
-        language === 'ar' 
-          ? `Switched to ${selectedLang?.name}` 
-          : `تم التبديل إلى ${selectedLang?.name}`,
-        { duration: 1500 }
-      );
     }
   };
 

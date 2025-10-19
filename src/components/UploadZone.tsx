@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { toast } from 'sonner';
-import { File, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
@@ -57,13 +56,11 @@ const UploadZone = () => {
           : `You have reached the maximum number of PDFs (${uploadCheck.maxPdfs}). Please upgrade your account or delete some files.`;
       }
       
-      toast.error(errorMsg);
       setUploadError(errorMsg);
       return;
     }
     
     if (file.type !== 'application/pdf') {
-      toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       setUploadError(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       return;
     }
@@ -89,8 +86,6 @@ const UploadZone = () => {
         setUploadProgress(100);
         
         if (pdf) {
-          toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-          
           // Refresh limits after successful upload
           refreshLimits();
           
@@ -136,8 +131,6 @@ const UploadZone = () => {
               clearInterval(progressInterval);
               setUploadProgress(100);
               
-              toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-              
               setTimeout(() => {
                 setIsUploading(false);
                 setUploadProgress(0);
@@ -166,7 +159,6 @@ const UploadZone = () => {
       setIsUploading(false);
       setUploadProgress(0);
       setUploadError(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
-      toast.error(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
     }
   };
 
@@ -201,7 +193,6 @@ const UploadZone = () => {
       const errorMsg = language === 'ar' 
         ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${uploadCheck.maxPdfs}). يرجى ترقية حسابك أو حذف بعض الملفات.`
         : `You have reached the maximum number of PDFs (${uploadCheck.maxPdfs}). Please upgrade your account or delete some files.`;
-      toast.error(errorMsg);
       setUploadError(errorMsg);
       return;
     }

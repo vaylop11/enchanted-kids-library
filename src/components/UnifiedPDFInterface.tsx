@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import { toast } from 'sonner';
 import { AlertTriangle, MessageSquare, Upload, Sparkles, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -24,7 +23,6 @@ const UnifiedPDFInterface = () => {
     setUploadError(null);
     
     if (file.type !== 'application/pdf') {
-      toast.error(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       setUploadError(language === 'ar' ? 'يرجى تحميل ملف PDF فقط' : 'Please upload only PDF files');
       return;
     }
@@ -38,7 +36,6 @@ const UnifiedPDFInterface = () => {
         const errorMsg = language === 'ar'
           ? 'حجم الملف كبير جدًا (الحد الأقصى 5 ميجابايت للخطة المجانية)'
           : 'File size too large (max 5MB for free plan)';
-        toast.error(errorMsg);
         setUploadError(errorMsg);
         return;
       }
@@ -49,7 +46,6 @@ const UnifiedPDFInterface = () => {
         const errorMsg = language === 'ar'
           ? 'لقد وصلت إلى الحد الأقصى (1 ملف PDF). سجل الدخول للحصول على المزيد.'
           : 'You have reached the limit (1 PDF). Sign in for more.';
-        toast.error(errorMsg);
         setUploadError(errorMsg);
         return;
       }
@@ -69,7 +65,6 @@ const UnifiedPDFInterface = () => {
             ? `لقد وصلت إلى الحد الأقصى لعدد ملفات PDF (${uploadCheck.maxPdfs}). يرجى حذف بعض الملفات لتحميل المزيد.`
             : `You have reached the maximum number of PDFs (${uploadCheck.maxPdfs}). Please delete some files to upload more.`;
         }
-        toast.error(errorMsg);
         setUploadError(errorMsg);
         return;
       }
@@ -95,7 +90,6 @@ const UnifiedPDFInterface = () => {
         setUploadProgress(100);
         
         if (pdf) {
-          toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
           await refreshLimits();
           
           setTimeout(() => {
@@ -132,8 +126,6 @@ const UnifiedPDFInterface = () => {
             clearInterval(progressInterval);
             setUploadProgress(100);
             
-            toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File uploaded successfully');
-            
             setTimeout(() => {
               setIsUploading(false);
               setUploadProgress(0);
@@ -153,7 +145,6 @@ const UnifiedPDFInterface = () => {
       setIsUploading(false);
       setUploadProgress(0);
       setUploadError(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
-      toast.error(language === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error occurred during upload');
     }
   };
 

@@ -7,7 +7,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import PayPalSubscribeButton from '@/components/payments/PayPalSubscribeButton';
 import { usePDFLimits } from '@/hooks/usePDFLimits';
-import { toast } from 'sonner';
 
 const PDFUpgradeCard = () => {
   const { user } = useAuth();
@@ -37,11 +36,6 @@ const PDFUpgradeCard = () => {
   const handleSubscriptionSuccess = async () => {
     // Refresh PDF limits to show unlimited access immediately
     await refreshLimits();
-    toast.success(
-      language === 'ar'
-        ? '🎉 تم تفعيل Gemi PRO! أصبح لديك رفع غير محدود الآن.'
-        : '🎉 Gemi PRO activated! You now have unlimited uploads.'
-    );
   };
 
   const features = [

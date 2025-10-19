@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { Clock, FileText, MessageSquare, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { deletePDF } from '@/services/pdfSupabaseService';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 
@@ -69,8 +68,6 @@ const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
         const success = await deletePDF(pdf.id);
         
         if (success) {
-          toast.success(language === 'ar' ? 'تم حذف الملف بنجاح' : 'PDF deleted successfully');
-          
           // Call onDelete callback to update parent component state
           if (onDelete) {
             onDelete(pdf.id);
@@ -78,8 +75,9 @@ const PDFCard = ({ pdf, index, onDelete }: PDFCardProps) => {
         }
       } catch (error) {
         console.error('Error deleting PDF:', error);
-        toast.error(language === 'ar' ? 'فشل في حذف الملف' : 'Failed to delete PDF');
-      } finally {
+        // Show error through UI instead of toast
+        alert(language === 'ar' ? 'فشل في حذف الملف' : 'Failed to delete PDF');
+      } finally{
         setIsDeleting(false);
       }
     }
